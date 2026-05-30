@@ -241,18 +241,18 @@
 
   /* ── Snapshot bar chart ── */
   .snapshot-controls {
-    display:flex; align-items:center; gap:16px; margin-bottom:24px; flex-wrap:wrap;
+    display:flex; align-items:center; gap:16px; margin-top:20px; margin-bottom:24px; flex-wrap:wrap;
   }
   .snapshot-controls label {
     font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim);
     text-transform:uppercase; letter-spacing:1px;
   }
   .snapshot-controls input[type=range] {
-    accent-color:var(--teal); width:260px; cursor:pointer;
+    accent-color:var(--teal); flex:1; min-width:200px; cursor:pointer;
   }
-  .snapshot-time-display {
-    font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px;
-    color:var(--teal); min-width:160px;
+  /* Time display is now inline in the section title */
+  #snapshotTitle span {
+    color:var(--teal);
   }
   .snapshot-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:40px; }
   .snap-row {
@@ -361,13 +361,12 @@
 
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
-    <div class="section-title">Snapshot — Pick a Time</div>
+    <div class="section-title" id="snapshotTitle">Snapshot — <span id="snapshotTimeDisplay">—</span></div>
+    <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snapshot-controls">
       <label>Date &amp; Time</label>
       <input type="range" id="snapshotSlider" min="0" max="119" value="0" oninput="onSliderChange()">
-      <div class="snapshot-time-display" id="snapshotTimeDisplay">—</div>
     </div>
-    <div class="snapshot-bars" id="snapshotBars"></div>
 
     <div class="section-title" style="margin-top:32px;">Forecast Inputs</div>
     <div class="conditions-bar" id="snapshotConditions">
