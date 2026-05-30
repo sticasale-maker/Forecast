@@ -367,8 +367,7 @@
 // =============================================================================
 
 // ── Lookup tables ──────────────────────────────────────────────────────────────
-const PERIOD_WEIGHT = {4:25,5:31,6:38,7:44,8:50,9:56,10:63,11:69,12:75,13:81,14:88,15:94,16:100,17:106,18:113,19:119,20:125};
-const WIND_WEIGHT   = [[0,0],[1,0.07],[2,0.29],[3,0.64],[4,1.14],[5,1.79],[6,2.57],[7,3.50],[8,4.57],[9,5.79],[10,7.14],[11,8.64],[12,10.29],[13,12.07],[14,14.00],[15,16.07],[16,18.29],[17,20.64],[18,23.14],[19,25.79],[20,28.57],[21,31.50],[22,34.57],[23,37.79],[24,41.14],[25,44.64],[26,48.29],[27,52.07],[28,56.00],[29,60.07],[30,64.29],[35,87.50],[40,114.29],[50,178.57]];
+const WIND_WEIGHT = [[0,0],[1,0.07],[2,0.29],[3,0.64],[4,1.14],[5,1.79],[6,2.57],[7,3.50],[8,4.57],[9,5.79],[10,7.14],[11,8.64],[12,10.29],[13,12.07],[14,14.00],[15,16.07],[16,18.29],[17,20.64],[18,23.14],[19,25.79],[20,28.57],[21,31.50],[22,34.57],[23,37.79],[24,41.14],[25,44.64],[26,48.29],[27,52.07],[28,56.00],[29,60.07],[30,64.29],[35,87.50],[40,114.29],[50,178.57]];
 
 function interpTable(table, v) {
   if (v <= table[0][0]) return table[0][1];
@@ -381,122 +380,107 @@ function interpTable(table, v) {
   return table[table.length-1][1];
 }
 
-function getPeriodWeight(p) {
-  p = Math.max(4, Math.min(20, p));
-  const keys = Object.keys(PERIOD_WEIGHT).map(Number).sort((a,b)=>a-b);
-  for (let i = 0; i < keys.length-1; i++) {
-    if (keys[i] <= p && p <= keys[i+1]) {
-      const f = (p - keys[i]) / (keys[i+1] - keys[i]);
-      return PERIOD_WEIGHT[keys[i]] * (1-f) + PERIOD_WEIGHT[keys[i+1]] * f;
-    }
-  }
-  return PERIOD_WEIGHT[20];
-}
+function windPower(kmh)        { return interpTable(WIND_WEIGHT, Math.max(0, kmh)); }
+function swellPower(h, period) { return h * h * Math.pow(period, 1.1); }
 
-// Verified: power = 19.75 * h² * periodWeight / 100
-// (gives 7.9988 for 0.9m/8s, 6.32 for 0.8m/8s — matches sheet's 7.98/6.30)
-function swellPower(h, period) {
-  return 19.75 * h * h * getPeriodWeight(Math.round(period)) / 100;
-}
-function windPower(kmh) {
-  return interpTable(WIND_WEIGHT, Math.max(0, kmh));
-}
-
-// ── Direction lookup tables ────────────────────────────────────────────────────
-// 32 compass bearings (every 11.25°)
+// Nearest-neighbour direction lookup (matches spreadsheet VLOOKUP behaviour)
 const COMPASS = [0,11.25,22.5,33.75,45,56.25,67.5,78.75,90,101.25,112.5,123.75,135,146.25,157.5,168.75,180,191.25,202.5,213.75,225,236.25,247.5,258.75,270,281.25,292.5,303.75,315,326.25,337.5,348.75];
 
-// Per-site tables: wind=Wind hit, sea=Sea&Swell hit, rif=Refraction index
-// Values taken DIRECTLY from spreadsheet big lookup table (all 32 rows × 3 cols per site)
-const LOOKUP = {
-  CTB: {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
-    sea:[20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[100,50,0,0,0,10,20,40,60,60,60,53,45,35,15,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  BIW: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,35,40,45,55,70,80,85,95,100,90,65,50,25,0,0],
-    sea:[0,0,0,0,0,0,0,0,0,0,0,10,40,45,50,55,60,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,0,0,0,0,40,50,60,70,60,55,50,45,40,80,50,30,20,0,0,0,0,0,0,0,0,0,0,0]},
-  BIE: {wind:[-10,-10,0,10,10,10,10,10,10,20,30,35,40,15,0,0,30,35,40,45,0,0,0,0,-10,-15,-20,-25,-30,-35,-40,0],
-    sea:[0,0,0,0,0,0,0,0,0,0,0,20,60,65,70,75,80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,0,0,0,30,60,80,90,80,40,35,30,25,20,80,55,40,30,10,0,0,0,0,0,0,0,0,0,0]},
-  Steps: {wind:[100,90,95,95,90,80,80,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,50,70,80,85,90,95],
-    sea:[0,0,0,0,10,15,30,50,80,100,100,80,45,33,25,18,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,10,20,40,60,45,15,0,0,20,50,66,65,40,35,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  Monument: {wind:[100,100,85,85,80,70,70,70,50,0,0,0,0,0,0,0,0,0,0,0,0,20,50,60,90,90,90,90,90,90,90,95],
-    sea:[0,0,0,0,5,10,20,40,70,75,70,50,20,10,8,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,10,15,30,40,35,10,20,25,25,50,60,50,40,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  Chowder: {wind:[0,0,0,0,0,0,20,60,90,95,100,100,100,100,70,50,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    sea:[0,0,0,0,0,0,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,10,20,30,30,30,35,40,30,25,23,20,18,14,12,8,6,4,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  CampCove: {wind:[80,50,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,20,40,50,60,70,80,80,80,80,80,80,80,80,80,80],
-    sea:[0,0,0,0,0,0,0,10,15,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,10,20,30,40,30,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  Fairlight: {wind:[-10,0,0,0,0,0,0,0,30,40,50,60,70,80,100,80,70,50,40,30,25,15,0,0,0,0,0,0,-10,-10,-10,-10],
-    sea:[0,0,0,0,0,0,0,0,0,0,0,0,20,50,80,50,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,2,3,5,8,10,18,30,40,30,20,0,20,30,40,10,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  Gordons: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    sea:[0,0,0,0,10,20,30,50,65,85,100,100,100,100,90,60,30,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,40,55,60,45,30,10,0,0,0,0,0,20,30,40,25,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  Freshwater: {wind:[20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,40,80,60,50,30,20,0,0,0,0,0,0,0,0,0,0,0],
-    sea:[20,25,30,35,35,45,50,50,50,50,50,75,95,100,100,60,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,0,30,50,80,100,85,60,30,0,0,0,45,90,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0]},
-  SharkPoint: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    sea:[40,75,100,100,100,100,100,100,100,95,90,85,80,75,65,55,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,20,20,20,20,15,10,0,0,0,0,0,0,0,0,0]},
-  // LittleBay: wind col in sheet is blank; sea col IS the sea+swell hit; rif col = 0
-  LittleBay: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    sea:[10,15,20,40,60,40,90,95,100,90,80,75,70,60,50,30,0,25,15,10,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-  // Oak: rif col in sheet = sea+swell hit; wind col = refraction index
-  Oak: {wind:[10,40,50,60,80,100,0,0,0,0,0,10,20,20,25,30,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    sea:[10,30,60,30,20,10,100,100,100,85,70,50,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    rif:[10,40,50,60,80,100,0,0,0,0,0,10,20,20,25,30,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
-};
-
-// Site config — tideMult = tide_demerit when tide=1.0m (so demerit = tideM * tideMult)
-// Values read directly from sheet: Tide row at tide=1: CTB=1.6,BIW=1,BIE=2,Steps=5,Mon=3,Shark=8,LBay=4.7,Oak=2.6
-const SITES = [
-  {key:'CTB',       name:'CTB Bower Lane',  swellSens:1.4, windSens:0.3, ppt:25, tideMult:1.6},
-  {key:'BIW',       name:'BI West',          swellSens:1.4, windSens:0.3, ppt:20, tideMult:1.0},
-  {key:'BIE',       name:'BI East',          swellSens:1.6, windSens:0.3, ppt:20, tideMult:2.0},
-  {key:'Steps',     name:'Leaps & Steps',    swellSens:1.6, windSens:0.3, ppt:10, tideMult:5.0},
-  {key:'Monument',  name:'Monument',         swellSens:1.6, windSens:0.3, ppt:20, tideMult:3.0},
-  {key:'Chowder',   name:'Chowder Bay',      swellSens:0.8, windSens:0.3, ppt:25, tideMult:0},
-  {key:'CampCove',  name:'Camp Cove',        swellSens:0.8, windSens:0.3, ppt:25, tideMult:0},
-  {key:'Fairlight', name:'Fairlight',        swellSens:1.0, windSens:0.3, ppt:25, tideMult:0},
-  {key:'Gordons',   name:"Gordon's Bay",     swellSens:2.2, windSens:0.3, ppt:25, tideMult:0},
-  {key:'Freshwater',name:'Freshwater',       swellSens:1.2, windSens:0.3, ppt:25, tideMult:0},
-  {key:'SharkPoint',name:'Shark Point',      swellSens:1.8, windSens:0.3, ppt:25, tideMult:8.0},
-  {key:'LittleBay', name:'Little Bay',       swellSens:0.3, windSens:0.3, ppt:25, tideMult:4.7},
-  {key:'Oak',       name:'Oak Park',         swellSens:2.5, windSens:0.3, ppt:20, tideMult:2.6},
-];
-
-// ── Direction interpolation ────────────────────────────────────────────────────
 function dirLookup(arr, deg) {
   deg = ((deg % 360) + 360) % 360;
-  const n = COMPASS.length;
-  // wrap-around between last point (348.75) and first (0/360)
-  if (deg > COMPASS[n-1]) {
-    const span = 360 - COMPASS[n-1] + COMPASS[0] + 11.25;
-    const f = (deg - COMPASS[n-1]) / span;
-    return arr[n-1] * (1-f) + arr[0] * f;
+  let idx = 0, minDiff = Infinity;
+  for (let i = 0; i < COMPASS.length; i++) {
+    const diff = Math.min(Math.abs(COMPASS[i] - deg), 360 - Math.abs(COMPASS[i] - deg));
+    if (diff < minDiff) { minDiff = diff; idx = i; }
   }
-  for (let i = 0; i < n-1; i++) {
-    if (COMPASS[i] <= deg && deg <= COMPASS[i+1]) {
-      const f = (deg - COMPASS[i]) / (COMPASS[i+1] - COMPASS[i]);
-      return arr[i] * (1-f) + arr[i+1] * f;
-    }
-  }
-  return arr[0];
+  return arr[idx];
 }
 
-// ── Score calculation ──────────────────────────────────────────────────────────
-// VERIFIED FORMULAS:
-//   swell_demerit  = swellPower(h, period) * (seaHit / 100) * swellSens
-//   refrac_demerit = (s1_rif + s2_rif) / periodPowerTune * 0.5
-//   wind_demerit   = windPower(kmh) * (windHit / 100) * windSens
-//   windwave_demerit = windPower(windWaveKmh_equiv) * (windHit_at_wwDir / 100) * windSens
-//   tide_demerit   = tideM * tideMult
-//   score = max(0, 60 - total_demerits)
+// ── Per-site direction lookup tables (extracted from spreadsheet rows 32-64) ──
+// Arrays are indexed by COMPASS bearing (32 values: N, NNE, ..., NNW)
+const LOOKUP = {
+  CTB:        {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
+               sea:[20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[100,50,0,0,0,10,20,40,60,60,60,53,45,35,15,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  BIW:        {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,35,40,45,55,70,80,85,95,100,90,65,50,25,0,0],
+               sea:[0,0,0,0,0,0,0,0,0,0,0,10,40,45,50,55,60,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,0,0,0,0,0,40,50,60,70,60,55,50,45,40,80,50,30,20,0,0,0,0,0,0,0,0,0,0,0]},
+  BIE:        {wind:[-10,-10,0,10,10,10,10,10,10,20,30,35,40,15,0,0,30,35,40,45,0,0,0,0,-10,-15,-20,-25,-30,-35,-40,0],
+               sea:[0,0,0,0,0,0,0,0,0,0,0,20,60,65,70,75,80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,0,0,0,0,30,60,80,90,80,40,35,30,25,20,80,55,40,30,10,0,0,0,0,0,0,0,0,0,0]},
+  Steps:      {wind:[100,90,95,95,90,80,80,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,50,70,80,85,90,95],
+               sea:[0,0,0,0,10,15,30,50,80,100,100,80,45,33,25,18,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,10,20,40,60,45,15,0,0,20,50,66,65,40,35,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Monument:   {wind:[100,100,85,85,80,70,70,70,50,0,0,0,0,0,0,0,0,0,0,0,0,20,50,60,90,90,90,90,90,90,90,95],
+               sea:[0,0,0,0,5,10,20,40,70,75,70,50,20,10,8,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,10,15,30,40,35,10,20,25,25,50,60,50,40,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Chowder:    {wind:[0,0,0,0,0,0,20,60,90,95,100,100,100,100,70,50,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               sea:[0,0,0,0,0,0,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,10,20,30,30,30,35,40,30,25,23,20,18,14,12,8,6,4,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  CampCove:   {wind:[80,50,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,20,40,50,60,70,80,80,80,80,80,80,80,80,80,80],
+               sea:[0,0,0,0,0,0,0,10,15,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,10,20,30,40,30,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Fairlight:  {wind:[-10,0,0,0,0,0,0,0,30,40,50,60,70,80,100,80,70,50,40,30,25,15,0,0,0,0,0,0,-10,-10,-10,-10],
+               sea:[0,0,0,0,0,0,0,0,0,0,0,0,20,50,80,50,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,0,2,3,5,8,10,18,30,40,30,20,0,20,30,40,10,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Gordons:    {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               sea:[0,0,0,0,10,20,30,50,65,85,100,100,100,100,90,60,30,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,0,40,55,60,45,30,10,0,0,0,0,0,20,30,40,25,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Freshwater: {wind:[20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,40,80,60,50,30,20,0,0,0,0,0,0,0,0,0,0,0],
+               sea:[20,25,30,35,35,45,50,50,50,50,50,75,95,100,100,60,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,0,0,30,50,80,100,85,60,30,0,0,0,45,90,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0]},
+  SharkPoint: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               sea:[40,75,100,100,100,100,100,100,100,95,90,85,80,75,65,55,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,20,20,20,20,15,10,0,0,0,0,0,0,0,0,0]},
+  // Note: LittleBay & Oak lookup data is crossed in the source spreadsheet.
+  // LittleBay demerit uses spreadsheet col AJ-AL data (below) with swellSens 0.3/spm 4,
+  // and tide formula other*(1.66*t-0.34). Oak uses col AM-AO data with swellSens 2.5/spm 5
+  // and tide formula other*(0.166*t-0.034). This matches the spreadsheet exactly.
+  LittleBay:  {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               sea:[0,0,0,0,30,50,90,95,100,90,80,75,70,60,50,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[10,15,20,40,60,40,0,0,0,0,0,10,20,20,25,30,30,25,15,10,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Oak:        {wind:[10,40,50,60,80,100,40,0,0,0,0,0,50,60,60,50,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               sea:[0,0,20,60,80,90,100,100,100,85,70,50,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+               rif:[10,30,60,30,20,10,0,0,0,10,30,60,80,70,60,45,30,25,15,10,0,0,0,0,0,0,0,0,0,0,0,0]},
+};
+
+// Site definitions: swellSens, spm (period multiplier), tide(other, tideM)
+const SITES = [
+  {key:'CTB',        name:'CTB Bower Lane',  swellSens:1.4, spm:4,
+   tide:(o,t)=>o*(t-0.2)},
+  {key:'BIW',        name:'BI West',          swellSens:1.4, spm:5,
+   tide:(o,t)=>o*(0.2941*t-0.0588)+(t>1.5?(t-1.5)*16:0)},
+  {key:'BIE',        name:'BI East',          swellSens:1.6, spm:5,
+   tide:(o,t)=>o*(0.2941*t-0.0588)},
+  {key:'Steps',      name:'Leaps & Steps',    swellSens:1.6, spm:10,
+   tide:(o,t)=>o*(0.2941*t-0.0588)},
+  {key:'Monument',   name:'Monument',         swellSens:1.6, spm:5,
+   tide:(o,t)=>o*(0.2941*t-0.0588)},
+  {key:'Chowder',    name:'Chowder Bay',      swellSens:0.8, spm:4,
+   tide:(o,t)=>0},
+  {key:'CampCove',   name:'Camp Cove',        swellSens:0.8, spm:4,
+   tide:(o,t)=>0},
+  {key:'Fairlight',  name:'Fairlight',        swellSens:1.0, spm:4,
+   tide:(o,t)=>0},
+  {key:'Gordons',    name:"Gordon's Bay",     swellSens:2.2, spm:4,
+   tide:(o,t)=>0},
+  {key:'Freshwater', name:'Freshwater',       swellSens:1.2, spm:4,
+   tide:(o,t)=>0},
+  {key:'SharkPoint', name:'Shark Point',      swellSens:1.8, spm:4,
+   tide:(o,t)=>t>1.3?30:t<0.9?0:t*75-67.5},
+  {key:'LittleBay',  name:'Little Bay',       swellSens:0.3, spm:4,
+   tide:(o,t)=>o*(1.66*t-0.34)},
+  {key:'Oak',        name:'Oak Park',         swellSens:2.5, spm:5,
+   tide:(o,t)=>o*(0.166*t-0.034)},
+];
+
+// Score formula (matches spreadsheet exactly):
+//   swellPower  = h² × period^1.1
+//   s_demerit   = swellPower × seaHit/100 × swellSens
+//   rif_demerit = (rif1×p1×spm + rif2×p2×spm) / 1000
+//   wind_demerit = windPower(kmh) × windHit/100 × 0.3
+//   tide_demerit = site.tide(other_demerits, tideM)
+//   score = max(0, round(60 − total))
 function calcScore(site, d) {
   const lk = LOOKUP[site.key];
   const {windKmh, windDir, swell1H, swell1Dir, swell1P,
@@ -505,29 +489,31 @@ function calcScore(site, d) {
   const s1p = swellPower(swell1H, swell1P);
   const s2p = swellPower(swell2H, swell2P);
 
-  const windHit  = Math.max(0, dirLookup(lk.wind, windDir));
-  const wwHit    = Math.max(0, dirLookup(lk.wind, windWaveDir));
-  const s1sea    = Math.max(0, dirLookup(lk.sea,  swell1Dir));
-  const s1rif    =             dirLookup(lk.rif,  swell1Dir);
-  const s2sea    = Math.max(0, dirLookup(lk.sea,  swell2Dir));
-  const s2rif    =             dirLookup(lk.rif,  swell2Dir);
+  const windHit = Math.max(0, dirLookup(lk.wind, windDir));
+  const wwHit   = Math.max(0, dirLookup(lk.wind, windWaveDir));
+  const s1sea   = Math.max(0, dirLookup(lk.sea,  swell1Dir));
+  const s1rif   =             dirLookup(lk.rif,  swell1Dir);
+  const s2sea   = Math.max(0, dirLookup(lk.sea,  swell2Dir));
+  const s2rif   =             dirLookup(lk.rif,  swell2Dir);
 
-  const tide_d = tideM * site.tideMult;
-  const wind_d = windPower(windKmh) * (windHit / 100) * site.windSens;
-  const ww_d   = windPower(windWaveH * 10) * (wwHit / 100) * site.windSens;  // wind-wave uses same wind table
-  const s1_d   = s1p * (s1sea / 100) * site.swellSens;
-  const s2_d   = s2p * (s2sea / 100) * site.swellSens;
-  const rif_d  = (s1rif + s2rif) / site.ppt * 0.5;
+  const wind_d = windPower(windKmh)       * (windHit/100) * 0.3;
+  const ww_d   = windPower(windWaveH * 10) * (wwHit/100)  * 0.3;
+  const s1_d   = s1p * (s1sea/100) * site.swellSens;
+  const s2_d   = s2p * (s2sea/100) * site.swellSens;
+  const rif_d  = (s1rif * s1p * site.spm + s2rif * s2p * site.spm) / 1000;
 
-  const totalD = tide_d + wind_d + ww_d + s1_d + s2_d + rif_d;
+  const other  = wind_d + ww_d + s1_d + s2_d + rif_d;
+  const tide_d = site.tide(other, tideM);
+  const totalD = other + tide_d;
+
   return {
     score: Math.max(0, Math.round(60 - totalD)),
     demerits: {
-      tide:  Math.round(tide_d * 10) / 10,
-      wind:  Math.round((wind_d + ww_d) * 10) / 10,
-      swell1:Math.round(s1_d * 10) / 10,
-      swell2:Math.round(s2_d * 10) / 10,
-      refrac:Math.round(rif_d * 10) / 10,
+      tide:   Math.round(tide_d  * 10) / 10,
+      wind:   Math.round((wind_d + ww_d) * 10) / 10,
+      swell1: Math.round(s1_d   * 10) / 10,
+      swell2: Math.round(s2_d   * 10) / 10,
+      refrac: Math.round(rif_d  * 10) / 10,
     }
   };
 }
