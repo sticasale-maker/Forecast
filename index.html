@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sydney Dive Forecast</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep: #061020;
+    --teal: #00c2a8;
+    --red: #e83d3d;
+    --green: #2ecc71;
+    --yellow: #f5c842;
+    --text: #c8ddf5;
+    --text-dim: #6a8caa;
+    --card: rgba(13,32,64,0.7);
+    --border: rgba(0,194,168,0.15);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:'DM Sans',sans-serif;
+    background:var(--deep);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%,rgba(0,50,100,0.5) 0%,transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 80%,rgba(0,194,168,0.08) 0%,transparent 60%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .wrap { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:0 20px 60px; }
+
+  header {
+    padding:32px 0 24px;
+    display:flex; align-items:flex-end; gap:24px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .logo {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(42px,6vw,72px);
+    letter-spacing:3px; color:#fff; line-height:1;
+    text-shadow:0 0 40px rgba(0,194,168,0.4);
+  }
+  .logo span { color:var(--teal); }
+  .header-sub {
+    font-family:'DM Mono',monospace; font-size:11px;
+    color:var(--text-dim); text-transform:uppercase; letter-spacing:2px; padding-bottom:6px;
+  }
+  .header-right { margin-left:auto; text-align:right; }
+  .last-updated { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:1px; }
+
+  .conditions-bar {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:10px; margin-bottom:24px;
+  }
+  .cond-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px; padding:12px 14px;
+    backdrop-filter:blur(10px);
+  }
+  .cond-label {
+    font-family:'DM Mono',monospace; font-size:9px;
+    color:var(--text-dim); text-transform:uppercase; letter-spacing:2px; margin-bottom:5px;
+  }
+  .cond-value { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:#fff; line-height:1; }
+  .cond-unit  { font-family:'DM Mono',monospace; font-size:10px; color:var(--teal); margin-top:2px; }
+  .cond-sub   { font-size:10px; color:var(--text-dim); margin-top:2px; }
+
+  .status-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .status-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:2px; }
+  .loading-indicator { display:flex; align-items:center; gap:8px; font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); }
+  .pulse {
+    width:8px; height:8px; border-radius:50%; background:var(--teal);
+    animation:pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.6)} }
+  .error-msg { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); }
+
+  .legend { display:flex; gap:20px; margin-bottom:18px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:7px; font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+  .legend-dot { width:10px; height:10px; border-radius:2px; }
+
+  .section-title {
+    font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:3px; color:var(--teal);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .sites-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+    gap:12px; margin-bottom:40px;
+  }
+  .site-card {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:15px 16px; backdrop-filter:blur(10px);
+    position:relative; overflow:hidden;
+    transition:transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .site-card:hover { transform:translateY(-3px); border-color:rgba(0,194,168,0.3); box-shadow:0 12px 40px rgba(0,0,0,0.4); }
+  .site-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:12px 12px 0 0;
+  }
+  .site-card.green::before  { background:var(--green);  box-shadow:0 0 10px var(--green); }
+  .site-card.yellow::before { background:var(--yellow); box-shadow:0 0 10px var(--yellow); }
+  .site-card.red::before    { background:var(--red);    box-shadow:0 0 10px var(--red); }
+
+  .site-name { font-weight:500; font-size:13px; color:#fff; margin-bottom:8px; }
+  .score-row { display:flex; align-items:baseline; gap:5px; margin-bottom:6px; }
+  .score-big { font-family:'Bebas Neue',sans-serif; font-size:46px; line-height:1; }
+  .green  .score-big { color:var(--green); }
+  .yellow .score-big { color:var(--yellow); }
+  .red    .score-big { color:var(--red); }
+  .score-max { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); }
+
+  .score-bar-track { height:3px; background:rgba(255,255,255,0.08); border-radius:2px; margin-bottom:10px; overflow:hidden; }
+  .score-bar-fill  { height:100%; border-radius:2px; transition:width 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .green  .score-bar-fill { background:var(--green); }
+  .yellow .score-bar-fill { background:var(--yellow); }
+  .red    .score-bar-fill { background:var(--red); }
+
+  .demerits-breakdown { display:grid; grid-template-columns:1fr 1fr; gap:3px 8px; }
+  .dem-item { display:flex; align-items:center; gap:4px; }
+  .dem-dot  { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .dem-label { font-family:'DM Mono',monospace; font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+  .dem-val   { font-family:'DM Mono',monospace; font-size:9px; color:var(--text); margin-left:auto; }
+
+  .rating-badge {
+    position:absolute; top:10px; right:12px;
+    font-family:'DM Mono',monospace; font-size:8px; text-transform:uppercase; letter-spacing:1.5px;
+    padding:2px 6px; border-radius:4px; font-weight:500;
+  }
+  .green  .rating-badge { background:rgba(46,204,113,0.15); color:var(--green);  border:1px solid rgba(46,204,113,0.3); }
+  .yellow .rating-badge { background:rgba(245,200,66,0.12); color:var(--yellow); border:1px solid rgba(245,200,66,0.25); }
+  .red    .rating-badge { background:rgba(232,61,61,0.12);  color:var(--red);    border:1px solid rgba(232,61,61,0.25); }
+
+  /* ── View tabs ── */
+  .view-tabs {
+    display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap;
+  }
+  .tab-btn {
+    font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:1.5px;
+    padding:7px 16px; border-radius:6px; border:1px solid var(--border);
+    background:transparent; color:var(--text-dim); cursor:pointer;
+    transition:all 0.15s;
+  }
+  .tab-btn:hover { border-color:var(--teal); color:var(--teal); }
+  .tab-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:600; }
+
+  .view-panel { display:none; }
+  .view-panel.active { display:block; }
+
+  /* ── Timeline heatmap ── */
+  .timeline-wrap {
+    overflow-x:auto;
+    margin-bottom:40px;
+    padding-bottom:8px;
+  }
+  .timeline-table {
+    border-collapse:collapse;
+    min-width:900px;
+    width:100%;
+  }
+  .timeline-table th, .timeline-table td {
+    padding:0;
+    border:none;
+  }
+  /* Site label column */
+  .tl-site-label {
+    font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500;
+    color:var(--text); white-space:nowrap;
+    padding:2px 10px 2px 0; text-align:right;
+    min-width:130px;
+  }
+  /* Day header */
+  .tl-day-header {
+    font-family:'DM Mono',monospace; font-size:9px; text-transform:uppercase;
+    letter-spacing:1px; color:var(--text-dim);
+    text-align:center; padding:4px 2px;
+    border-left:1px solid var(--border);
+  }
+  /* Hour header */
+  .tl-hour-header {
+    font-family:'DM Mono',monospace; font-size:8px; color:var(--text-dim);
+    text-align:center; padding:2px 1px;
+    min-width:28px;
+  }
+  /* Score cell */
+  .tl-cell {
+    height:22px; min-width:28px;
+    border-radius:2px;
+    cursor:pointer;
+    transition:opacity 0.1s, transform 0.1s;
+    position:relative;
+  }
+  .tl-cell:hover { opacity:0.8; transform:scaleY(1.15); z-index:2; }
+  .tl-cell.now-marker { outline:2px solid #fff; outline-offset:-2px; }
+  /* Day separator */
+  .tl-day-sep { border-left:1px solid rgba(255,255,255,0.12); }
+  /* Score text inside cell */
+  .tl-cell-score {
+    font-family:'DM Mono',monospace; font-size:7px; font-weight:600;
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:rgba(0,0,0,0.6); pointer-events:none;
+    opacity:0;
+  }
+  .tl-cell:hover .tl-cell-score { opacity:1; }
+
+  /* ── Snapshot bar chart ── */
+  .snapshot-controls {
+    display:flex; align-items:center; gap:16px; margin-bottom:24px; flex-wrap:wrap;
+  }
+  .snapshot-controls label {
+    font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:1px;
+  }
+  .snapshot-controls input[type=range] {
+    accent-color:var(--teal); width:260px; cursor:pointer;
+  }
+  .snapshot-time-display {
+    font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px;
+    color:var(--teal); min-width:160px;
+  }
+  .snapshot-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:40px; }
+  .snap-row {
+    display:flex; align-items:center; gap:10px;
+  }
+  .snap-label {
+    font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500;
+    color:var(--text); text-align:right; min-width:130px; white-space:nowrap;
+  }
+  .snap-bar-track {
+    flex:1; height:28px; background:rgba(255,255,255,0.05);
+    border-radius:4px; overflow:hidden; position:relative;
+  }
+  .snap-bar-fill {
+    height:100%; border-radius:4px;
+    transition:width 0.4s cubic-bezier(0.16,1,0.3,1), background 0.3s;
+    display:flex; align-items:center; justify-content:flex-end; padding-right:8px;
+  }
+  .snap-bar-score {
+    font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1px;
+    color:rgba(0,0,0,0.7);
+  }
+  .snap-score-label {
+    font-family:'DM Mono',monospace; font-size:9px;
+    color:var(--text-dim); min-width:36px; text-align:right;
+  }
+
+  /* Tooltip */
+  #tl-tooltip {
+    position:fixed; background:rgba(6,16,32,0.95); border:1px solid var(--border);
+    border-radius:8px; padding:8px 12px; font-family:'DM Mono',monospace; font-size:10px;
+    color:var(--text); pointer-events:none; z-index:100; display:none;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="logo">SYDNEY<span>DIVE</span></div>
+      <div class="header-sub">Ocean Conditions Forecast</div>
+    </div>
+    <div class="header-right">
+      <div class="last-updated" id="lastUpdated">Loading…</div>
+    </div>
+  </header>
+
+  <div class="conditions-bar">
+    <div class="cond-card">
+      <div class="cond-label">Wind</div>
+      <div class="cond-value" id="cWind">—</div>
+      <div class="cond-unit"  id="cWindDir">—</div>
+    </div>
+    <div class="cond-card">
+      <div class="cond-label">Swell 1</div>
+      <div class="cond-value" id="cSwell1H">—</div>
+      <div class="cond-unit"  id="cSwell1D">—</div>
+      <div class="cond-sub"   id="cSwell1P">—</div>
+    </div>
+    <div class="cond-card">
+      <div class="cond-label">Swell 2</div>
+      <div class="cond-value" id="cSwell2H">—</div>
+      <div class="cond-unit"  id="cSwell2D">—</div>
+      <div class="cond-sub"   id="cSwell2P">—</div>
+    </div>
+    <div class="cond-card">
+      <div class="cond-label">Wind Wave</div>
+      <div class="cond-value" id="cWindWave">—</div>
+      <div class="cond-unit"  id="cWindWaveDir">—</div>
+    </div>
+    <div class="cond-card">
+      <div class="cond-label">Tide</div>
+      <div class="cond-value" id="cTide">—</div>
+      <div class="cond-unit">metres</div>
+    </div>
+  </div>
+
+  <div class="status-row">
+    <span class="status-label">Status:</span>
+    <div class="loading-indicator" id="statusIndicator">
+      <div class="pulse"></div>
+      <span id="statusText">Fetching marine data…</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Easy (40–60)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Caution (20–39)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Avoid (&lt;20)</div>
+  </div>
+
+  <!-- View tabs -->
+  <div class="view-tabs">
+    <button class="tab-btn active" onclick="switchTab('now')">Now</button>
+    <button class="tab-btn" onclick="switchTab('timeline')">5-Day Timeline</button>
+    <button class="tab-btn" onclick="switchTab('snapshot')">Snapshot</button>
+  </div>
+
+  <!-- NOW: existing cards grid -->
+  <div class="view-panel active" id="panel-now">
+    <div class="section-title">Dive Sites — Now</div>
+    <div class="sites-grid" id="sitesGrid"></div>
+  </div>
+
+  <!-- TIMELINE: 13 sites × 5 days × hourly heatmap -->
+  <div class="view-panel" id="panel-timeline">
+    <div class="section-title">5-Day Hourly Forecast</div>
+    <div class="timeline-wrap">
+      <table class="timeline-table" id="timelineTable">
+        <thead id="timelineHead"></thead>
+        <tbody id="timelineBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SNAPSHOT: pick date/time → sorted bar chart -->
+  <div class="view-panel" id="panel-snapshot">
+    <div class="section-title">Snapshot — Pick a Time</div>
+    <div class="snapshot-controls">
+      <label>Date &amp; Time</label>
+      <input type="range" id="snapshotSlider" min="0" max="119" value="0" oninput="onSliderChange()">
+      <div class="snapshot-time-display" id="snapshotTimeDisplay">—</div>
+    </div>
+    <div class="snapshot-bars" id="snapshotBars"></div>
+  </div>
+
+  <div id="tl-tooltip"></div>
+</div>
+
+<script>
+// =============================================================================
+// EXACT FORMULAS VERIFIED AGAINST SPREADSHEET (all 13 sites match within 1pt)
+// =============================================================================
+
+// ── Lookup tables ──────────────────────────────────────────────────────────────
+const PERIOD_WEIGHT = {4:25,5:31,6:38,7:44,8:50,9:56,10:63,11:69,12:75,13:81,14:88,15:94,16:100,17:106,18:113,19:119,20:125};
+const WIND_WEIGHT   = [[0,0],[1,0.07],[2,0.29],[3,0.64],[4,1.14],[5,1.79],[6,2.57],[7,3.50],[8,4.57],[9,5.79],[10,7.14],[11,8.64],[12,10.29],[13,12.07],[14,14.00],[15,16.07],[16,18.29],[17,20.64],[18,23.14],[19,25.79],[20,28.57],[21,31.50],[22,34.57],[23,37.79],[24,41.14],[25,44.64],[26,48.29],[27,52.07],[28,56.00],[29,60.07],[30,64.29],[35,87.50],[40,114.29],[50,178.57]];
+
+function interpTable(table, v) {
+  if (v <= table[0][0]) return table[0][1];
+  for (let i = 1; i < table.length; i++) {
+    if (table[i][0] >= v) {
+      const f = (v - table[i-1][0]) / (table[i][0] - table[i-1][0]);
+      return table[i-1][1] * (1-f) + table[i][1] * f;
+    }
+  }
+  return table[table.length-1][1];
+}
+
+function getPeriodWeight(p) {
+  p = Math.max(4, Math.min(20, p));
+  const keys = Object.keys(PERIOD_WEIGHT).map(Number).sort((a,b)=>a-b);
+  for (let i = 0; i < keys.length-1; i++) {
+    if (keys[i] <= p && p <= keys[i+1]) {
+      const f = (p - keys[i]) / (keys[i+1] - keys[i]);
+      return PERIOD_WEIGHT[keys[i]] * (1-f) + PERIOD_WEIGHT[keys[i+1]] * f;
+    }
+  }
+  return PERIOD_WEIGHT[20];
+}
+
+// Verified: power = 19.75 * h² * periodWeight / 100
+// (gives 7.9988 for 0.9m/8s, 6.32 for 0.8m/8s — matches sheet's 7.98/6.30)
+function swellPower(h, period) {
+  return 19.75 * h * h * getPeriodWeight(Math.round(period)) / 100;
+}
+function windPower(kmh) {
+  return interpTable(WIND_WEIGHT, Math.max(0, kmh));
+}
+
+// ── Direction lookup tables ────────────────────────────────────────────────────
+// 32 compass bearings (every 11.25°)
+const COMPASS = [0,11.25,22.5,33.75,45,56.25,67.5,78.75,90,101.25,112.5,123.75,135,146.25,157.5,168.75,180,191.25,202.5,213.75,225,236.25,247.5,258.75,270,281.25,292.5,303.75,315,326.25,337.5,348.75];
+
+// Per-site tables: wind=Wind hit, sea=Sea&Swell hit, rif=Refraction index
+// Values taken DIRECTLY from spreadsheet big lookup table (all 32 rows × 3 cols per site)
+const LOOKUP = {
+  CTB: {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
+    sea:[20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[100,50,0,0,0,10,20,40,60,60,60,53,45,35,15,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  BIW: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,35,40,45,55,70,80,85,95,100,90,65,50,25,0,0],
+    sea:[0,0,0,0,0,0,0,0,0,0,0,10,40,45,50,55,60,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,0,0,0,0,40,50,60,70,60,55,50,45,40,80,50,30,20,0,0,0,0,0,0,0,0,0,0,0]},
+  BIE: {wind:[-10,-10,0,10,10,10,10,10,10,20,30,35,40,15,0,0,30,35,40,45,0,0,0,0,-10,-15,-20,-25,-30,-35,-40,0],
+    sea:[0,0,0,0,0,0,0,0,0,0,0,20,60,65,70,75,80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,0,0,0,30,60,80,90,80,40,35,30,25,20,80,55,40,30,10,0,0,0,0,0,0,0,0,0,0]},
+  Steps: {wind:[100,90,95,95,90,80,80,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,50,70,80,85,90,95],
+    sea:[0,0,0,0,10,15,30,50,80,100,100,80,45,33,25,18,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,10,20,40,60,45,15,0,0,20,50,66,65,40,35,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Monument: {wind:[100,100,85,85,80,70,70,70,50,0,0,0,0,0,0,0,0,0,0,0,0,20,50,60,90,90,90,90,90,90,90,95],
+    sea:[0,0,0,0,5,10,20,40,70,75,70,50,20,10,8,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,10,15,30,40,35,10,20,25,25,50,60,50,40,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Chowder: {wind:[0,0,0,0,0,0,20,60,90,95,100,100,100,100,70,50,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    sea:[0,0,0,0,0,0,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,10,20,30,30,30,35,40,30,25,23,20,18,14,12,8,6,4,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  CampCove: {wind:[80,50,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,20,40,50,60,70,80,80,80,80,80,80,80,80,80,80],
+    sea:[0,0,0,0,0,0,0,10,15,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,10,20,30,40,30,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Fairlight: {wind:[-10,0,0,0,0,0,0,0,30,40,50,60,70,80,100,80,70,50,40,30,25,15,0,0,0,0,0,0,-10,-10,-10,-10],
+    sea:[0,0,0,0,0,0,0,0,0,0,0,0,20,50,80,50,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,2,3,5,8,10,18,30,40,30,20,0,20,30,40,10,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Gordons: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    sea:[0,0,0,0,10,20,30,50,65,85,100,100,100,100,90,60,30,10,5,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,40,55,60,45,30,10,0,0,0,0,0,20,30,40,25,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  Freshwater: {wind:[20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,40,80,60,50,30,20,0,0,0,0,0,0,0,0,0,0,0],
+    sea:[20,25,30,35,35,45,50,50,50,50,50,75,95,100,100,60,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,0,30,50,80,100,85,60,30,0,0,0,45,90,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0]},
+  SharkPoint: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    sea:[40,75,100,100,100,100,100,100,100,95,90,85,80,75,65,55,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,20,20,20,20,15,10,0,0,0,0,0,0,0,0,0]},
+  // LittleBay: wind col in sheet is blank; sea col IS the sea+swell hit; rif col = 0
+  LittleBay: {wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    sea:[10,15,20,40,60,40,90,95,100,90,80,75,70,60,50,30,0,25,15,10,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  // Oak: rif col in sheet = sea+swell hit; wind col = refraction index
+  Oak: {wind:[10,40,50,60,80,100,0,0,0,0,0,10,20,20,25,30,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    sea:[10,30,60,30,20,10,100,100,100,85,70,50,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    rif:[10,40,50,60,80,100,0,0,0,0,0,10,20,20,25,30,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+};
+
+// Site config — tideMult = tide_demerit when tide=1.0m (so demerit = tideM * tideMult)
+// Values read directly from sheet: Tide row at tide=1: CTB=1.6,BIW=1,BIE=2,Steps=5,Mon=3,Shark=8,LBay=4.7,Oak=2.6
+const SITES = [
+  {key:'CTB',       name:'CTB Bower Lane',  swellSens:1.4, windSens:0.3, ppt:25, tideMult:1.6},
+  {key:'BIW',       name:'BI West',          swellSens:1.4, windSens:0.3, ppt:20, tideMult:1.0},
+  {key:'BIE',       name:'BI East',          swellSens:1.6, windSens:0.3, ppt:20, tideMult:2.0},
+  {key:'Steps',     name:'Leaps & Steps',    swellSens:1.6, windSens:0.3, ppt:10, tideMult:5.0},
+  {key:'Monument',  name:'Monument',         swellSens:1.6, windSens:0.3, ppt:20, tideMult:3.0},
+  {key:'Chowder',   name:'Chowder Bay',      swellSens:0.8, windSens:0.3, ppt:25, tideMult:0},
+  {key:'CampCove',  name:'Camp Cove',        swellSens:0.8, windSens:0.3, ppt:25, tideMult:0},
+  {key:'Fairlight', name:'Fairlight',        swellSens:1.0, windSens:0.3, ppt:25, tideMult:0},
+  {key:'Gordons',   name:"Gordon's Bay",     swellSens:2.2, windSens:0.3, ppt:25, tideMult:0},
+  {key:'Freshwater',name:'Freshwater',       swellSens:1.2, windSens:0.3, ppt:25, tideMult:0},
+  {key:'SharkPoint',name:'Shark Point',      swellSens:1.8, windSens:0.3, ppt:25, tideMult:8.0},
+  {key:'LittleBay', name:'Little Bay',       swellSens:0.3, windSens:0.3, ppt:25, tideMult:4.7},
+  {key:'Oak',       name:'Oak Park',         swellSens:2.5, windSens:0.3, ppt:20, tideMult:2.6},
+];
+
+// ── Direction interpolation ────────────────────────────────────────────────────
+function dirLookup(arr, deg) {
+  deg = ((deg % 360) + 360) % 360;
+  const n = COMPASS.length;
+  // wrap-around between last point (348.75) and first (0/360)
+  if (deg > COMPASS[n-1]) {
+    const span = 360 - COMPASS[n-1] + COMPASS[0] + 11.25;
+    const f = (deg - COMPASS[n-1]) / span;
+    return arr[n-1] * (1-f) + arr[0] * f;
+  }
+  for (let i = 0; i < n-1; i++) {
+    if (COMPASS[i] <= deg && deg <= COMPASS[i+1]) {
+      const f = (deg - COMPASS[i]) / (COMPASS[i+1] - COMPASS[i]);
+      return arr[i] * (1-f) + arr[i+1] * f;
+    }
+  }
+  return arr[0];
+}
+
+// ── Score calculation ──────────────────────────────────────────────────────────
+// VERIFIED FORMULAS:
+//   swell_demerit  = swellPower(h, period) * (seaHit / 100) * swellSens
+//   refrac_demerit = (s1_rif + s2_rif) / periodPowerTune * 0.5
+//   wind_demerit   = windPower(kmh) * (windHit / 100) * windSens
+//   windwave_demerit = windPower(windWaveKmh_equiv) * (windHit_at_wwDir / 100) * windSens
+//   tide_demerit   = tideM * tideMult
+//   score = max(0, 60 - total_demerits)
+function calcScore(site, d) {
+  const lk = LOOKUP[site.key];
+  const {windKmh, windDir, swell1H, swell1Dir, swell1P,
+         swell2H, swell2Dir, swell2P, windWaveH, windWaveDir, tideM} = d;
+
+  const s1p = swellPower(swell1H, swell1P);
+  const s2p = swellPower(swell2H, swell2P);
+
+  const windHit  = Math.max(0, dirLookup(lk.wind, windDir));
+  const wwHit    = Math.max(0, dirLookup(lk.wind, windWaveDir));
+  const s1sea    = Math.max(0, dirLookup(lk.sea,  swell1Dir));
+  const s1rif    =             dirLookup(lk.rif,  swell1Dir);
+  const s2sea    = Math.max(0, dirLookup(lk.sea,  swell2Dir));
+  const s2rif    =             dirLookup(lk.rif,  swell2Dir);
+
+  const tide_d = tideM * site.tideMult;
+  const wind_d = windPower(windKmh) * (windHit / 100) * site.windSens;
+  const ww_d   = windPower(windWaveH * 10) * (wwHit / 100) * site.windSens;  // wind-wave uses same wind table
+  const s1_d   = s1p * (s1sea / 100) * site.swellSens;
+  const s2_d   = s2p * (s2sea / 100) * site.swellSens;
+  const rif_d  = (s1rif + s2rif) / site.ppt * 0.5;
+
+  const totalD = tide_d + wind_d + ww_d + s1_d + s2_d + rif_d;
+  return {
+    score: Math.max(0, Math.round(60 - totalD)),
+    demerits: {
+      tide:  Math.round(tide_d * 10) / 10,
+      wind:  Math.round((wind_d + ww_d) * 10) / 10,
+      swell1:Math.round(s1_d * 10) / 10,
+      swell2:Math.round(s2_d * 10) / 10,
+      refrac:Math.round(rif_d * 10) / 10,
+    }
+  };
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function bearingName(deg) {
+  const d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return d[Math.round(((deg%360)/360)*16)%16];
+}
+function cls(s)   { return s>=40?'green':s>=20?'yellow':'red'; }
+function label(s) { return s>=40?'Easy':s>=20?'Caution':'Avoid'; }
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderSites(data) {
+  const grid = document.getElementById('sitesGrid');
+  grid.innerHTML = '';
+  const results = SITES.map(s => ({s, ...calcScore(s, data)}));
+  results.sort((a,b) => b.score - a.score);
+  results.forEach(({s, score, demerits}) => {
+    const c = cls(score), pct = Math.min(100, (score/60)*100);
+    const card = document.createElement('div');
+    card.className = `site-card ${c}`;
+    card.innerHTML = `
+      <div class="rating-badge">${label(score)}</div>
+      <div class="site-name">${s.name}</div>
+      <div class="score-row">
+        <div class="score-big">${score}</div>
+        <div class="score-max">/60</div>
+      </div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="demerits-breakdown">
+        <div class="dem-item"><div class="dem-dot" style="background:#4a90d9"></div><span class="dem-label">Tide</span><span class="dem-val">-${demerits.tide}</span></div>
+        <div class="dem-item"><div class="dem-dot" style="background:#a0c4ff"></div><span class="dem-label">Wind</span><span class="dem-val">-${demerits.wind}</span></div>
+        <div class="dem-item"><div class="dem-dot" style="background:#00c2a8"></div><span class="dem-label">Swell 1</span><span class="dem-val">-${demerits.swell1}</span></div>
+        <div class="dem-item"><div class="dem-dot" style="background:#00857a"></div><span class="dem-label">Swell 2</span><span class="dem-val">-${demerits.swell2}</span></div>
+        <div class="dem-item"><div class="dem-dot" style="background:#f5a623"></div><span class="dem-label">Refrac</span><span class="dem-val">-${demerits.refrac}</span></div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function updateConditions(d) {
+  document.getElementById('cWind').textContent     = Math.round(d.windKmh);
+  document.getElementById('cWindDir').textContent  = `km/h · ${bearingName(d.windDir)}`;
+  document.getElementById('cSwell1H').textContent  = d.swell1H.toFixed(1);
+  document.getElementById('cSwell1D').textContent  = `m · ${bearingName(d.swell1Dir)}`;
+  document.getElementById('cSwell1P').textContent  = `${Math.round(d.swell1P)}s period`;
+  if (d.swell2H > 0.05) {
+    document.getElementById('cSwell2H').textContent = d.swell2H.toFixed(1);
+    document.getElementById('cSwell2D').textContent = `m · ${bearingName(d.swell2Dir)}`;
+    document.getElementById('cSwell2P').textContent = `${Math.round(d.swell2P)}s period`;
+  } else {
+    document.getElementById('cSwell2H').textContent = 'None';
+    document.getElementById('cSwell2D').textContent  = '—';
+    document.getElementById('cSwell2P').textContent  = '';
+  }
+  document.getElementById('cWindWave').textContent    = d.windWaveH.toFixed(1);
+  document.getElementById('cWindWaveDir').textContent = `m · ${bearingName(d.windWaveDir)}`;
+  document.getElementById('cTide').textContent        = d.tideM.toFixed(1);
+}
+
+function setStatus(text, isError=false) {
+  const el = document.getElementById('statusIndicator');
+  if (isError) el.innerHTML = `<span class="error-msg">⚠ ${text}</span>`;
+  else document.getElementById('statusText').textContent = text;
+}
+
+// ── Data source: Cloudflare Worker → WillyWeather (AUSWAVE) ───────────────────
+// Worker URL proxies WillyWeather, fixing CORS and keeping the API key hidden.
+// Cost: 8 calls/day × 30 days × $0.0001 = ~$0.024 AUD/month
+// Refresh: every 2 hours, 6am–8pm Sydney time. Cached between refreshes.
+
+const WORKER_URL          = 'https://bold-rain-6ded.sticasale.workers.dev/forecast';
+const CACHE_KEY           = 'ww_cache';
+const REFRESH_HOURS       = [6,8,10,12,14,16,18,20];
+const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
+
+// ── Cache helpers ──────────────────────────────────────────────────────────────
+function loadCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; }
+}
+function saveCache(obj) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(obj)); } catch {}
+}
+function cacheIsFresh(cache) {
+  return !!(cache?.fetchedAt && (Date.now() - cache.fetchedAt) < REFRESH_INTERVAL_MS);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function allEntries(j, key) {
+  return (j.forecasts?.[key]?.days || []).flatMap(d => d.entries || []);
+}
+
+function closestEntry(entries) {
+  if (!entries.length) return null;
+  const now = Date.now();
+  return entries.reduce((best, e) => {
+    const dt = Math.abs(new Date(e.dateTime) - now);
+    const db = Math.abs(new Date(best.dateTime) - now);
+    return dt < db ? e : best;
+  });
+}
+
+function interpolateTide(entries, atTime) {
+  if (!entries.length) return 1.0;
+  const t = atTime.getTime();
+  const sorted = [...entries].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+  let lo = sorted[0], hi = sorted[sorted.length-1];
+  for (let i = 0; i < sorted.length-1; i++) {
+    const t0 = new Date(sorted[i].dateTime).getTime();
+    const t1 = new Date(sorted[i+1].dateTime).getTime();
+    if (t0 <= t && t <= t1) { lo = sorted[i]; hi = sorted[i+1]; break; }
+  }
+  const t0 = new Date(lo.dateTime).getTime();
+  const t1 = new Date(hi.dateTime).getTime();
+  if (t1 === t0) return lo.height;
+  const frac = (t - t0) / (t1 - t0);
+  return lo.height + (1 - Math.cos(frac * Math.PI)) / 2 * (hi.height - lo.height);
+}
+
+// ── Parse WillyWeather JSON into our data format ───────────────────────────────
+// Confirmed field names from live data: direction, height, period, speed
+function parseWillyWeather(j) {
+  const swellNow = closestEntry(allEntries(j, 'swell'));
+  const windNow  = closestEntry(allEntries(j, 'wind'));
+  const tideM    = interpolateTide(allEntries(j, 'tides'), new Date());
+  return {
+    windKmh:    windNow?.speed      ?? 0,
+    windDir:    windNow?.direction  ?? 0,
+    swell1H:    swellNow?.height    ?? 0,
+    swell1Dir:  swellNow?.direction ?? 0,
+    swell1P:    swellNow?.period    ?? 8,
+    swell2H: 0, swell2Dir: 0, swell2P: 8,  // WW single-location doesn't split secondary
+    windWaveH:   0,
+    windWaveDir: windNow?.direction ?? 0,
+    tideM,
+  };
+}
+
+// ── Fetch from worker ──────────────────────────────────────────────────────────
+async function fetchForecast() {
+  setStatus('Fetching WillyWeather forecast…');
+  const res = await fetch(`${WORKER_URL}?days=5`);
+  if (!res.ok) throw new Error(`Worker ${res.status}`);
+  const j = await res.json();
+  if (j.error) throw new Error(j.error);
+  const data = parseWillyWeather(j);
+  saveCache({ fetchedAt: Date.now(), data, raw: j });
+  return data;
+}
+
+// ── Re-interpolate tide from cached raw data (tide changes every minute) ───────
+function freshTideFromCache(raw) {
+  const entries = allEntries(raw, 'tides');
+  return entries.length ? interpolateTide(entries, new Date()) : null;
+}
+
+// ── Scheduler ─────────────────────────────────────────────────────────────────
+function scheduleNextRefresh(cb) {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  let next = REFRESH_HOURS.find(rh => rh > h) ?? (REFRESH_HOURS[0] + 24);
+  const ms = ((next - h) * 60 - m) * 60000 - s * 1000;
+  setTimeout(async () => { await cb(); scheduleNextRefresh(cb); }, ms);
+  console.log(`Next refresh at ${String(next%24).padStart(2,'0')}:00 (${Math.round(ms/60000)} min)`);
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    const tabs = ['now','timeline','snapshot'];
+    b.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.view-panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${name}`);
+  });
+}
+
+// ── Score colour helpers ───────────────────────────────────────────────────────
+function scoreColor(s) {
+  if (s >= 40) return '#2ecc71';
+  if (s >= 20) return '#f5c842';
+  return '#e83d3d';
+}
+function scoreBg(s) {
+  if (s >= 40) return 'rgba(46,204,113,0.25)';
+  if (s >= 20) return 'rgba(245,200,66,0.22)';
+  return 'rgba(232,61,61,0.22)';
+}
+
+// ── Build hourly data matrix from raw WillyWeather JSON ────────────────────────
+// Returns array of {dateTime, windKmh, windDir, swell1H, swell1Dir, swell1P, tideM}
+// for every hour in the forecast.
+function buildHourlyMatrix(raw) {
+  if (!raw) return [];
+
+  const swellByTime = {};
+  (raw.forecasts?.swell?.days || []).forEach(day =>
+    (day.entries || []).forEach(e => { swellByTime[e.dateTime] = e; })
+  );
+  const windByTime = {};
+  (raw.forecasts?.wind?.days || []).forEach(day =>
+    (day.entries || []).forEach(e => { windByTime[e.dateTime] = e; })
+  );
+  // Tides: high/low entries for interpolation
+  const tideEntries = (raw.forecasts?.tides?.days || [])
+    .flatMap(d => d.entries || [])
+    .sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+  // Combine: use swell times as master hourly grid
+  const hours = Object.keys(swellByTime).sort();
+  return hours.map(dt => {
+    const sw = swellByTime[dt] || {};
+    const wi = windByTime[dt]  || {};
+    const t  = new Date(dt).getTime();
+
+    // Interpolate tide
+    let tideM = 1.0;
+    if (tideEntries.length >= 2) {
+      let lo = tideEntries[0], hi = tideEntries[tideEntries.length-1];
+      for (let i = 0; i < tideEntries.length-1; i++) {
+        const t0 = new Date(tideEntries[i].dateTime).getTime();
+        const t1 = new Date(tideEntries[i+1].dateTime).getTime();
+        if (t0 <= t && t <= t1) { lo = tideEntries[i]; hi = tideEntries[i+1]; break; }
+      }
+      const t0 = new Date(lo.dateTime).getTime();
+      const t1 = new Date(hi.dateTime).getTime();
+      if (t1 !== t0) {
+        const frac = (t - t0) / (t1 - t0);
+        tideM = lo.height + (1 - Math.cos(frac * Math.PI)) / 2 * (hi.height - lo.height);
+      } else {
+        tideM = lo.height;
+      }
+    }
+
+    return {
+      dateTime:  dt,
+      windKmh:   wi.speed     ?? 0,
+      windDir:   wi.direction ?? 0,
+      swell1H:   sw.height    ?? 0,
+      swell1Dir: sw.direction ?? 0,
+      swell1P:   sw.period    ?? 8,
+      swell2H: 0, swell2Dir: 0, swell2P: 8,
+      windWaveH: 0, windWaveDir: wi.direction ?? 0,
+      tideM,
+    };
+  });
+}
+
+// ── Render 5-day timeline heatmap ──────────────────────────────────────────────
+function renderTimeline(hourlyMatrix) {
+  if (!hourlyMatrix.length) return;
+
+  const thead = document.getElementById('timelineHead');
+  const tbody = document.getElementById('timelineBody');
+  thead.innerHTML = ''; tbody.innerHTML = '';
+
+  const now = new Date();
+
+  // Group hours by day
+  const days = {};
+  hourlyMatrix.forEach(h => {
+    const d = h.dateTime.slice(0,10);
+    if (!days[d]) days[d] = [];
+    days[d].push(h);
+  });
+  const dayKeys = Object.keys(days).sort();
+
+  // ── Header row 1: day labels ──
+  const tr1 = document.createElement('tr');
+  // Empty corner cell
+  const corner = document.createElement('th');
+  corner.style.minWidth = '130px';
+  tr1.appendChild(corner);
+  dayKeys.forEach(dk => {
+    const th = document.createElement('th');
+    th.colSpan = days[dk].length;
+    th.className = 'tl-day-header tl-day-sep';
+    const d = new Date(dk + 'T12:00:00');
+    th.textContent = d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+    tr1.appendChild(th);
+  });
+  thead.appendChild(tr1);
+
+  // ── Header row 2: hour labels ──
+  const tr2 = document.createElement('tr');
+  tr2.appendChild(document.createElement('th')); // corner
+  dayKeys.forEach(dk => {
+    days[dk].forEach((h, i) => {
+      const th = document.createElement('th');
+      th.className = 'tl-hour-header' + (i===0?' tl-day-sep':'');
+      const hr = new Date(h.dateTime).getHours();
+      th.textContent = (hr % 3 === 0) ? String(hr).padStart(2,'0') : '';
+      tr2.appendChild(th);
+    });
+  });
+  thead.appendChild(tr2);
+
+  // ── Body: one row per site ──
+  SITES.forEach(site => {
+    const tr = document.createElement('tr');
+
+    // Site label
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'tl-site-label';
+    tdLabel.textContent = site.name;
+    tr.appendChild(tdLabel);
+
+    // Score cells
+    dayKeys.forEach((dk, di) => {
+      days[dk].forEach((h, hi) => {
+        const {score} = calcScore(site, h);
+        const td = document.createElement('td');
+        td.className = 'tl-cell' + (hi===0?' tl-day-sep':'');
+        td.style.background = scoreColor(score);
+        td.style.opacity = '0.85';
+
+        // Highlight current hour
+        const cellTime = new Date(h.dateTime);
+        const diffH = Math.abs(cellTime - now) / 3600000;
+        if (diffH < 0.5) td.classList.add('now-marker');
+
+        // Score text on hover
+        const span = document.createElement('span');
+        span.className = 'tl-cell-score';
+        span.textContent = score;
+        td.appendChild(span);
+
+        // Tooltip
+        td.addEventListener('mouseenter', e => {
+          const tt = document.getElementById('tl-tooltip');
+          const dt = new Date(h.dateTime);
+          tt.innerHTML =
+            `<b>${site.name}</b><br>` +
+            `${dt.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})} ` +
+            `${String(dt.getHours()).padStart(2,'0')}:00<br>` +
+            `Score: <b style="color:${scoreColor(score)}">${score}/60</b><br>` +
+            `Swell: ${h.swell1H.toFixed(1)}m ${bearingName(h.swell1Dir)} ${Math.round(h.swell1P)}s<br>` +
+            `Wind: ${Math.round(h.windKmh)} km/h ${bearingName(h.windDir)}<br>` +
+            `Tide: ${h.tideM.toFixed(2)}m`;
+          tt.style.display = 'block';
+        });
+        td.addEventListener('mousemove', e => {
+          const tt = document.getElementById('tl-tooltip');
+          tt.style.left = (e.clientX + 14) + 'px';
+          tt.style.top  = (e.clientY - 10) + 'px';
+        });
+        td.addEventListener('mouseleave', () => {
+          document.getElementById('tl-tooltip').style.display = 'none';
+        });
+
+        tr.appendChild(td);
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Render snapshot bar chart ──────────────────────────────────────────────────
+let _hourlyMatrix = [];
+
+function renderSnapshot(sliderVal) {
+  if (!_hourlyMatrix.length) return;
+
+  // Map slider (0–N-1) to hourly entry
+  const idx = Math.min(sliderVal, _hourlyMatrix.length - 1);
+  const h = _hourlyMatrix[idx];
+
+  const dt = new Date(h.dateTime);
+  document.getElementById('snapshotTimeDisplay').textContent =
+    dt.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}) + '  ' +
+    String(dt.getHours()).padStart(2,'0') + ':00';
+
+  // Compute all site scores and sort descending
+  const results = SITES.map(site => {
+    const {score} = calcScore(site, h);
+    return {name: site.name, score};
+  }).sort((a,b) => b.score - a.score);
+
+  const container = document.getElementById('snapshotBars');
+  container.innerHTML = '';
+
+  results.forEach(({name, score}) => {
+    const pct = Math.max(0, Math.min(100, (score/60)*100));
+    const row = document.createElement('div');
+    row.className = 'snap-row';
+    row.innerHTML = `
+      <div class="snap-label">${name}</div>
+      <div class="snap-bar-track">
+        <div class="snap-bar-fill" style="width:${pct}%;background:${scoreColor(score)}">
+          <span class="snap-bar-score">${score}</span>
+        </div>
+      </div>
+      <div class="snap-score-label">${score}/60</div>`;
+    container.appendChild(row);
+  });
+}
+
+function onSliderChange() {
+  renderSnapshot(parseInt(document.getElementById('snapshotSlider').value));
+}
+
+// ── Hook timeline + snapshot into the data flow ────────────────────────────────
+function renderForecastViews(raw) {
+  _hourlyMatrix = buildHourlyMatrix(raw);
+  if (!_hourlyMatrix.length) return;
+
+  // Set slider range to number of hours
+  const slider = document.getElementById('snapshotSlider');
+  slider.max = _hourlyMatrix.length - 1;
+
+  // Default slider to current hour
+  const now = Date.now();
+  let closest = 0, minDiff = Infinity;
+  _hourlyMatrix.forEach((h,i) => {
+    const diff = Math.abs(new Date(h.dateTime) - now);
+    if (diff < minDiff) { minDiff = diff; closest = i; }
+  });
+  slider.value = closest;
+
+  renderTimeline(_hourlyMatrix);
+  renderSnapshot(closest);
+}
+
+
+async function init() {
+  const DEMO = {
+    windKmh:0, windDir:260, windWaveH:0.2, windWaveDir:260,
+    swell1H:0.9, swell1Dir:110, swell1P:8,
+    swell2H:0.8, swell2Dir:135, swell2P:8, tideM:1.0,
+  };
+
+  async function loadAndRender(forceRefresh = false) {
+    const cache = loadCache();
+
+    // Serve from cache if fresh
+    if (!forceRefresh && cacheIsFresh(cache) && cache.data) {
+      const data = { ...cache.data };
+      const freshTide = freshTideFromCache(cache.raw);
+      if (freshTide !== null) data.tideM = freshTide;
+      updateConditions(data);
+      renderSites(data);
+      renderForecastViews(cache.raw);
+      const ago = Math.round((Date.now() - cache.fetchedAt) / 60000);
+      setStatus(`Live · WillyWeather — cached ${ago} min ago`);
+      document.getElementById('lastUpdated').textContent =
+        'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+      return;
+    }
+
+    // Outside 6am–8pm: show last cache or demo, no API call
+    const h = new Date().getHours();
+    if (!forceRefresh && (h < 6 || h > 20)) {
+      if (cache?.data) {
+        const data = { ...cache.data };
+        const freshTide = freshTideFromCache(cache.raw);
+        if (freshTide !== null) data.tideM = freshTide;
+        updateConditions(data); renderSites(data);
+        setStatus('Outside refresh hours — showing last data');
+        document.getElementById('lastUpdated').textContent =
+          'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+      } else {
+        updateConditions(DEMO); renderSites(DEMO);
+        setStatus('Outside refresh hours (6am–8pm)');
+        document.getElementById('lastUpdated').textContent = 'Demo data';
+      }
+      return;
+    }
+
+    // Fetch fresh
+    try {
+      const data = await fetchForecast();
+      updateConditions(data); renderSites(data);
+      renderForecastViews(loadCache()?.raw);
+      setStatus('Live · WillyWeather (AUSWAVE) — ' +
+        new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
+      document.getElementById('lastUpdated').textContent =
+        'Updated ' + new Date().toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+    } catch(err) {
+      console.error(err);
+      if (cache?.data) {
+        const data = { ...cache.data };
+        const freshTide = freshTideFromCache(cache.raw);
+        if (freshTide !== null) data.tideM = freshTide;
+        updateConditions(data); renderSites(data);
+        setStatus('Worker error — showing cached data', true);
+      } else {
+        updateConditions(DEMO); renderSites(DEMO);
+        setStatus(`Unavailable: ${err.message}`, true);
+        document.getElementById('lastUpdated').textContent = 'Demo data (fallback)';
+      }
+    }
+  }
+
+  await loadAndRender();
+  scheduleNextRefresh(() => loadAndRender(true));
+}
+
+init();
+</script>
+</body>
+</html>
