@@ -94,6 +94,41 @@
   }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.6)} }
   .error-msg { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); }
+  .error-banner {
+    display:none;
+    background:rgba(232,61,61,0.12);
+    border:1px solid rgba(232,61,61,0.4);
+    border-radius:10px;
+    padding:16px 20px;
+    margin-bottom:20px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    color:#ff8080;
+    line-height:1.6;
+  }
+  .error-banner strong {
+    font-size:14px;
+    color:var(--red);
+    display:block;
+    margin-bottom:6px;
+    letter-spacing:0.5px;
+  }
+  .error-banner .retry-btn {
+    display:inline-block;
+    margin-top:12px;
+    padding:8px 20px;
+    background:var(--teal);
+    color:#000;
+    border:none;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    cursor:pointer;
+    font-weight:700;
+  }
+  .error-banner .retry-btn:active { opacity:0.75; }
 
   .legend { display:flex; gap:20px; margin-bottom:18px; flex-wrap:wrap; }
   .legend-item { display:flex; align-items:center; gap:7px; font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
@@ -309,6 +344,13 @@
       <div class="last-updated" id="lastUpdated">Loading…</div>
     </div>
   </header>
+
+  <div class="error-banner" id="errorBanner">
+    <strong>⚠ Could not load forecast data</strong>
+    <span id="errorDetail">The forecast server did not respond.</span>
+    <br>
+    <button class="retry-btn" onclick="retryLoad()">↺ Try Again</button>
+  </div>
 
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Easy (40–60)</div>
@@ -620,7 +662,7 @@ function setStatus(text, isError=false) {
 
 const WORKER_URL          = 'https://bold-rain-6ded.sticasale.workers.dev/forecast';
 const CACHE_KEY           = 'ww_cache';
-const REFRESH_HOURS       = [6,8,10,12,14,16,18,20];
+const REFRESH_HOURS       = [0,2,4,6,8,10,12,14,16,18,20,22];
 const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
 // ── Cache helpers ──────────────────────────────────────────────────────────────
@@ -684,16 +726,43 @@ function parseWillyWeather(j) {
   };
 }
 
-// ── Fetch from worker ──────────────────────────────────────────────────────────
+// ── Fetch from worker with retry + timeout ────────────────────────────────────
+const FETCH_TIMEOUT_MS = 10000; // 10s per attempt
+const MAX_RETRIES      = 3;
+
+async function fetchOnce() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${WORKER_URL}?days=5`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const j = await res.json();
+    if (j.error) throw new Error(j.detail || j.error);
+    return j;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e.name === 'AbortError' ? new Error('Request timed out') : e;
+  }
+}
+
 async function fetchForecast() {
-  setStatus('Fetching WillyWeather forecast…');
-  const res = await fetch(`${WORKER_URL}?days=5`);
-  if (!res.ok) throw new Error(`Worker ${res.status}`);
-  const j = await res.json();
-  if (j.error) throw new Error(j.error);
-  const data = parseWillyWeather(j);
-  saveCache({ fetchedAt: Date.now(), data, raw: j });
-  return data;
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt === 1) setStatus('Fetching forecast…');
+      else               setStatus(`Retrying… (attempt ${attempt} of ${MAX_RETRIES})`);
+      const j      = await fetchOnce();
+      const data   = parseWillyWeather(j);
+      const matrix = buildHourlyMatrix(j);
+      saveCache({ fetchedAt: Date.now(), data, matrix });
+      return data;
+    } catch(e) {
+      lastErr = e;
+      if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw lastErr;
 }
 
 // ── Re-interpolate tide from cached raw data (tide changes every minute) ───────
@@ -956,6 +1025,25 @@ function onSliderChange() {
 }
 
 // ── Hook timeline + snapshot into the data flow ────────────────────────────────
+function renderForecastViewsFromMatrix(matrix) {
+  _hourlyMatrix = matrix;
+  if (!_hourlyMatrix.length) return;
+
+  const slider = document.getElementById('snapshotSlider');
+  slider.max = _hourlyMatrix.length - 1;
+
+  const now = Date.now();
+  let closest = 0, minDiff = Infinity;
+  _hourlyMatrix.forEach((h,i) => {
+    const diff = Math.abs(new Date(h.dateTime) - now);
+    if (diff < minDiff) { minDiff = diff; closest = i; }
+  });
+  slider.value = closest;
+
+  renderTimeline(_hourlyMatrix);
+  renderSnapshot(closest);
+}
+
 function renderForecastViews(raw) {
   _hourlyMatrix = buildHourlyMatrix(raw);
   if (!_hourlyMatrix.length) return;
@@ -978,6 +1066,23 @@ function renderForecastViews(raw) {
 }
 
 
+// ── Error banner helpers ───────────────────────────────────────────────────────
+function showErrorBanner(msg) {
+  const b = document.getElementById('errorBanner');
+  document.getElementById('errorDetail').textContent =
+    msg || 'The forecast server did not respond after 3 attempts.';
+  b.style.display = 'block';
+}
+function hideErrorBanner() {
+  document.getElementById('errorBanner').style.display = 'none';
+}
+
+let _retryFn = null;
+function retryLoad() {
+  hideErrorBanner();
+  if (_retryFn) _retryFn();
+}
+
 async function init() {
   const DEMO = {
     windKmh:0, windDir:260, windWaveH:0.2, windWaveDir:260,
@@ -990,12 +1095,9 @@ async function init() {
 
     // Serve from cache if fresh
     if (!forceRefresh && cacheIsFresh(cache) && cache.data) {
-      const data = { ...cache.data };
-      const freshTide = freshTideFromCache(cache.raw);
-      if (freshTide !== null) data.tideM = freshTide;
-      updateConditions(data);
-      renderSites(data);
-      renderForecastViews(cache.raw);
+      updateConditions(cache.data);
+      renderSites(cache.data);
+      if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix);
       const ago = Math.round((Date.now() - cache.fetchedAt) / 60000);
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
@@ -1003,50 +1105,35 @@ async function init() {
       return;
     }
 
-    // Outside 6am–8pm: show last cache or demo, no API call
-    const h = new Date().getHours();
-    if (!forceRefresh && (h < 6 || h > 20)) {
-      if (cache?.data) {
-        const data = { ...cache.data };
-        const freshTide = freshTideFromCache(cache.raw);
-        if (freshTide !== null) data.tideM = freshTide;
-        updateConditions(data); renderSites(data);
-        setStatus('Outside refresh hours — showing last data');
-        document.getElementById('lastUpdated').textContent =
-          'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
-      } else {
-        updateConditions(DEMO); renderSites(DEMO);
-        setStatus('Outside refresh hours (6am–8pm)');
-        document.getElementById('lastUpdated').textContent = 'Demo data';
-      }
-      return;
-    }
-
     // Fetch fresh
     try {
       const data = await fetchForecast();
+      hideErrorBanner();
       updateConditions(data); renderSites(data);
-      renderForecastViews(loadCache()?.raw);
+      const matrix = loadCache()?.matrix || [];
+      if (matrix.length) renderForecastViewsFromMatrix(matrix);
       setStatus('Live · WillyWeather (AUSWAVE) — ' +
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
     } catch(err) {
       console.error(err);
+      showErrorBanner(err.message);
       if (cache?.data) {
-        const data = { ...cache.data };
-        const freshTide = freshTideFromCache(cache.raw);
-        if (freshTide !== null) data.tideM = freshTide;
-        updateConditions(data); renderSites(data);
-        setStatus('Worker error — showing cached data', true);
+        updateConditions(cache.data); renderSites(cache.data);
+        if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix);
+        setStatus('⚠ Showing cached data — live fetch failed', true);
+        document.getElementById('lastUpdated').textContent =
+          'Cached · ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
       } else {
         updateConditions(DEMO); renderSites(DEMO);
-        setStatus(`Unavailable: ${err.message}`, true);
+        setStatus('⚠ No data available — showing demo', true);
         document.getElementById('lastUpdated').textContent = 'Demo data (fallback)';
       }
     }
   }
 
+  _retryFn = () => loadAndRender(true);
   await loadAndRender();
   scheduleNextRefresh(() => loadAndRender(true));
 }
