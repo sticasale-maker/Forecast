@@ -478,40 +478,40 @@ const LOOKUP = {
 
 // Site definitions: swellSens, spm (period multiplier), tide(other, tideM)
 const SITES = [
-  {key:'CTB',        name:'CTB Bower Lane',  swellSens:1.4, spm:4,
+  {key:'CTB',        name:'CTB Bower Lane',  swellSens:1.4, spm:3.24,
    tide:(o,t)=>o*(t-0.2)},
-  {key:'BIW',        name:'BI West',          swellSens:1.4, spm:5,
+  {key:'BIW',        name:'BI West',          swellSens:1.4, spm:4.05,
    tide:(o,t)=>o*(0.2941*t-0.0588)+(t>1.5?(t-1.5)*16:0)},
-  {key:'BIE',        name:'BI East',          swellSens:1.6, spm:5,
+  {key:'BIE',        name:'BI East',          swellSens:1.6, spm:4.05,
    tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Steps',      name:'Leaps & Steps',    swellSens:1.6, spm:10,
+  {key:'Steps',      name:'Leaps & Steps',    swellSens:1.6, spm:8.1,
    tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Monument',   name:'Monument',         swellSens:1.6, spm:5,
+  {key:'Monument',   name:'Monument',         swellSens:1.6, spm:4.05,
    tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Chowder',    name:'Chowder Bay',      swellSens:0.8, spm:4,
+  {key:'Chowder',    name:'Chowder Bay',      swellSens:0.8, spm:3.24,
    tide:(o,t)=>0},
-  {key:'CampCove',   name:'Camp Cove',        swellSens:0.8, spm:4,
+  {key:'CampCove',   name:'Camp Cove',        swellSens:0.8, spm:3.24,
    tide:(o,t)=>0},
-  {key:'Fairlight',  name:'Fairlight',        swellSens:1.0, spm:4,
+  {key:'Fairlight',  name:'Fairlight',        swellSens:1.0, spm:3.24,
    tide:(o,t)=>0},
-  {key:'Gordons',    name:"Gordon's Bay",     swellSens:2.2, spm:4,
+  {key:'Gordons',    name:"Gordon's Bay",    swellSens:2.2, spm:3.24,
    tide:(o,t)=>0},
-  {key:'Freshwater', name:'Freshwater',       swellSens:1.2, spm:4,
+  {key:'Freshwater', name:'Freshwater',       swellSens:1.2, spm:3.24,
    tide:(o,t)=>0},
-  {key:'SharkPoint', name:'Shark Point',      swellSens:1.8, spm:4,
+  {key:'SharkPoint', name:'Shark Point',      swellSens:1.8, spm:3.24,
    tide:(o,t)=>t>1.3?30:t<0.9?0:t*75-67.5},
-  {key:'LittleBay',  name:'Little Bay',       swellSens:0.3, spm:4,
+  {key:'LittleBay',  name:'Little Bay',       swellSens:0.3, spm:3.24,
    tide:(o,t)=>o*(1.66*t-0.34)},
-  {key:'Oak',        name:'Oak Park',         swellSens:2.5, spm:5,
+  {key:'Oak',        name:'Oak Park',         swellSens:2.5, spm:4.05,
    tide:(o,t)=>o*(0.166*t-0.034)},
 ];
 
 // Score formula (matches spreadsheet exactly):
-//   swellPower  = h² × period^1.1
-//   s_demerit   = swellPower × seaHit/100 × swellSens
-//   rif_demerit = (rif1×p1×spm + rif2×p2×spm) / 1000
+//   swellPower   = h² × period^1.1
+//   s_demerit    = swellPower × seaHit/100 × swellSens
+//   rif_demerit  = (rif1×p1×spm + rif2×p2×spm) / 1000
 //   wind_demerit = windPower(kmh) × windHit/100 × 0.3
-//   tide_demerit = site.tide(other_demerits, tideM)
+//   tide_demerit = site.tide(swell_demerits_only, tideM)  ← wind excluded from tide base
 //   score = max(0, round(60 − total))
 function calcScore(site, d) {
   const lk = LOOKUP[site.key];
@@ -528,15 +528,17 @@ function calcScore(site, d) {
   const s2sea   = Math.max(0, dirLookup(lk.sea,  swell2Dir));
   const s2rif   =             dirLookup(lk.rif,  swell2Dir);
 
-  const wind_d = windPower(windKmh)       * (windHit/100) * 0.3;
-  const ww_d   = windPower(windWaveH * 10) * (wwHit/100)  * 0.3;
-  const s1_d   = s1p * (s1sea/100) * site.swellSens;
-  const s2_d   = s2p * (s2sea/100) * site.swellSens;
-  const rif_d  = (s1rif * s1p * site.spm + s2rif * s2p * site.spm) / 1000;
+  const wind_d  = windPower(windKmh)       * (windHit/100) * 0.3;
+  const ww_d    = windPower(windWaveH * 10) * (wwHit/100)  * 0.3;
+  const s1_d    = s1p * (s1sea/100) * site.swellSens;
+  const s2_d    = s2p * (s2sea/100) * site.swellSens;
+  const rif_d   = (s1rif * s1p * site.spm + s2rif * s2p * site.spm) / 1000;
 
-  const other  = wind_d + ww_d + s1_d + s2_d + rif_d;
-  const tide_d = site.tide(other, tideM);
-  const totalD = other + tide_d;
+  // Tide formula is based on swell-related demerits only (not wind/windwave)
+  const swell_other = s1_d + s2_d + rif_d;
+  const other   = wind_d + ww_d + swell_other;
+  const tide_d  = site.tide(swell_other, tideM);
+  const totalD  = other + tide_d;
 
   return {
     score: Math.max(0, Math.round(60 - totalD)),
