@@ -950,7 +950,7 @@ function parseWillyWeather(j) {
 // WillyWeather only provides primary swell. Open-Meteo AUSWAVE provides all components.
 // Free, no API key, updates every 6 hours. Cached 6 hours separately from WW cache.
 
-const OPENMETEO_CACHE_KEY = 'om_marine_cache';
+const OPENMETEO_CACHE_KEY = 'om_marine_cache_v2';
 const OPENMETEO_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const OPENMETEO_LAT       = -33.8882;
 const OPENMETEO_LNG       = 151.29166;
@@ -1065,8 +1065,12 @@ function mergeOpenMeteoIntoData(data, omData) {
     const now = Date.now();
     let closest = null, minDiff = Infinity;
     Object.entries(omData.hourly).forEach(([dt, vals]) => {
-      const diff = Math.abs(new Date(dt).getTime() - now);
-      if (diff < minDiff && vals.windWaveP > 0) { minDiff = diff; closest = vals; }
+      if (!vals.windWaveP) return;
+      // OM datetime format: "2026-06-02T14:00" — parse safely
+      const ts = Date.parse(dt.length === 16 ? dt + ':00' : dt);
+      if (isNaN(ts)) return;
+      const diff = Math.abs(ts - now);
+      if (diff < minDiff) { minDiff = diff; closest = vals; }
     });
     if (closest) windWaveP = closest.windWaveP;
   }
@@ -1566,7 +1570,7 @@ async function init() {
 }
 
 // ── Score validation against Google Sheet ─────────────────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhxpkRQ-CBWa7fli9JWBonlGA63Xv88Hp5NFm2MQGP7qvKvGftY8FJJiVmbgXQF2pj/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjXf1-qI_zYDu6CkxYtr6oTjPTXwIjUci3hBrgHa2UJUCCqYV5eQB3BduVpB0OtG1F/exec';
 
 // Map sheet site name strings → app site keys
 const SHEET_NAME_MAP = {
@@ -1635,6 +1639,7 @@ async function validateScores(data) {
       windKmh:     Math.round(data.windKmh),
       windWaveDir: Math.round(data.windWaveDir),
       windWaveH:   data.windWaveH,
+      windWaveP:   Math.round(data.windWaveP || 0),
       swellDir:    Math.round(data.swell1Dir),
       swellH:      data.swell1H,
       swellP:      Math.round(data.swell1P),
@@ -1706,7 +1711,7 @@ async function validateScores(data) {
       badge.className   = 'warn';
     }
 
-    const inputSummary = `Tide ${data.tideM}m · Wind ${data.windDir}° ${data.windKmh}km/h · WW ${data.windWaveDir}° ${data.windWaveH}m · Swell ${data.swell1Dir}° ${data.swell1H}m ${data.swell1P}s · Swell2 ${data.swell2Dir}° ${data.swell2H}m ${data.swell2P}s`;
+    const inputSummary = `Tide ${data.tideM}m · Wind ${data.windDir}° ${data.windKmh}km/h · WW ${data.windWaveDir}° ${data.windWaveH}m ${data.windWaveP||0}s · Swell ${data.swell1Dir}° ${data.swell1H}m ${data.swell1P}s · Swell2 ${data.swell2Dir}° ${data.swell2H}m ${data.swell2P}s`;
     status.textContent = `Validated ${new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} · ${inputSummary}`;
 
   } catch(err) {
@@ -1723,6 +1728,7 @@ function hardRefresh() {
   try { localStorage.removeItem('ww_cache'); } catch(e) {}
   try { localStorage.removeItem('viz_config_cache'); } catch(e) {}
   try { localStorage.removeItem('om_marine_cache'); } catch(e) {}
+  try { localStorage.removeItem('om_marine_cache_v2'); } catch(e) {}
   window.location.reload(true);
 }
 
