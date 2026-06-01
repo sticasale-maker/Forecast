@@ -733,7 +733,7 @@ async function loadConfig() {
 
 // Site definitions — tide formulas are fixed (not in the sheet)
 const SITES = [
-  {key:'CTB',        name:'CTB Bower Lane',  tideBase:'swell_rif',
+  {key:'CTB',        name:'CTB Bower Lane',  tideBase:'ww_swell_rif',
    tide:(o,t)=>o*(t-0.2)},
   {key:'BIW',        name:'BI West',          tideBase:'all',
    tide:(o,t)=>o*(0.2941*t-0.0588)+(t>1.5?(t-1.5)*16:0)},
@@ -762,9 +762,10 @@ const SITES = [
 //   s_demerit    = swellPower × seaHit/100 × swellSens        ← swellSens from CONFIG
 //   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = 81/periodPower from CONFIG
 //   wind_demerit = windPower(kmh) × windHit/100 × windSens    ← windHit can be negative (bonus)
+//   windWave_d   = swellPower(wwH, 5) × seaHit(wwDir)/100 × swellSens  ← period hardcoded=5 (sheet A24), uses sea hit + swellSens
 //   tide_demerit = site.tide(tideBase, tideM)                 ← tideBase is per-site:
-//                  'swell_rif' = swell+rif only (CTB)
-//                  'all'       = wind+swell+rif (all others)
+//                  'ww_swell_rif' = windwave+swell+rif (CTB — excludes wind chop only)
+//                  'all'          = wind+windwave+swell+rif (all others with tide formula)
 //   score        = max(0, round(60 − total))
 function calcScore(site, d) {
   const si  = SITE_KEYS_ORDERED.indexOf(site.key);
@@ -780,23 +781,30 @@ function calcScore(site, d) {
   const s2p = swellPower(swell2H, swell2P);
 
   const windHit = dirLookup(lk.wind, windDir);        // negatives kept — sheet uses them as bonuses
-  const wwHit   = dirLookup(lk.wind, windWaveDir);    // negatives kept
+  const wwSeaHit = Math.max(0, dirLookup(lk.sea, windWaveDir)); // wind wave uses sea hit
   const s1sea   = Math.max(0, dirLookup(lk.sea,  swell1Dir));
   const s1rif   =             dirLookup(lk.rif,  swell1Dir);
   const s2sea   = Math.max(0, dirLookup(lk.sea,  swell2Dir));
   const s2rif   =             dirLookup(lk.rif,  swell2Dir);
 
-  const wind_d  = windPower(windKmh)       * (windHit/100) * windSens;
-  const ww_d    = windPower(windWaveH * 10) * (wwHit/100)  * windSens;
+  const wind_d  = windPower(windKmh)                    * (windHit/100)   * windSens;
+  // Wind wave: treated as swell with hardcoded period=5 (per sheet cell A24), uses swellSens
+  const ww_d    = swellPower(windWaveH, 5)              * (wwSeaHit/100)  * swellSens;
   const s1_d    = s1p * (s1sea/100) * swellSens;
   const s2_d    = s2p * (s2sea/100) * swellSens;
   const rif_d   = (s1rif * s1p * spm + s2rif * s2p * spm) / 1000;
 
   // Tide base includes wind + swell + rif (matches sheet formula)
   const swell_rif    = s1_d + s2_d + rif_d;
-  const all_demerits = wind_d + ww_d + swell_rif;
-  // tideBase flag on each site: 'swell_rif' excludes wind, 'all' includes it
-  const tide_base = site.tideBase === 'swell_rif' ? swell_rif : all_demerits;
+  const ww_swell_rif = ww_d + swell_rif;
+  const all_demerits = wind_d + ww_swell_rif;
+  // tideBase flag on each site:
+  //   'swell_rif'    = swell+rif only (excludes wind chop AND wind wave)
+  //   'ww_swell_rif' = windwave+swell+rif (excludes wind chop only) ← CTB
+  //   'all'          = wind+windwave+swell+rif
+  const tide_base = site.tideBase === 'swell_rif'    ? swell_rif
+                  : site.tideBase === 'ww_swell_rif' ? ww_swell_rif
+                  : all_demerits;
   const tide_d  = site.tide(tide_base, tideM);
   const totalD  = all_demerits + tide_d;
 
@@ -1050,6 +1058,19 @@ function guardSwell2(swell1H, swell1Dir, swell2H, swell2Dir, swell2P) {
 function mergeOpenMeteoIntoData(data, omData) {
   if (!omData?.current) return data;
   const c = omData.current;
+
+  // wind_wave_period may be null in current conditions — fall back to closest hourly entry
+  let windWaveP = c.windWaveP || 0;
+  if (!windWaveP && omData.hourly) {
+    const now = Date.now();
+    let closest = null, minDiff = Infinity;
+    Object.entries(omData.hourly).forEach(([dt, vals]) => {
+      const diff = Math.abs(new Date(dt).getTime() - now);
+      if (diff < minDiff && vals.windWaveP > 0) { minDiff = diff; closest = vals; }
+    });
+    if (closest) windWaveP = closest.windWaveP;
+  }
+
   const guarded = guardSwell2(
     data.swell1H, data.swell1Dir,
     c.swell2H || 0, c.swell2Dir || 0, c.swell2P || 8
@@ -1059,7 +1080,7 @@ function mergeOpenMeteoIntoData(data, omData) {
     ...guarded,
     windWaveH:  c.windWaveH  || 0,
     windWaveDir:c.windWaveDir || data.windDir,
-    windWaveP:  c.windWaveP  || 0,
+    windWaveP,
   };
 }
 
@@ -1408,9 +1429,10 @@ function renderSnapshot(sliderVal) {
   if (h.windWaveH > 0) {
     document.getElementById('sWindWaveH').textContent = h.windWaveH.toFixed(1);
     document.getElementById('sWindWaveD').textContent = `m · ${bearingName(h.windWaveDir)} (${Math.round(h.windWaveDir)}°)`;
-    // windWaveP shown if available (informational only — not used in scoring)
+    // windWaveP shown if available (informational only — scoring uses hardcoded period=5)
     const wwp = h.windWaveP ?? 0;
-    document.getElementById('sWindWaveP').textContent = wwp > 0 ? `${Math.round(wwp)}s period` : 'period n/a';
+    document.getElementById('sWindWaveP').textContent = wwp > 0 ? `${Math.round(wwp)}s period` : '';
+    document.getElementById('sWindWaveP').style.display = wwp > 0 ? '' : 'none';
     wwCard.style.display = '';
   } else {
     wwCard.style.display = 'none';
