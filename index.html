@@ -369,41 +369,34 @@
   <!-- View tabs -->
   <div class="view-tabs">
     <button class="tab-btn active" onclick="switchTab('snapshot')">Snapshot</button>
-    <button class="tab-btn" onclick="switchTab('now')">Now</button>
     <button class="tab-btn" onclick="switchTab('timeline')">5-Day Timeline</button>
+    <button class="tab-btn" onclick="switchTab('about')">About</button>
   </div>
 
-  <!-- NOW: existing cards grid -->
-  <div class="view-panel" id="panel-now">
-    <div class="conditions-bar">
-      <div class="cond-card">
-        <div class="cond-label">Wind</div>
-        <div class="cond-value" id="cWind">—</div>
-        <div class="cond-unit"  id="cWindDir">—</div>
-      </div>
-      <div class="cond-card">
-        <div class="cond-label">Swell 1</div>
-        <div class="cond-value" id="cSwell1H">—</div>
-        <div class="cond-unit"  id="cSwell1D">—</div>
-        <div class="cond-sub"   id="cSwell1P">—</div>
-      </div>
-      <div class="cond-card">
-        <div class="cond-label">Tide</div>
-        <div class="cond-value" id="cTide">—</div>
-        <div class="cond-unit">metres</div>
+  <!-- Hidden elements needed by JS (conditions + status + sites grid) -->
+  <div style="display:none">
+    <div id="cWind"></div><div id="cWindDir"></div>
+    <div id="cSwell1H"></div><div id="cSwell1D"></div><div id="cSwell1P"></div>
+    <div id="cTide"></div>
+    <div id="statusIndicator"><span id="statusText"></span></div>
+    <div id="sitesGrid"></div>
+  </div>
+
+  <!-- ABOUT panel -->
+  <div class="view-panel" id="panel-about">
+    <div style="max-width:600px; padding:32px 0;">
+      <div class="section-title">About</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px 36px;backdrop-filter:blur(10px);line-height:1.9;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:#fff;margin-bottom:18px;">VIZ FORECAST APP</div>
+        <p style="color:var(--text);margin-bottom:12px;">Based on a proprietary wave transformation model</p>
+        <p style="color:var(--text-dim);margin-bottom:4px;">© Marco Bordieri - VIZ Group</p>
+        <p style="color:var(--text-dim);margin-bottom:4px;">By Divers For Divers, June 2026</p>
+        <p style="color:var(--text-dim);margin-bottom:18px;">Creative Commons License: BY NC ND</p>
+        <p style="color:var(--teal);font-family:'DM Mono',monospace;font-size:13px;">
+          <a href="mailto:vizgroupsydney@gmail.com" style="color:var(--teal);text-decoration:none;">vizgroupsydney@gmail.com</a>
+        </p>
       </div>
     </div>
-
-    <div class="status-row">
-      <span class="status-label">Status:</span>
-      <div class="loading-indicator" id="statusIndicator">
-        <div class="pulse"></div>
-        <span id="statusText">Fetching marine data…</span>
-      </div>
-    </div>
-
-    <div class="section-title">Dive Sites — Now</div>
-    <div class="sites-grid" id="sitesGrid"></div>
   </div>
 
   <!-- TIMELINE: 13 sites × 5 days × hourly heatmap -->
@@ -791,8 +784,8 @@ function scheduleNextRefresh(cb) {
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
 function switchTab(name) {
+  const tabs = ['snapshot','timeline','about'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const tabs = ['snapshot','now','timeline'];
     b.classList.toggle('active', tabs[i] === name);
   });
   document.querySelectorAll('.view-panel').forEach(p => {
