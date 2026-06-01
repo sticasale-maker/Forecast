@@ -360,6 +360,55 @@
     display:inline-block;
   }
   #ptr-arrow.ready { transform:rotate(180deg); }
+
+  /* ── Score validation panel ── */
+  #val-panel {
+    display:none;
+    margin-bottom:28px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  #val-panel.visible { display:block; }
+  #val-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px;
+    background:rgba(255,255,255,0.04);
+    border-bottom:1px solid var(--border);
+    cursor:pointer; user-select:none;
+  }
+  #val-header-left { display:flex; align-items:center; gap:8px; }
+  #val-title { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+  #val-badge {
+    font-family:'DM Mono',monospace; font-size:10px; padding:2px 7px;
+    border-radius:4px; background:var(--green); color:#000;
+  }
+  #val-badge.warn { background:var(--red); color:#fff; }
+  #val-toggle { font-size:13px; color:var(--text-dim); transition:transform 0.2s; }
+  #val-toggle.open { transform:rotate(180deg); }
+  #val-body { padding:12px 14px; display:none; }
+  #val-body.open { display:block; }
+  #val-status { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); margin-bottom:10px; }
+  .val-table { width:100%; border-collapse:collapse; }
+  .val-table th {
+    font-family:'DM Mono',monospace; font-size:9px; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:1px;
+    text-align:left; padding:4px 6px; border-bottom:1px solid var(--border);
+  }
+  .val-table th:not(:first-child) { text-align:right; }
+  .val-table td {
+    font-family:'DM Mono',monospace; font-size:11px; color:var(--text);
+    padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .val-table td:not(:first-child) { text-align:right; }
+  .val-table tr.mismatch td { color:var(--red); font-weight:600; }
+  .val-table tr.mismatch td:first-child { color:var(--red); }
+  .val-diff-ok  { color:var(--green); }
+  .val-diff-warn { color:var(--red); font-weight:600; }
+  .val-sub-hdr { font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; }
+  .val-demerit-row td { font-size:10px; color:var(--text-dim); padding-top:1px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .val-demerit-row.mismatch td { color:var(--red); opacity:0.8; }
+  .val-dem { font-family:'DM Mono',monospace; }
 </style>
 </head>
 <body>
@@ -451,6 +500,18 @@
         <div class="cond-unit"  id="sSwell1D">—</div>
         <div class="cond-sub"   id="sSwell1P">—</div>
       </div>
+      <div class="cond-card" id="sSwell2Card">
+        <div class="cond-label">Swell 2</div>
+        <div class="cond-value" id="sSwell2H">—</div>
+        <div class="cond-unit"  id="sSwell2D">—</div>
+        <div class="cond-sub"   id="sSwell2P">—</div>
+      </div>
+      <div class="cond-card" id="sWindWaveCard">
+        <div class="cond-label">Wind Wave</div>
+        <div class="cond-value" id="sWindWaveH">—</div>
+        <div class="cond-unit"  id="sWindWaveD">—</div>
+        <div class="cond-sub"   id="sWindWaveP">—</div>
+      </div>
       <div class="cond-card">
         <div class="cond-label">Tide</div>
         <div class="cond-value" id="sTide">—</div>
@@ -460,6 +521,32 @@
   </div>
 
   <div id="tl-tooltip"></div>
+
+  <!-- Score validation panel — bottom of Snapshot page -->
+  <div id="val-panel">
+    <div id="val-header" onclick="toggleValBody()">
+      <div id="val-header-left">
+        <span id="val-title">Sheet vs App Validation</span>
+        <span id="val-badge">—</span>
+      </div>
+      <span id="val-toggle">▾</span>
+    </div>
+    <div id="val-body">
+      <div id="val-status">Waiting for forecast…</div>
+      <table class="val-table" id="val-table">
+        <thead>
+          <tr>
+            <th>Site</th>
+            <th></th>
+            <th>Sheet</th>
+            <th>App</th>
+            <th>Diff</th>
+          </tr>
+        </thead>
+        <tbody id="val-tbody"></tbody>
+      </table>
+    </div>
+  </div>
 
   <!-- Footer: legend + last updated -->
   <div style="border-top:1px solid var(--border);margin-top:48px;padding-top:18px;display:flex;align-items:center;flex-wrap:wrap;gap:16px;justify-content:space-between;">
@@ -646,28 +733,38 @@ async function loadConfig() {
 
 // Site definitions — tide formulas are fixed (not in the sheet)
 const SITES = [
-  {key:'CTB',        name:'CTB Bower Lane',  tide:(o,t)=>o*(t-0.2)},
-  {key:'BIW',        name:'BI West',          tide:(o,t)=>o*(0.2941*t-0.0588)+(t>1.5?(t-1.5)*16:0)},
-  {key:'BIE',        name:'BI East',          tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Steps',      name:'Leaps & Steps',    tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Monument',   name:'Monument',         tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Chowder',    name:'Chowder Bay',      tide:(o,t)=>0},
-  {key:'CampCove',   name:'Camp Cove',        tide:(o,t)=>0},
-  {key:'Fairlight',  name:'Fairlight',        tide:(o,t)=>0},
-  {key:'Gordons',    name:"Gordon's Bay",     tide:(o,t)=>0},
-  {key:'Freshwater', name:'Freshwater',       tide:(o,t)=>0},
-  {key:'SharkPoint', name:'Shark Point',      tide:(o,t)=>t>1.3?30:t<0.9?0:t*75-67.5},
-  {key:'LittleBay',  name:'Little Bay',       tide:(o,t)=>o*(1.66*t-0.34)},
-  {key:'Oak',        name:'Oak Park',         tide:(o,t)=>o*(0.166*t-0.034)},
+  {key:'CTB',        name:'CTB Bower Lane',  tideBase:'swell_rif',
+   tide:(o,t)=>o*(t-0.2)},
+  {key:'BIW',        name:'BI West',          tideBase:'all',
+   tide:(o,t)=>o*(0.2941*t-0.0588)+(t>1.5?(t-1.5)*16:0)},
+  {key:'BIE',        name:'BI East',          tideBase:'all',
+   tide:(o,t)=>o*(0.2941*t-0.0588)},
+  {key:'Steps',      name:'Leaps & Steps',    tideBase:'all',
+   tide:(o,t)=>o*(0.2941*t-0.0588)},
+  {key:'Monument',   name:'Monument',         tideBase:'all',
+   tide:(o,t)=>o*(0.2941*t-0.0588)},
+  {key:'Chowder',    name:'Chowder Bay',      tideBase:'all',   tide:(o,t)=>0},
+  {key:'CampCove',   name:'Camp Cove',        tideBase:'all',   tide:(o,t)=>0},
+  {key:'Fairlight',  name:'Fairlight',        tideBase:'all',   tide:(o,t)=>0},
+  {key:'Gordons',    name:"Gordon's Bay",     tideBase:'all',   tide:(o,t)=>0},
+  {key:'Freshwater', name:'Freshwater',       tideBase:'all',   tide:(o,t)=>0},
+  {key:'SharkPoint', name:'Shark Point',      tideBase:'all',
+   tide:(o,t)=>t>1.3?30:t<0.9?0:t*75-67.5},
+  {key:'LittleBay',  name:'Little Bay',       tideBase:'all',
+   tide:(o,t)=>o*(1.66*t-0.34)},
+  {key:'Oak',        name:'Oak Park',         tideBase:'all',
+   tide:(o,t)=>o*(0.166*t-0.034)},
 ];
 
 // Score formula — identical logic, now reads from CONFIG instead of hardcoded values.
-// Formula (unchanged):
+// Formula (corrected to match sheet):
 //   swellPower   = h² × period^1.1
 //   s_demerit    = swellPower × seaHit/100 × swellSens        ← swellSens from CONFIG
 //   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = 81/periodPower from CONFIG
-//   wind_demerit = windPower(kmh) × windHit/100 × windSens    ← windSens from CONFIG
-//   tide_demerit = site.tide(swell_demerits_only, tideM)
+//   wind_demerit = windPower(kmh) × windHit/100 × windSens    ← windHit can be negative (bonus)
+//   tide_demerit = site.tide(tideBase, tideM)                 ← tideBase is per-site:
+//                  'swell_rif' = swell+rif only (CTB)
+//                  'all'       = wind+swell+rif (all others)
 //   score        = max(0, round(60 − total))
 function calcScore(site, d) {
   const si  = SITE_KEYS_ORDERED.indexOf(site.key);
@@ -682,8 +779,8 @@ function calcScore(site, d) {
   const s1p = swellPower(swell1H, swell1P);
   const s2p = swellPower(swell2H, swell2P);
 
-  const windHit = Math.max(0, dirLookup(lk.wind, windDir));
-  const wwHit   = Math.max(0, dirLookup(lk.wind, windWaveDir));
+  const windHit = dirLookup(lk.wind, windDir);        // negatives kept — sheet uses them as bonuses
+  const wwHit   = dirLookup(lk.wind, windWaveDir);    // negatives kept
   const s1sea   = Math.max(0, dirLookup(lk.sea,  swell1Dir));
   const s1rif   =             dirLookup(lk.rif,  swell1Dir);
   const s2sea   = Math.max(0, dirLookup(lk.sea,  swell2Dir));
@@ -695,20 +792,23 @@ function calcScore(site, d) {
   const s2_d    = s2p * (s2sea/100) * swellSens;
   const rif_d   = (s1rif * s1p * spm + s2rif * s2p * spm) / 1000;
 
-  // Tide formula is based on swell-related demerits only (not wind/windwave)
-  const swell_other = s1_d + s2_d + rif_d;
-  const other   = wind_d + ww_d + swell_other;
-  const tide_d  = site.tide(swell_other, tideM);
-  const totalD  = other + tide_d;
+  // Tide base includes wind + swell + rif (matches sheet formula)
+  const swell_rif    = s1_d + s2_d + rif_d;
+  const all_demerits = wind_d + ww_d + swell_rif;
+  // tideBase flag on each site: 'swell_rif' excludes wind, 'all' includes it
+  const tide_base = site.tideBase === 'swell_rif' ? swell_rif : all_demerits;
+  const tide_d  = site.tide(tide_base, tideM);
+  const totalD  = all_demerits + tide_d;
 
   return {
     score: Math.max(0, Math.round(60 - totalD)),
     demerits: {
-      tide:   Math.round(tide_d  * 10) / 10,
-      wind:   Math.round((wind_d + ww_d) * 10) / 10,
-      swell1: Math.round(s1_d   * 10) / 10,
-      swell2: Math.round(s2_d   * 10) / 10,
-      refrac: Math.round(rif_d  * 10) / 10,
+      tide:     Math.round(tide_d  * 10) / 10,
+      wind:     Math.round(wind_d  * 10) / 10,
+      windWave: Math.round(ww_d    * 10) / 10,
+      swell1:   Math.round(s1_d   * 10) / 10,
+      swell2:   Math.round(s2_d   * 10) / 10,
+      refrac:   Math.round(rif_d  * 10) / 10,
     }
   };
 }
@@ -838,6 +938,155 @@ function parseWillyWeather(j) {
   };
 }
 
+// ── Open-Meteo Marine API — secondary swell + wind wave ───────────────────────
+// WillyWeather only provides primary swell. Open-Meteo AUSWAVE provides all components.
+// Free, no API key, updates every 6 hours. Cached 6 hours separately from WW cache.
+
+const OPENMETEO_CACHE_KEY = 'om_marine_cache';
+const OPENMETEO_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const OPENMETEO_LAT       = -33.8882;
+const OPENMETEO_LNG       = 151.29166;
+const OPENMETEO_URL       = `https://marine-api.open-meteo.com/v1/marine` +
+  `?latitude=${OPENMETEO_LAT}&longitude=${OPENMETEO_LNG}` +
+  `&hourly=secondary_swell_wave_height,secondary_swell_wave_direction,secondary_swell_wave_period` +
+  `,wind_wave_height,wind_wave_direction,wind_wave_period` +
+  `&current=secondary_swell_wave_height,secondary_swell_wave_direction,secondary_swell_wave_period` +
+  `,wind_wave_height,wind_wave_direction,wind_wave_period` +
+  `&forecast_days=7&wind_speed_unit=kmh&timezone=Australia%2FSydney`;
+
+// Returns { current: {...}, hourly: { [isoDateTime]: {...} } } or null on failure
+async function fetchOpenMeteoMarine() {
+  // Check cache
+  try {
+    const cached = JSON.parse(localStorage.getItem(OPENMETEO_CACHE_KEY) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < OPENMETEO_CACHE_TTL) {
+      console.log('Open-Meteo: loaded from cache');
+      return cached.data;
+    }
+  } catch(e) {}
+
+  try {
+    const res = await fetch(OPENMETEO_URL);
+    if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
+    const j = await res.json();
+
+    // Parse current conditions
+    const c = j.current || {};
+    const current = {
+      swell2H:    c.secondary_swell_wave_height    ?? 0,
+      swell2Dir:  c.secondary_swell_wave_direction ?? 0,
+      swell2P:    c.secondary_swell_wave_period    ?? 8,
+      windWaveH:  c.wind_wave_height               ?? 0,
+      windWaveDir:c.wind_wave_direction             ?? 0,
+      windWaveP:  c.wind_wave_period               ?? 0,
+    };
+
+    // Parse hourly — build a map keyed by ISO datetime string
+    const times = j.hourly?.time || [];
+    const s2h   = j.hourly?.secondary_swell_wave_height    || [];
+    const s2d   = j.hourly?.secondary_swell_wave_direction || [];
+    const s2p   = j.hourly?.secondary_swell_wave_period    || [];
+    const wwh   = j.hourly?.wind_wave_height               || [];
+    const wwd   = j.hourly?.wind_wave_direction            || [];
+    const wwp   = j.hourly?.wind_wave_period               || [];
+
+    const hourly = {};
+    times.forEach((dt, i) => {
+      hourly[dt] = {
+        swell2H:    s2h[i] ?? 0,
+        swell2Dir:  s2d[i] ?? 0,
+        swell2P:    s2p[i] ?? 8,
+        windWaveH:  wwh[i] ?? 0,
+        windWaveDir:wwd[i] ?? 0,
+        windWaveP:  wwp[i] ?? 0,
+      };
+    });
+
+    const data = { current, hourly };
+    localStorage.setItem(OPENMETEO_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), data }));
+    console.log(`Open-Meteo: fetched ${times.length} hourly entries`);
+    return data;
+
+  } catch(e) {
+    console.warn('Open-Meteo Marine fetch failed, secondary swell/wind wave will be 0:', e.message);
+    return null;
+  }
+}
+
+// Merge Open-Meteo current data into a WillyWeather data object
+// ── Swell 2 cross-source guard ─────────────────────────────────────────────────
+// Problem: WillyWeather and Open-Meteo partition the wave spectrum independently.
+// "Primary" and "Secondary" labels are rank-ordered by energy and can swap,
+// causing the same physical swell to appear in both sources and be double-counted.
+//
+// Guard: suppress swell2 if it is BOTH:
+//   1. Close in direction to swell1 (within DIR_THRESH degrees), AND
+//   2. Significant relative to swell1 height (> HEIGHT_RATIO of swell1H)
+//
+// When suppressed, swell2H is zeroed and swell2Suppressed=true is set
+// so the UI can show a visual indicator.
+
+const SWELL2_DIR_THRESH   = 45;   // degrees — same-system threshold
+const SWELL2_HEIGHT_RATIO = 0.5;  // swell2H > 50% of swell1H → suspicious
+
+function angularDiff(a, b) {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+function guardSwell2(swell1H, swell1Dir, swell2H, swell2Dir, swell2P) {
+  if (!swell2H || swell2H <= 0) return { swell2H: 0, swell2Dir, swell2P, swell2Suppressed: false };
+  const dirClose    = angularDiff(swell1Dir, swell2Dir) < SWELL2_DIR_THRESH;
+  const heightClose = swell2H > swell1H * SWELL2_HEIGHT_RATIO;
+  const suppress    = dirClose && heightClose;
+  return {
+    swell2H:          suppress ? 0 : swell2H,
+    swell2Dir,
+    swell2P,
+    swell2Suppressed: suppress,
+  };
+}
+
+function mergeOpenMeteoIntoData(data, omData) {
+  if (!omData?.current) return data;
+  const c = omData.current;
+  const guarded = guardSwell2(
+    data.swell1H, data.swell1Dir,
+    c.swell2H || 0, c.swell2Dir || 0, c.swell2P || 8
+  );
+  return {
+    ...data,
+    ...guarded,
+    windWaveH:  c.windWaveH  || 0,
+    windWaveDir:c.windWaveDir || data.windDir,
+    windWaveP:  c.windWaveP  || 0,
+  };
+}
+
+// Merge Open-Meteo hourly data into the WillyWeather matrix
+// Open-Meteo uses "2026-06-02T14:00" format; WW uses "2026-06-02 14:00:00"
+function mergeOpenMeteoIntoMatrix(matrix, omData) {
+  if (!omData?.hourly) return matrix;
+  const lookup = omData.hourly;
+
+  return matrix.map(row => {
+    const omKey = row.dateTime.replace(' ', 'T').substring(0, 16);
+    const om    = lookup[omKey];
+    if (!om) return row;
+    const guarded = guardSwell2(
+      row.swell1H, row.swell1Dir,
+      om.swell2H || 0, om.swell2Dir || 0, om.swell2P || 8
+    );
+    return {
+      ...row,
+      ...guarded,
+      windWaveH:  om.windWaveH  || 0,
+      windWaveDir:om.windWaveDir || row.windDir,
+      windWaveP:  om.windWaveP  || 0,
+    };
+  });
+}
+
 // ── Fetch from worker with retry + timeout ────────────────────────────────────
 const FETCH_TIMEOUT_MS = 10000; // 10s per attempt
 const MAX_RETRIES      = 3;
@@ -865,8 +1114,14 @@ async function fetchForecast() {
       if (attempt === 1) setStatus('Fetching forecast…');
       else               setStatus(`Retrying… (attempt ${attempt} of ${MAX_RETRIES})`);
       const j      = await fetchOnce();
-      const data   = parseWillyWeather(j);
-      const matrix = buildHourlyMatrix(j);
+      let data     = parseWillyWeather(j);
+      let matrix   = buildHourlyMatrix(j);
+
+      // Fetch secondary swell + wind wave from Open-Meteo in parallel
+      const omData = await fetchOpenMeteoMarine();
+      data   = mergeOpenMeteoIntoData(data, omData);
+      matrix = mergeOpenMeteoIntoMatrix(matrix, omData);
+
       saveCache({ fetchedAt: Date.now(), data, matrix });
       return data;
     } catch(e) {
@@ -1130,6 +1385,36 @@ function renderSnapshot(sliderVal) {
   document.getElementById('sSwell1D').textContent = `m · ${bearingName(h.swell1Dir)} (${Math.round(h.swell1Dir)}°)`;
   document.getElementById('sSwell1P').textContent = `${Math.round(h.swell1P)}s period`;
   document.getElementById('sTide').textContent    = h.tideM.toFixed(2);
+
+  // Swell 2 — show card only if height > 0; show suppressed notice if guard fired
+  const s2Card = document.getElementById('sSwell2Card');
+  if (h.swell2H > 0 || h.swell2Suppressed) {
+    const rawH = h.swell2Suppressed ? '—' : h.swell2H.toFixed(1);
+    const rawD = h.swell2Suppressed
+      ? `suppressed (${Math.round(h.swell2Dir)}° ≈ swell 1)`
+      : `m · ${bearingName(h.swell2Dir)} (${Math.round(h.swell2Dir)}°)`;
+    const rawP = h.swell2Suppressed ? '' : `${Math.round(h.swell2P)}s period`;
+    document.getElementById('sSwell2H').textContent = rawH;
+    document.getElementById('sSwell2D').textContent = rawD;
+    document.getElementById('sSwell2P').textContent = rawP;
+    document.getElementById('sSwell2D').style.color = h.swell2Suppressed ? 'var(--yellow)' : '';
+    s2Card.style.display = '';
+  } else {
+    s2Card.style.display = 'none';
+  }
+
+  // Wind Wave — show card only if height > 0
+  const wwCard = document.getElementById('sWindWaveCard');
+  if (h.windWaveH > 0) {
+    document.getElementById('sWindWaveH').textContent = h.windWaveH.toFixed(1);
+    document.getElementById('sWindWaveD').textContent = `m · ${bearingName(h.windWaveDir)} (${Math.round(h.windWaveDir)}°)`;
+    // windWaveP shown if available (informational only — not used in scoring)
+    const wwp = h.windWaveP ?? 0;
+    document.getElementById('sWindWaveP').textContent = wwp > 0 ? `${Math.round(wwp)}s period` : 'period n/a';
+    wwCard.style.display = '';
+  } else {
+    wwCard.style.display = 'none';
+  }
 }
 
 function onSliderChange() {
@@ -1207,13 +1492,20 @@ async function init() {
 
     // Serve from cache if fresh
     if (!forceRefresh && cacheIsFresh(cache) && cache.data) {
-      updateConditions(cache.data);
-      renderSites(cache.data);
-      if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix);
+      // Also fetch/load Open-Meteo to ensure secondary swell is current
+      const omData = await fetchOpenMeteoMarine();
+      const data   = mergeOpenMeteoIntoData(cache.data, omData);
+      const matrix = cache.matrix?.length
+        ? mergeOpenMeteoIntoMatrix(cache.matrix, omData)
+        : [];
+      updateConditions(data);
+      renderSites(data);
+      if (matrix.length) renderForecastViewsFromMatrix(matrix);
       const ago = Math.round((Date.now() - cache.fetchedAt) / 60000);
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
         'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+      validateScores(data); // run validation against sheet
       return;
     }
 
@@ -1228,6 +1520,7 @@ async function init() {
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+      validateScores(data); // run validation against sheet
     } catch(err) {
       console.error(err);
       showErrorBanner(err.message);
@@ -1250,11 +1543,164 @@ async function init() {
   scheduleNextRefresh(() => loadAndRender(true));
 }
 
+// ── Score validation against Google Sheet ─────────────────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhxpkRQ-CBWa7fli9JWBonlGA63Xv88Hp5NFm2MQGP7qvKvGftY8FJJiVmbgXQF2pj/exec';
+
+// Map sheet site name strings → app site keys
+const SHEET_NAME_MAP = {
+  'CTB Bower Ln':  'CTB',
+  'CTB Bower Lane':'CTB',
+  'BI West':       'BIW',
+  'BI East':       'BIE',
+  'Leaps & Steps': 'Steps',
+  'Steps':         'Steps',
+  'Monument':      'Monument',
+  'Chowder Bay':   'Chowder',
+  'Camp Cove':     'CampCove',
+  'Fairlight':     'Fairlight',
+  "Gordon's Bay":  'Gordons',
+  'Freshwater':    'Freshwater',
+  'Shark Point':   'SharkPoint',
+  'Little Bay':    'LittleBay',
+  'Oak Park':      'Oak',
+  'Oak':           'Oak',
+};
+
+function toggleValBody() {
+  const body   = document.getElementById('val-body');
+  const toggle = document.getElementById('val-toggle');
+  const isOpen = body.classList.toggle('open');
+  toggle.classList.toggle('open', isOpen);
+}
+
+function fmtD(v) {
+  // Format a demerit value to 1dp
+  if (v === undefined || v === null || isNaN(v)) return '—';
+  return v.toFixed(1);
+}
+
+function diffCell(a, b) {
+  // Show diff between two demerit values; red if |diff| > 0.5
+  if (a === undefined || b === undefined) return '<td>—</td>';
+  const d = Math.round((a - b) * 10) / 10;
+  const big = Math.abs(d) > 0.5;
+  const sign = d > 0 ? '+' : '';
+  return `<td class="${big ? 'val-diff-warn' : 'val-diff-ok'}">${sign}${d}</td>`;
+}
+
+async function validateScores(data) {
+  const panel  = document.getElementById('val-panel');
+  const badge  = document.getElementById('val-badge');
+  const status = document.getElementById('val-status');
+  const tbody  = document.getElementById('val-tbody');
+
+  panel.classList.add('visible');
+  badge.textContent = '…';
+  badge.className   = '';
+  status.textContent = 'Writing inputs to sheet and reading scores…';
+
+  // Build app scores + demerits for all 13 sites
+  const appResults = {};
+  SITES.forEach(site => {
+    const r = calcScore(site, data);
+    appResults[site.key] = { score: r.score, ...r.demerits };
+  });
+
+  try {
+    const params = new URLSearchParams({
+      tide:        data.tideM,
+      windDir:     Math.round(data.windDir),
+      windKmh:     Math.round(data.windKmh),
+      windWaveDir: Math.round(data.windWaveDir),
+      windWaveH:   data.windWaveH,
+      swellDir:    Math.round(data.swell1Dir),
+      swellH:      data.swell1H,
+      swellP:      Math.round(data.swell1P),
+      swell2Dir:   Math.round(data.swell2Dir),
+      swell2H:     data.swell2H,
+      swell2P:     Math.round(data.swell2P),
+    });
+
+    const res = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
+    if (!res.ok) throw new Error(`Script returned ${res.status}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+
+    const sheetScores   = json.sheetScores;   // { "CTB Bower Ln": 48, ... }
+    const sheetDemerits = json.sheetDemerits; // { "CTB": { tide, wind, swell, rif }, ... }
+
+    // Build comparison rows in sheet order
+    const rows = [];
+    let mismatches = 0;
+
+    Object.entries(sheetScores).forEach(([sheetName, sheetScore]) => {
+      const key = SHEET_NAME_MAP[sheetName];
+      if (!key || !appResults[key]) return;
+      const app  = appResults[key];
+      const sd   = sheetDemerits?.[key] || {};
+      const diff = sheetScore - app.score;
+      const isMismatch = Math.abs(diff) > 2;
+      if (isMismatch) mismatches++;
+      rows.push({ sheetName, key, sheetScore, app, sd, diff, isMismatch });
+    });
+
+    // Render table — three rows per site
+    tbody.innerHTML = rows.map(r => {
+      const d          = Math.round((r.diff) * 10) / 10;
+      const sign       = d > 0 ? '+' : '';
+      const scoreClass = r.isMismatch ? 'val-diff-warn' : 'val-diff-ok';
+      const sd  = r.sd;
+      const app = r.app;
+      // Sheet score rounded to 1dp; app score is integer
+      const sheetScoreFmt = Number.isInteger(r.sheetScore) ? r.sheetScore : r.sheetScore.toFixed(1);
+      return `
+      <tr class="${r.isMismatch ? 'mismatch' : ''}">
+        <td rowspan="3" style="vertical-align:middle;border-right:1px solid rgba(255,255,255,0.06)">${r.sheetName}</td>
+        <td class="val-sub-hdr">Score</td>
+        <td>${sheetScoreFmt}</td>
+        <td>${app.score}</td>
+        <td class="${scoreClass}">${sign}${d}</td>
+      </tr>
+      <tr class="${r.isMismatch ? 'mismatch' : ''} val-demerit-row">
+        <td class="val-sub-hdr">Tide / Wind / Swell1 / Rif</td>
+        <td class="val-dem">${fmtD(sd.tide)} / ${fmtD(sd.wind)} / ${fmtD(sd.swell)} / ${fmtD(sd.rif)}</td>
+        <td class="val-dem">${fmtD(app.tide)} / ${fmtD(app.wind)} / ${fmtD(app.swell1)} / ${fmtD(app.refrac)}</td>
+        <td></td>
+      </tr>
+      <tr class="${r.isMismatch ? 'mismatch' : ''} val-demerit-row">
+        <td class="val-sub-hdr">Swell2 / Wind Wave</td>
+        <td class="val-dem">${fmtD(sd.swell2)} / ${fmtD(sd.windWave)}</td>
+        <td class="val-dem">${fmtD(app.swell2)} / ${fmtD(app.windWave)}</td>
+        <td></td>
+      </tr>`;
+    }).join('');
+
+    // Badge
+    if (mismatches === 0) {
+      badge.textContent = `✓ ${rows.length} match`;
+      badge.className   = '';
+    } else {
+      badge.textContent = `⚠ ${mismatches} diff${mismatches > 1 ? 's' : ''} > 2`;
+      badge.className   = 'warn';
+    }
+
+    const inputSummary = `Tide ${data.tideM}m · Wind ${data.windDir}° ${data.windKmh}km/h · WW ${data.windWaveDir}° ${data.windWaveH}m · Swell ${data.swell1Dir}° ${data.swell1H}m ${data.swell1P}s · Swell2 ${data.swell2Dir}° ${data.swell2H}m ${data.swell2P}s`;
+    status.textContent = `Validated ${new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} · ${inputSummary}`;
+
+  } catch(err) {
+    badge.textContent  = 'Error';
+    badge.className    = 'warn';
+    status.textContent = `Validation failed: ${err.message}`;
+    console.warn('Validation error:', err);
+  }
+}
+
 // ── Hard refresh (button + pull-to-refresh) ────────────────────────────────────
 function hardRefresh() {
   // Clear both data cache and config cache so everything reloads fresh
   try { localStorage.removeItem('ww_cache'); } catch(e) {}
   try { localStorage.removeItem('viz_config_cache'); } catch(e) {}
+  try { localStorage.removeItem('om_marine_cache'); } catch(e) {}
   window.location.reload(true);
 }
 
