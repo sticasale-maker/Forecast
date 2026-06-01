@@ -339,22 +339,6 @@
     line-height:1.6;
   }
 
-  /* ── Refresh button ── */
-  .refresh-btn {
-    background:transparent;
-    border:1px solid var(--border);
-    border-radius:8px;
-    color:var(--teal);
-    cursor:pointer;
-    font-size:20px;
-    line-height:1;
-    padding:8px 12px;
-    transition:border-color 0.15s, background 0.15s, transform 0.3s;
-  }
-  .refresh-btn:active { background:rgba(0,194,168,0.12); border-color:var(--teal); }
-  .refresh-btn.spinning { animation:spin 0.7s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-
   /* ── Pull-to-refresh indicator ── */
   #ptr-indicator {
     position:fixed; top:0; left:0; right:0;
@@ -391,7 +375,6 @@
       <div class="header-sub">Sydney Dive Sites</div>
     </div>
     <div class="header-right">
-      <button class="refresh-btn" id="refreshBtn" onclick="hardRefresh()" title="Refresh">↺</button>
     </div>
   </header>
 
@@ -1187,8 +1170,6 @@ async function init() {
 
 // ── Hard refresh (button + pull-to-refresh) ────────────────────────────────────
 function hardRefresh() {
-  const btn = document.getElementById('refreshBtn');
-  if (btn) btn.classList.add('spinning');
   // Clear the data cache so we always fetch fresh on reload
   try { localStorage.removeItem('ww_cache'); } catch(e) {}
   // Force bypass browser cache
