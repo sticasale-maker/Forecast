@@ -365,6 +365,78 @@
     line-height:1.6;
   }
 
+  /* ── Daily weather summary banner ── */
+  #day-summary-banner {
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:500;
+    background:linear-gradient(135deg, rgba(0,30,70,0.97) 0%, rgba(0,50,80,0.97) 100%);
+    backdrop-filter:blur(16px);
+    border-bottom:1px solid rgba(0,194,168,0.3);
+    padding:20px 24px 18px;
+    transform:translateY(0);
+    transition:transform 0.6s cubic-bezier(0.4,0,0.2,1), opacity 0.6s ease;
+    opacity:1;
+    pointer-events:none;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  #day-summary-banner.hidden {
+    transform:translateY(-110%);
+    opacity:0;
+  }
+  .dsb-inner {
+    max-width:1400px;
+    margin:0 auto;
+    display:flex;
+    align-items:flex-start;
+    gap:16px;
+  }
+  .dsb-icon {
+    font-size:40px;
+    line-height:1;
+    flex-shrink:0;
+    filter:drop-shadow(0 0 10px rgba(0,194,168,0.5));
+    animation:dsb-float 3s ease-in-out infinite;
+  }
+  @keyframes dsb-float {
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-4px)}
+  }
+  .dsb-text-wrap { flex:1; min-width:0; }
+  .dsb-eyebrow {
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:2.5px;
+    color:var(--teal);
+    margin-bottom:6px;
+    opacity:0.85;
+  }
+  .dsb-summary {
+    font-family:'DM Sans',sans-serif;
+    font-size:clamp(14px,2.2vw,18px);
+    font-weight:400;
+    color:#e8f4ff;
+    line-height:1.55;
+    letter-spacing:0.1px;
+  }
+  .dsb-summary.loading {
+    color:var(--text-dim);
+    font-style:italic;
+    animation:dsb-pulse-text 1.4s ease-in-out infinite;
+  }
+  @keyframes dsb-pulse-text { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .dsb-progress {
+    position:absolute;
+    bottom:0; left:0;
+    height:2px;
+    background:var(--teal);
+    border-radius:0 2px 2px 0;
+    box-shadow:0 0 8px rgba(0,194,168,0.6);
+    transition:width 0.1s linear;
+    width:100%;
+  }
+
   /* ── Pull-to-refresh indicator ── */
   #ptr-indicator {
     position:fixed; top:0; left:0; right:0;
@@ -452,6 +524,18 @@
   setTimeout(hide,2400);
 })();
 </script>
+
+<!-- Daily Weather Summary Banner -->
+<div id="day-summary-banner">
+  <div class="dsb-inner">
+    <div class="dsb-icon" id="dsb-icon">🌊</div>
+    <div class="dsb-text-wrap">
+      <div class="dsb-eyebrow">Today's vibe for Sydney divers</div>
+      <div class="dsb-summary loading" id="dsb-summary">Checking today's conditions for you…</div>
+    </div>
+  </div>
+  <div class="dsb-progress" id="dsb-progress"></div>
+</div>
 
 <div id="ptr-indicator">
   <span id="ptr-arrow">↓</span>
@@ -1737,6 +1821,8 @@ async function init() {
     swell2H:0.8, swell2Dir:135, swell2P:8, tideM:1.0,
   };
 
+  let _dsbShown = false; // show summary banner only once per session
+
   async function loadAndRender(forceRefresh = false) {
     const cache = loadCache();
 
@@ -1756,6 +1842,7 @@ async function init() {
       document.getElementById('lastUpdated').textContent =
         'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
       validateScores(data); // run validation against sheet
+      if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data); }
       return;
     }
 
@@ -1771,6 +1858,7 @@ async function init() {
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
       validateScores(data); // run validation against sheet
+      if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data); }
     } catch(err) {
       console.error(err);
       showErrorBanner(err.message);
@@ -2007,6 +2095,193 @@ function hardRefresh() {
     if (triggered) hardRefresh();
   });
 })();
+
+// ── Daily Weather Summary Banner ──────────────────────────────────────────────
+// Builds a friendly condition summary from live forecast data.
+// Shows in the header area for 6 seconds then slides away.
+
+const DSB_DURATION_MS = 6000; // display time in ms
+
+// Returns the time-of-day window and whether to look at tomorrow
+function getDayWindow() {
+  const h = new Date().getHours();
+  if (h >= 20) return { label: 'tomorrow', isTomorrow: true };
+  if (h >= 17) return { label: 'this evening', isTomorrow: false };
+  if (h >= 12) return { label: 'this afternoon', isTomorrow: false };
+  return { label: 'today', isTomorrow: false };
+}
+
+// Fetch with a hard timeout — resolves null instead of hanging indefinitely
+function fetchWithTimeout(url, ms) {
+  return Promise.race([
+    fetch(url).then(r => r.ok ? r.json() : null).catch(() => null),
+    new Promise(resolve => setTimeout(() => resolve(null), ms))
+  ]);
+}
+
+// Build the summary from ocean data + optional Open-Meteo enrichment
+function buildSummaryFromData(data, omj, isTomorrow) {
+  const { label: timeLabel } = getDayWindow();
+
+  let airDesc = '', rainWarn = '', skyDesc = '';
+  if (omj) {
+    try {
+      const idx   = isTomorrow ? 1 : 0;
+      const maxT  = omj.daily?.temperature_2m_max?.[idx];
+      const minT  = omj.daily?.temperature_2m_min?.[idx];
+      const rain  = omj.daily?.precipitation_sum?.[idx] || 0;
+      const wcode = omj.daily?.weathercode?.[idx] ?? 0;
+      if (maxT !== undefined) {
+        const avg = (maxT + minT) / 2;
+        if (avg >= 22)      airDesc = 'gorgeous and warm topside';
+        else if (avg >= 17) airDesc = 'nice and mild out of the water';
+        else if (avg >= 12) airDesc = 'a bit crisp once you surface';
+        else                airDesc = 'cold once you peel off that wetsuit';
+      }
+      if (rain >= 5)        rainWarn = 'rain on the way so pack a dry bag';
+      else if (rain >= 1.5) rainWarn = 'light shower possible — no big deal';
+      if (wcode <= 1)       skyDesc = 'sunny skies';
+      else if (wcode <= 3)  skyDesc = 'partly cloudy but bright';
+      else if (wcode <= 48) skyDesc = 'a misty, moody kind of day';
+      else if (wcode <= 67) skyDesc = 'overcast with some rain about';
+      else if (wcode <= 82) skyDesc = 'showery spells';
+      else                  skyDesc = 'stormy conditions up top';
+    } catch(e) {}
+  }
+
+  const wind  = data.windKmh   || 0;
+  const swell = data.swell1H   || 0;
+  const chop  = data.windWaveH || 0;
+  const tide  = data.tideM     || 1.0;
+
+  let oceanMood;
+  if (wind > 35 || swell > 2.0) {
+    oceanMood = "it's pretty gnarly out there — might be a couch day for most spots";
+  } else if (wind > 25 || (swell > 1.5 && chop > 0.6)) {
+    oceanMood = 'a bumpy one on the surface, so pick a sheltered site';
+  } else if (swell > 1.2 || chop > 0.4) {
+    oceanMood = "some movement in the water but nothing the regulars can't handle";
+  } else if (swell < 0.5 && wind < 10) {
+    oceanMood = 'conditions are absolutely dreamy — glassy and calm';
+  } else {
+    oceanMood = 'solid conditions for a dive or snorkel';
+  }
+
+  const windNote = wind > 20 ? 'the wind will make it feel cooler on the surface' : '';
+  const tideNote = tide > 1.6 ? 'high tide giving great depth at the entries'
+                 : tide < 0.4 ? 'low tide — mind the shallows getting in' : '';
+
+  const openings = [
+    `Hey team, ${timeLabel} is shaping up — `,
+    `Alright crew, here's the ${timeLabel} vibe: `,
+    `Quick conditions check for ${timeLabel} — `,
+    `Hey legends, ${timeLabel} is looking like `,
+    `Heads up for ${timeLabel}: `,
+  ];
+  const opening = openings[new Date().getMinutes() % openings.length];
+
+  const pieces = [];
+  if (skyDesc)  pieces.push(skyDesc);
+  if (airDesc)  pieces.push(airDesc);
+  pieces.push(oceanMood);
+  if (windNote) pieces.push(windNote);
+  if (tideNote) pieces.push(tideNote);
+  if (rainWarn) pieces.push(rainWarn);
+  const used = pieces.slice(0, 3);
+
+  const body = used.length === 1 ? used[0]
+             : used.length === 2 ? `${used[0]}, with ${used[1]}`
+             : `${used[0]}, ${used[1]}, and ${used[2]}`;
+
+  const sentence = opening + body + '.';
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+}
+
+async function generateDaySummary(data) {
+  const { isTomorrow } = getDayWindow();
+  // Try to enrich with Open-Meteo air/sky data (3s timeout — gracefully skipped if local/offline)
+  const forecastDays = isTomorrow ? 2 : 1;
+  const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=-33.8688&longitude=151.2093` +
+    `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum` +
+    `&timezone=Australia%2FSydney&forecast_days=${forecastDays}`;
+  const omj = await fetchWithTimeout(omUrl, 3000);
+  return buildSummaryFromData(data, omj, isTomorrow);
+}
+
+
+function pickWeatherIcon(data) {
+  const wind  = data.windKmh   || 0;
+  const swell = data.swell1H   || 0;
+  const chop  = data.windWaveH || 0;
+  if (wind > 35 || (swell > 2.0 && chop > 0.8)) return '⛈️';
+  if (wind > 25) return '💨';
+  if (swell < 0.5 && wind < 10) return '✨';
+  if (swell > 1.5) return '🌊';
+  if (swell > 0.8) return '🤿';
+  return '🌊';
+}
+
+function startDSBCountdown(durationMs) {
+  const bar = document.getElementById('dsb-progress');
+  const banner = document.getElementById('day-summary-banner');
+  if (!bar || !banner) return;
+
+  // Animate progress bar draining from 100% → 0%
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+    const remaining = Math.max(0, 1 - elapsed / durationMs);
+    bar.style.width = (remaining * 100) + '%';
+    if (elapsed < durationMs) {
+      requestAnimationFrame(step);
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+async function initDaySummaryBanner(data) {
+  const banner    = document.getElementById('day-summary-banner');
+  const summaryEl = document.getElementById('dsb-summary');
+  const iconEl    = document.getElementById('dsb-icon');
+  const eyebrowEl = document.querySelector('.dsb-eyebrow');
+  if (!banner || !summaryEl) return;
+
+  iconEl.textContent = pickWeatherIcon(data);
+
+  // Set eyebrow label based on time window
+  const { label: timeLabel } = getDayWindow();
+  if (eyebrowEl) {
+    const eyebrowMap = {
+      'today':         "Today's vibe for Sydney divers",
+      'this afternoon':"This afternoon's conditions",
+      'this evening':  "Evening dive conditions",
+      'tomorrow':      "Planning for tomorrow?",
+    };
+    eyebrowEl.textContent = eyebrowMap[timeLabel] || "Today's vibe for Sydney divers";
+  }
+
+  // Wait for splash to finish (2.4s + 0.6s fade) before showing
+  await new Promise(r => setTimeout(r, 3200));
+
+  // Ensure banner is visible
+  banner.classList.remove('hidden');
+
+  try {
+    const summary = await generateDaySummary(data);
+    summaryEl.classList.remove('loading');
+    summaryEl.textContent = summary || 'The ocean is calling — hope to see you out there today!';
+  } catch(e) {
+    summaryEl.classList.remove('loading');
+    summaryEl.textContent = 'Conditions are loaded — check the scores below and get amongst it!';
+    console.warn('DSB summary failed:', e.message);
+  }
+
+  // Start 6-second countdown to hide
+  startDSBCountdown(DSB_DURATION_MS);
+}
 
 // Load parameters from Google Sheet first, then start the app.
 // Falls back to hardcoded defaults if sheet is unreachable.
