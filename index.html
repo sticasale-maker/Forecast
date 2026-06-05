@@ -310,13 +310,20 @@
   /* Hour slider row */
   .hour-slider-row {
     display:flex; align-items:center; gap:14px;
+    width:100vw;
+    position:relative;
+    left:50%;
+    transform:translateX(-50%);
+    padding:0 20px;
+    box-sizing:border-box;
   }
   .hour-slider-row label {
     font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim);
-    text-transform:uppercase; letter-spacing:1px; white-space:nowrap; min-width:70px;
+    text-transform:uppercase; letter-spacing:1px; white-space:nowrap; min-width:36px;
+    text-align:center;
   }
   .hour-slider-row input[type=range] {
-    accent-color:var(--teal); flex:1; min-width:160px; cursor:pointer;
+    accent-color:var(--teal); flex:1; width:100%; cursor:pointer;
   }
   .hour-tick-labels {
     display:flex; justify-content:space-between;
@@ -1544,7 +1551,7 @@ function renderDayButtons(dayIdx) {
     if (key === today) {
       label = 'Today';
     } else {
-      label = d.toLocaleDateString('en-AU', {weekday:'short', day:'numeric', month:'short'});
+      label = d.toLocaleDateString('en-AU', {weekday:'short'}).toUpperCase();
     }
     btn.textContent = label;
     btn.onclick = () => selectDay(key, dayIdx);
