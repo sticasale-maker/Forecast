@@ -292,26 +292,40 @@
 
   /* ── Snapshot bar chart ── */
   .snapshot-controls {
-    display:flex; align-items:center; gap:16px; margin-top:20px; margin-bottom:24px; flex-wrap:wrap;
+    display:flex; flex-direction:column; gap:14px; margin-top:20px; margin-bottom:24px;
   }
-  .snapshot-controls label {
+  /* Day buttons row */
+  .day-btns {
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .day-btn {
+    font-family:'DM Mono',monospace; font-size:12px; text-transform:uppercase;
+    letter-spacing:1px; padding:10px 18px; border-radius:8px;
+    border:1px solid var(--border); background:transparent;
+    color:var(--text-dim); cursor:pointer; transition:all 0.15s;
+    white-space:nowrap;
+  }
+  .day-btn:hover { border-color:var(--teal); color:var(--teal); }
+  .day-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:700; }
+  /* Hour slider row */
+  .hour-slider-row {
+    display:flex; align-items:center; gap:14px;
+  }
+  .hour-slider-row label {
     font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim);
-    text-transform:uppercase; letter-spacing:1px;
+    text-transform:uppercase; letter-spacing:1px; white-space:nowrap; min-width:70px;
   }
-  .snapshot-controls input[type=range] {
-    accent-color:var(--teal); flex:1; min-width:200px; cursor:pointer;
+  .hour-slider-row input[type=range] {
+    accent-color:var(--teal); flex:1; min-width:160px; cursor:pointer;
+  }
+  .hour-tick-labels {
+    display:flex; justify-content:space-between;
+    font-family:'DM Mono',monospace; font-size:9px; color:var(--text-dim);
+    padding:0 2px; margin-top:2px;
   }
   /* Time display is now inline in the section title */
   #snapshotTitle span {
     color:var(--teal);
-  }
-  /* Date & Time label — big and inviting */
-  .snapshot-controls label {
-    font-family:'Bebas Neue',sans-serif !important;
-    font-size:clamp(28px,6vw,42px) !important;
-    color:#fff !important;
-    letter-spacing:3px !important;
-    text-transform:uppercase;
   }
   .snapshot-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:40px; }
   .snap-row {
@@ -549,8 +563,18 @@
     <div class="section-title" id="snapshotTitle">Snapshot — <span id="snapshotTimeDisplay">—</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snapshot-controls">
-      <label>Date &amp; Time</label>
-      <input type="range" id="snapshotSlider" min="0" max="119" value="0" oninput="onSliderChange()">
+      <!-- Day selector buttons — built dynamically from data -->
+      <div class="day-btns" id="dayBtns"></div>
+      <!-- Hour slider for the selected day -->
+      <div class="hour-slider-row">
+        <label id="hourSliderLabel">Hour</label>
+        <div style="flex:1;">
+          <input type="range" id="snapshotSlider" min="0" max="23" value="0" oninput="onHourSliderChange()">
+          <div class="hour-tick-labels">
+            <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="section-title" style="margin-top:32px;">Forecast Inputs</div>
@@ -1486,49 +1510,139 @@ function renderSnapshot(sliderVal) {
   }
 }
 
-function onSliderChange() {
-  renderSnapshot(parseInt(document.getElementById('snapshotSlider').value));
+// ── Day-button + hour-slider navigation ────────────────────────────────────────
+let _selectedDayKey = null;   // 'YYYY-MM-DD'
+let _dayKeys = [];             // ordered list of day keys present in _hourlyMatrix
+
+/** Group _hourlyMatrix entries by local date string (YYYY-MM-DD). */
+function _buildDayIndex() {
+  const idx = {};
+  _hourlyMatrix.forEach((h, i) => {
+    const d = new Date(h.dateTime);
+    // Use Sydney local date
+    const key = d.toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'}); // YYYY-MM-DD
+    if (!idx[key]) idx[key] = [];
+    idx[key].push(i);
+  });
+  return idx;
 }
+
+/** Render the day-selector buttons. */
+function renderDayButtons(dayIdx) {
+  _dayKeys = Object.keys(dayIdx).sort();
+  const container = document.getElementById('dayBtns');
+  container.innerHTML = '';
+
+  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+
+  _dayKeys.forEach((key, ki) => {
+    const btn = document.createElement('button');
+    btn.className = 'day-btn' + (key === _selectedDayKey ? ' active' : '');
+    // Label: "Today", or weekday name
+    const d = new Date(key + 'T12:00:00+11:00');
+    let label;
+    if (key === today) {
+      label = 'Today';
+    } else {
+      label = d.toLocaleDateString('en-AU', {weekday:'short', day:'numeric', month:'short'});
+    }
+    btn.textContent = label;
+    btn.onclick = () => selectDay(key, dayIdx);
+    container.appendChild(btn);
+  });
+}
+
+/** Called when user clicks a day button. */
+function selectDay(key, dayIdx) {
+  if (!dayIdx) dayIdx = _buildDayIndex();
+  _selectedDayKey = key;
+
+  // Update button active state
+  document.querySelectorAll('#dayBtns .day-btn').forEach((b, i) => {
+    b.classList.toggle('active', _dayKeys[i] === key);
+  });
+
+  const hoursForDay = dayIdx[key] || [];
+
+  // Set slider range to hours available for this day
+  const slider = document.getElementById('snapshotSlider');
+  slider.min = 0;
+  slider.max = Math.max(0, hoursForDay.length - 1);
+
+  // Pick the nearest hour to now if it's today, else pick closest to 9 AM
+  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  let bestSliderVal = 0;
+  if (key === today) {
+    const now = Date.now();
+    let minDiff = Infinity;
+    hoursForDay.forEach((matrixIdx, sliderPos) => {
+      const diff = Math.abs(new Date(_hourlyMatrix[matrixIdx].dateTime) - now);
+      if (diff < minDiff) { minDiff = diff; bestSliderVal = sliderPos; }
+    });
+  } else {
+    // Default to 9 AM slot, or whichever hour is closest
+    let minDiff = Infinity;
+    hoursForDay.forEach((matrixIdx, sliderPos) => {
+      const hr = new Date(_hourlyMatrix[matrixIdx].dateTime).getHours();
+      const diff = Math.abs(hr - 9);
+      if (diff < minDiff) { minDiff = diff; bestSliderVal = sliderPos; }
+    });
+  }
+  slider.value = bestSliderVal;
+  _renderFromDaySlider(hoursForDay, parseInt(slider.value));
+}
+
+/** Translate day-slider position → global matrix index, then render. */
+function _renderFromDaySlider(hoursForDay, sliderPos) {
+  const matrixIdx = hoursForDay[Math.min(sliderPos, hoursForDay.length - 1)];
+  if (matrixIdx == null) return;
+  const h = _hourlyMatrix[matrixIdx];
+  const hr = new Date(h.dateTime).getHours();
+  const ampm = hr === 0 ? '12am' : hr < 12 ? `${hr}am` : hr === 12 ? '12pm' : `${hr-12}pm`;
+  document.getElementById('hourSliderLabel').textContent = ampm;
+  renderSnapshot(matrixIdx);
+}
+
+function onHourSliderChange() {
+  if (!_selectedDayKey) return;
+  const dayIdx = _buildDayIndex();
+  const hoursForDay = dayIdx[_selectedDayKey] || [];
+  _renderFromDaySlider(hoursForDay, parseInt(document.getElementById('snapshotSlider').value));
+}
+
+// Keep old name as alias so nothing else breaks
+function onSliderChange() { onHourSliderChange(); }
 
 // ── Hook timeline + snapshot into the data flow ────────────────────────────────
 function renderForecastViewsFromMatrix(matrix) {
   _hourlyMatrix = matrix;
   if (!_hourlyMatrix.length) return;
 
-  const slider = document.getElementById('snapshotSlider');
-  slider.max = _hourlyMatrix.length - 1;
+  const dayIdx = _buildDayIndex();
+  _dayKeys = Object.keys(dayIdx).sort();
 
-  const now = Date.now();
-  let closest = 0, minDiff = Infinity;
-  _hourlyMatrix.forEach((h,i) => {
-    const diff = Math.abs(new Date(h.dateTime) - now);
-    if (diff < minDiff) { minDiff = diff; closest = i; }
-  });
-  slider.value = closest;
+  // Default selected day = today (or first day in data)
+  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  _selectedDayKey = _dayKeys.includes(today) ? today : _dayKeys[0];
 
+  renderDayButtons(dayIdx);
   renderTimeline(_hourlyMatrix);
-  renderSnapshot(closest);
+  selectDay(_selectedDayKey, dayIdx);
 }
 
 function renderForecastViews(raw) {
   _hourlyMatrix = buildHourlyMatrix(raw);
   if (!_hourlyMatrix.length) return;
 
-  // Set slider range to number of hours
-  const slider = document.getElementById('snapshotSlider');
-  slider.max = _hourlyMatrix.length - 1;
+  const dayIdx = _buildDayIndex();
+  _dayKeys = Object.keys(dayIdx).sort();
 
-  // Default slider to current hour
-  const now = Date.now();
-  let closest = 0, minDiff = Infinity;
-  _hourlyMatrix.forEach((h,i) => {
-    const diff = Math.abs(new Date(h.dateTime) - now);
-    if (diff < minDiff) { minDiff = diff; closest = i; }
-  });
-  slider.value = closest;
+  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  _selectedDayKey = _dayKeys.includes(today) ? today : _dayKeys[0];
 
+  renderDayButtons(dayIdx);
   renderTimeline(_hourlyMatrix);
-  renderSnapshot(closest);
+  selectDay(_selectedDayKey, dayIdx);
 }
 
 
