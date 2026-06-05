@@ -481,6 +481,49 @@
         </p>
       </div>
     </div>
+
+    <!-- Visitor counter + since date -->
+    <div style="margin-top:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">
+        Since 6/6/2026
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">
+        Visitors:
+        <a href="https://www.freecounterstat.com" title="free web counter" target="_blank" style="color:var(--teal);text-decoration:none;">
+          <img src="https://counter9.stat.ovh/private/freecounterstat.php?c=jkq7n3zf1ytpx5wd" style="border:none;vertical-align:middle;height:18px;" alt="visitor counter">
+        </a>
+      </div>
+    </div>
+
+    <!-- Score validation panel — about page only -->
+    <div style="margin-top:24px;">
+      <div id="val-panel">
+        <div id="val-header" onclick="toggleValBody()">
+          <div id="val-header-left">
+            <span id="val-title">Sheet vs App Validation</span>
+            <span id="val-badge">—</span>
+          </div>
+          <span id="val-toggle">▾</span>
+        </div>
+        <div id="val-body">
+          <div id="val-status">Waiting for forecast…</div>
+          <table class="val-table" id="val-table">
+            <thead>
+              <tr>
+                <th>Site</th>
+                <th></th>
+                <th>Sheet</th>
+                <th>App</th>
+                <th>Diff</th>
+              </tr>
+            </thead>
+            <tbody id="val-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
   </div>
 
   <!-- TIMELINE: 13 sites × 5 days × hourly heatmap -->
@@ -538,7 +581,7 @@
 
   <div id="tl-tooltip"></div>
 
-  <!-- Legend above divider line -->
+  <!-- Legend + last updated (global footer row) -->
   <div style="margin-top:32px;display:flex;align-items:center;flex-wrap:wrap;gap:16px;justify-content:space-between;">
     <div class="legend" style="margin-bottom:0;">
       <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Easy (40–60)</div>
@@ -547,35 +590,9 @@
     </div>
     <div class="last-updated" id="lastUpdated">Loading…</div>
   </div>
-
-  <!-- Divider line -->
   <div style="border-top:1px solid var(--border);margin-top:18px;"></div>
 
-  <!-- Score validation panel — below the line -->
-  <div id="val-panel">
-    <div id="val-header" onclick="toggleValBody()">
-      <div id="val-header-left">
-        <span id="val-title">Sheet vs App Validation</span>
-        <span id="val-badge">—</span>
-      </div>
-      <span id="val-toggle">▾</span>
-    </div>
-    <div id="val-body">
-      <div id="val-status">Waiting for forecast…</div>
-      <table class="val-table" id="val-table">
-        <thead>
-          <tr>
-            <th>Site</th>
-            <th></th>
-            <th>Sheet</th>
-            <th>App</th>
-            <th>Diff</th>
-          </tr>
-        </thead>
-        <tbody id="val-tbody"></tbody>
-      </table>
-    </div>
-  </div>
+  <!-- (Validation panel moved to About tab) -->
 </div>
 
 <script>
