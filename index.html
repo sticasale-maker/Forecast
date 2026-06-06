@@ -370,15 +370,15 @@
     position:fixed;
     top:0; left:0; right:0;
     z-index:500;
-    background:linear-gradient(135deg, rgba(0,30,70,0.97) 0%, rgba(0,50,80,0.97) 100%);
-    backdrop-filter:blur(16px);
-    border-bottom:1px solid rgba(0,194,168,0.3);
-    padding:20px 24px 18px;
+    background:linear-gradient(160deg, rgba(0,22,55,0.98) 0%, rgba(0,45,75,0.98) 60%, rgba(0,30,60,0.98) 100%);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid rgba(0,194,168,0.25);
+    padding:28px 28px 22px;
     transform:translateY(0);
-    transition:transform 0.6s cubic-bezier(0.4,0,0.2,1), opacity 0.6s ease;
+    transition:transform 0.65s cubic-bezier(0.4,0,0.2,1), opacity 0.65s ease;
     opacity:1;
     pointer-events:none;
-    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    box-shadow:0 10px 48px rgba(0,0,0,0.6);
   }
   #day-summary-banner.hidden {
     transform:translateY(-110%);
@@ -387,37 +387,23 @@
   .dsb-inner {
     max-width:1400px;
     margin:0 auto;
-    display:flex;
-    align-items:flex-start;
-    gap:16px;
-  }
-  .dsb-icon {
-    font-size:40px;
-    line-height:1;
-    flex-shrink:0;
-    filter:drop-shadow(0 0 10px rgba(0,194,168,0.5));
-    animation:dsb-float 3s ease-in-out infinite;
-  }
-  @keyframes dsb-float {
-    0%,100%{transform:translateY(0)}
-    50%{transform:translateY(-4px)}
   }
   .dsb-text-wrap { flex:1; min-width:0; }
   .dsb-eyebrow {
     font-family:'DM Mono',monospace;
-    font-size:9px;
+    font-size:10px;
     text-transform:uppercase;
     letter-spacing:2.5px;
     color:var(--teal);
-    margin-bottom:6px;
-    opacity:0.85;
+    margin-bottom:8px;
+    opacity:0.9;
   }
   .dsb-summary {
     font-family:'DM Sans',sans-serif;
-    font-size:clamp(14px,2.2vw,18px);
+    font-size:clamp(16px,2.4vw,20px);
     font-weight:400;
-    color:#e8f4ff;
-    line-height:1.55;
+    color:#eef5ff;
+    line-height:1.5;
     letter-spacing:0.1px;
   }
   .dsb-summary.loading {
@@ -425,14 +411,126 @@
     font-style:italic;
     animation:dsb-pulse-text 1.4s ease-in-out infinite;
   }
-  @keyframes dsb-pulse-text { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  @keyframes dsb-pulse-text { 0%,100%{opacity:1} 50%{opacity:0.45} }
+  /* Score mini-strip */
+  .dsb-scores {
+    display:flex;
+    gap:6px;
+    margin-top:14px;
+    flex-wrap:wrap;
+  }
+  .dsb-score-chip {
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.5px;
+    padding:3px 9px 3px 7px;
+    border-radius:20px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+    opacity:0.88;
+  }
+  .dsb-score-chip.green  { background:rgba(46,204,113,0.15);  border:1px solid rgba(46,204,113,0.35);  color:#2ecc71; }
+  .dsb-score-chip.yellow { background:rgba(245,200,66,0.13);  border:1px solid rgba(245,200,66,0.3);   color:#f5c842; }
+  .dsb-score-chip.red    { background:rgba(232,61,61,0.13);   border:1px solid rgba(232,61,61,0.3);    color:#e83d3d; }
+  .dsb-score-chip-dot {
+    width:6px; height:6px; border-radius:50%; flex-shrink:0;
+  }
+  .green  .dsb-score-chip-dot { background:#2ecc71; }
+  .yellow .dsb-score-chip-dot { background:#f5c842; }
+  .red    .dsb-score-chip-dot { background:#e83d3d; }
+  /* Row layout: icon + text side by side */
+  .dsb-row {
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+  }
+  .dsb-row-icon {
+    font-size:36px;
+    line-height:1;
+    flex-shrink:0;
+    width:44px;
+    text-align:center;
+    filter:drop-shadow(0 0 8px rgba(0,194,168,0.4));
+  }
+  .dsb-row-body {
+    flex:1;
+    min-width:0;
+  }
+
+  /* Two-section summaries */
+  .dsb-section {
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid rgba(0,194,168,0.12);
+  }
+  .dsb-section-label {
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:2px;
+    color:var(--teal);
+    opacity:0.7;
+    margin-bottom:5px;
+  }
+  .dsb-section-text {
+    font-family:'DM Sans',sans-serif;
+    font-size:clamp(16px,2.4vw,20px);
+    font-weight:400;
+    color:#eef5ff;
+    line-height:1.5;
+  }
+  /* Trend chart */
+  .dsb-trend-wrap {
+    margin-top:14px;
+    padding-top:10px;
+    border-top:1px solid rgba(0,194,168,0.12);
+  }
+  .dsb-trend-eyebrow {
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    color:var(--teal);
+    opacity:0.7;
+    margin-bottom:8px;
+  }
+  .dsb-trend {
+    display:flex;
+    align-items:flex-end;
+    gap:2px;
+    height:36px;
+  }
+  .dsb-trend-col {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    height:36px;
+  }
+  .dsb-trend-bar {
+    width:100%;
+    border-radius:2px 2px 0 0;
+    min-height:2px;
+  }
+  .dsb-trend-label {
+    font-family:'DM Mono',monospace;
+    font-size:8px;
+    color:var(--text-dim);
+    text-align:center;
+    margin-top:3px;
+    letter-spacing:0.3px;
+    line-height:1;
+  }
   .dsb-progress {
     position:absolute;
     bottom:0; left:0;
     height:2px;
     background:var(--teal);
     border-radius:0 2px 2px 0;
-    box-shadow:0 0 8px rgba(0,194,168,0.6);
+    box-shadow:0 0 10px rgba(0,194,168,0.7);
     transition:width 0.1s linear;
     width:100%;
   }
@@ -528,10 +626,28 @@
 <!-- Daily Weather Summary Banner -->
 <div id="day-summary-banner">
   <div class="dsb-inner">
-    <div class="dsb-icon" id="dsb-icon">🌊</div>
     <div class="dsb-text-wrap">
-      <div class="dsb-eyebrow">Today's vibe for Sydney divers</div>
-      <div class="dsb-summary loading" id="dsb-summary">Checking today's conditions for you…</div>
+      <!-- Surface section -->
+      <div class="dsb-row">
+        <div class="dsb-row-icon" id="dsb-icon">🌊</div>
+        <div class="dsb-row-body">
+          <div class="dsb-eyebrow" id="dsb-eyebrow-label">Today's conditions</div>
+          <div class="dsb-summary loading" id="dsb-summary">Checking today's conditions for you…</div>
+        </div>
+      </div>
+      <!-- Dive section -->
+      <div class="dsb-section dsb-row" id="dsb-dive-section" style="display:none">
+        <div class="dsb-row-icon" id="dsb-dive-icon">🤿</div>
+        <div class="dsb-row-body">
+          <div class="dsb-section-label">In the water</div>
+          <div class="dsb-section-text" id="dsb-dive-text"></div>
+        </div>
+      </div>
+      <!-- Trend chart -->
+      <div class="dsb-trend-wrap" id="dsb-trend-wrap" style="display:none">
+        <div class="dsb-trend-eyebrow" id="dsb-trend-eyebrow">Avg dive score across all sites</div>
+        <div class="dsb-trend" id="dsb-trend"></div>
+      </div>
     </div>
   </div>
   <div class="dsb-progress" id="dsb-progress"></div>
@@ -1842,7 +1958,7 @@ async function init() {
       document.getElementById('lastUpdated').textContent =
         'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
       validateScores(data); // run validation against sheet
-      if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data); }
+      if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data, matrix); }
       return;
     }
 
@@ -1858,7 +1974,7 @@ async function init() {
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
       validateScores(data); // run validation against sheet
-      if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data); }
+      if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data, loadCache()?.matrix || []); }
     } catch(err) {
       console.error(err);
       showErrorBanner(err.message);
@@ -2100,8 +2216,6 @@ function hardRefresh() {
 // Builds a friendly condition summary from live forecast data.
 // Shows in the header area for 6 seconds then slides away.
 
-const DSB_DURATION_MS = 6000; // display time in ms
-
 // Returns the time-of-day window and whether to look at tomorrow
 function getDayWindow() {
   const h = new Date().getHours();
@@ -2119,93 +2233,147 @@ function fetchWithTimeout(url, ms) {
   ]);
 }
 
-// Build the summary from ocean data + optional Open-Meteo enrichment
-function buildSummaryFromData(data, omj, isTomorrow) {
+// ── Surface (out-of-water) summary ─────────────────────────────────────────────
+function buildSurfaceSummary(omj, isTomorrow, data) {
   const { label: timeLabel } = getDayWindow();
+  let skyDesc = '', airDesc = '', rainWarn = '', windSurface = '';
+  let wcode = -1, rain = 0, avgTemp = 20;
 
-  let airDesc = '', rainWarn = '', skyDesc = '';
   if (omj) {
     try {
-      const idx   = isTomorrow ? 1 : 0;
-      const maxT  = omj.daily?.temperature_2m_max?.[idx];
-      const minT  = omj.daily?.temperature_2m_min?.[idx];
-      const rain  = omj.daily?.precipitation_sum?.[idx] || 0;
-      const wcode = omj.daily?.weathercode?.[idx] ?? 0;
+      const idx = isTomorrow ? 1 : 0;
+      const maxT = omj.daily?.temperature_2m_max?.[idx];
+      const minT = omj.daily?.temperature_2m_min?.[idx];
+      rain  = omj.daily?.precipitation_sum?.[idx] || 0;
+      wcode = omj.daily?.weathercode?.[idx] ?? -1;
       if (maxT !== undefined) {
-        const avg = (maxT + minT) / 2;
-        if (avg >= 22)      airDesc = 'gorgeous and warm topside';
-        else if (avg >= 17) airDesc = 'nice and mild out of the water';
-        else if (avg >= 12) airDesc = 'a bit crisp once you surface';
-        else                airDesc = 'cold once you peel off that wetsuit';
+        avgTemp = (maxT + minT) / 2;
+        if (avgTemp >= 23)      airDesc = `warm day, up to ${Math.round(maxT)}\u00b0C`;
+        else if (avgTemp >= 18) airDesc = `pleasant ${Math.round(minT)}\u2013${Math.round(maxT)}\u00b0C`;
+        else if (avgTemp >= 13) airDesc = `mild but bring a layer, ${Math.round(minT)}\u2013${Math.round(maxT)}\u00b0C`;
+        else                    airDesc = `cold day, only ${Math.round(maxT)}\u00b0C \u2014 dress warm`;
       }
-      if (rain >= 5)        rainWarn = 'rain on the way so pack a dry bag';
-      else if (rain >= 1.5) rainWarn = 'light shower possible — no big deal';
-      if (wcode <= 1)       skyDesc = 'sunny skies';
-      else if (wcode <= 3)  skyDesc = 'partly cloudy but bright';
-      else if (wcode <= 48) skyDesc = 'a misty, moody kind of day';
-      else if (wcode <= 67) skyDesc = 'overcast with some rain about';
-      else if (wcode <= 82) skyDesc = 'showery spells';
-      else                  skyDesc = 'stormy conditions up top';
+      if (rain >= 5)        rainWarn = 'showers likely \u2014 pack a dry bag';
+      else if (rain >= 1.5) rainWarn = 'light shower possible';
+      if (wcode >= 0) {
+        if (wcode <= 1)       skyDesc = 'Clear sunny skies';
+        else if (wcode <= 3)  skyDesc = 'Partly cloudy';
+        else if (wcode <= 48) skyDesc = 'Misty and overcast';
+        else if (wcode <= 67) skyDesc = 'Grey and rainy';
+        else if (wcode <= 82) skyDesc = 'Showery';
+        else                  skyDesc = 'Stormy';
+      }
     } catch(e) {}
   }
 
+  const wind = data.windKmh || 0;
+  if (wind > 30)      windSurface = `strong ${Math.round(wind)} km/h wind \u2014 it'll feel cold out of the water`;
+  else if (wind > 18) windSurface = `${Math.round(wind)} km/h breeze \u2014 bring a towel you can hold onto`;
+  else if (wind > 10) windSurface = `light ${Math.round(wind)} km/h wind`;
+
+  // Pick surface icon based on sky + temp + rain + wind
+  let icon;
+  if (wcode >= 95)                                     icon = '\u26c8\ufe0f';   // thunderstorm
+  else if (rain >= 5 || (wcode >= 61 && wcode <= 82)) icon = '\ud83c\udf27\ufe0f'; // rain
+  else if (rain >= 1.5 || wcode >= 51)                icon = '\ud83c\udf26\ufe0f'; // sun+rain
+  else if (wcode >= 45)                               icon = '\ud83c\udf2b\ufe0f'; // fog
+  else if (wcode >= 2)                                icon = wind > 20 ? '\ud83c\udf2c\ufe0f' : '\u26c5'; // windy/cloudy
+  else if (wind > 25)                                 icon = '\ud83d\udca8';    // wind
+  else if (avgTemp >= 22)                             icon = '\u2600\ufe0f';    // sun
+  else                                                icon = '\ud83c\udf24\ufe0f'; // sun+cloud
+
+  const parts = [];
+  if (skyDesc)     parts.push(skyDesc);
+  if (airDesc)     parts.push(airDesc);
+  if (windSurface) parts.push(windSurface);
+  if (rainWarn)    parts.push(rainWarn);
+
+  const text = !parts.length
+    ? `Nice day to be out ${timeLabel} \u2014 enjoy!`
+    : parts.length === 1 ? parts[0] + '.'
+    : parts.length === 2 ? `${parts[0]}, ${parts[1].toLowerCase()}.`
+    : `${parts[0]}, ${parts[1].toLowerCase()}, ${parts[2].toLowerCase()}.`;
+
+  return { text, icon };
+}
+
+
+// ── In-water (dive) summary ─────────────────────────────────────────────────────
+function buildDiveSummary(data, arc) {
+  const { label: timeLabel } = getDayWindow();
   const wind  = data.windKmh   || 0;
   const swell = data.swell1H   || 0;
   const chop  = data.windWaveH || 0;
   const tide  = data.tideM     || 1.0;
+  const period = data.swell1P  || 8;
 
-  let oceanMood;
-  if (wind > 35 || swell > 2.0) {
-    oceanMood = "it's pretty gnarly out there — might be a couch day for most spots";
-  } else if (wind > 25 || (swell > 1.5 && chop > 0.6)) {
-    oceanMood = 'a bumpy one on the surface, so pick a sheltered site';
-  } else if (swell > 1.2 || chop > 0.4) {
-    oceanMood = "some movement in the water but nothing the regulars can't handle";
-  } else if (swell < 0.5 && wind < 10) {
-    oceanMood = 'conditions are absolutely dreamy — glassy and calm';
-  } else {
-    oceanMood = 'solid conditions for a dive or snorkel';
+  // Swell character
+  let swellDesc;
+  if (swell > 2.0)      swellDesc = `big ${swell.toFixed(1)}m swell making most sites rough`;
+  else if (swell > 1.4) swellDesc = `${swell.toFixed(1)}m swell — sheltered spots only`;
+  else if (swell > 0.9) swellDesc = `${swell.toFixed(1)}m swell, manageable at most sites`;
+  else if (swell > 0.4) swellDesc = `small ${swell.toFixed(1)}m swell, clean and easy`;
+  else                  swellDesc = `minimal swell — ideal underwater`;
+
+  // Period adds context
+  if (swell > 0.4) {
+    if (period >= 14)     swellDesc += `, long ${Math.round(period)}s period (strong surge)`;
+    else if (period >= 10) swellDesc += `, ${Math.round(period)}s period`;
   }
 
-  const windNote = wind > 20 ? 'the wind will make it feel cooler on the surface' : '';
-  const tideNote = tide > 1.6 ? 'high tide giving great depth at the entries'
-                 : tide < 0.4 ? 'low tide — mind the shallows getting in' : '';
+  // Wind effect on surface / entries
+  let windEffect = '';
+  if (wind > 30)      windEffect = `choppy surface entries with ${Math.round(wind)} km/h winds`;
+  else if (wind > 20) windEffect = `${Math.round(wind)} km/h wind adding surface chop`;
+  else if (wind > 12) windEffect = `light chop from ${Math.round(wind)} km/h wind`;
 
-  const openings = [
-    `Hey team, ${timeLabel} is shaping up — `,
-    `Alright crew, here's the ${timeLabel} vibe: `,
-    `Quick conditions check for ${timeLabel} — `,
-    `Hey legends, ${timeLabel} is looking like `,
-    `Heads up for ${timeLabel}: `,
-  ];
-  const opening = openings[new Date().getMinutes() % openings.length];
+  // Tide
+  let tideNote = '';
+  if (tide > 1.6)      tideNote = `high tide (${tide.toFixed(1)}m) — great depth at entries`;
+  else if (tide < 0.4) tideNote = `low tide (${tide.toFixed(1)}m) — watch the rocks`;
 
-  const pieces = [];
-  if (skyDesc)  pieces.push(skyDesc);
-  if (airDesc)  pieces.push(airDesc);
-  pieces.push(oceanMood);
-  if (windNote) pieces.push(windNote);
-  if (tideNote) pieces.push(tideNote);
-  if (rainWarn) pieces.push(rainWarn);
-  const used = pieces.slice(0, 3);
+  // Arc-based day trajectory
+  let trajectory = '';
+  if (arc) {
+    if (arc.trendNote)         trajectory = arc.trendNote;
+    else if (arc.peak >= 48)   trajectory = `scores peak ${arc.peakTime} — that\'s your window`;
+    else if (arc.peak >= 35)   trajectory = `best window ${arc.peakTime} with scores around ${arc.peak}/60`;
+    else if (arc.peak >= 20)   trajectory = `challenging all day, best ${arc.peakTime} at ${arc.peak}/60`;
+    else                       trajectory = `tough conditions all day — scores stay low`;
+  }
 
-  const body = used.length === 1 ? used[0]
-             : used.length === 2 ? `${used[0]}, with ${used[1]}`
-             : `${used[0]}, ${used[1]}, and ${used[2]}`;
+  const parts = [swellDesc];
+  if (windEffect) parts.push(windEffect);
+  if (tideNote)   parts.push(tideNote);
 
-  const sentence = opening + body + '.';
-  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+  let text = parts.join(', ') + '.';
+  if (trajectory) text += ' ' + trajectory.charAt(0).toUpperCase() + trajectory.slice(1) + '.';
+  text = text.charAt(0).toUpperCase() + text.slice(1);
+
+  // Pick dive icon based on swell + wind + arc score
+  let icon;
+  const peakScore = arc?.peak ?? 60;
+  if (swell > 2.0 || wind > 35)         icon = '🚫';
+  else if (swell > 1.4 || wind > 25)    icon = '⚠️';
+  else if (peakScore >= 45)              icon = '🤿';
+  else if (peakScore >= 30)             icon = '🐠';
+  else if (swell < 0.5 && wind < 10)   icon = '✨';
+  else                                   icon = '🌊';
+
+  return { text, icon };
 }
 
-async function generateDaySummary(data) {
+async function generateBothSummaries(data, arc) {
   const { isTomorrow } = getDayWindow();
-  // Try to enrich with Open-Meteo air/sky data (3s timeout — gracefully skipped if local/offline)
   const forecastDays = isTomorrow ? 2 : 1;
   const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=-33.8688&longitude=151.2093` +
     `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum` +
     `&timezone=Australia%2FSydney&forecast_days=${forecastDays}`;
   const omj = await fetchWithTimeout(omUrl, 3000);
-  return buildSummaryFromData(data, omj, isTomorrow);
+  return {
+    surface: buildSurfaceSummary(omj, isTomorrow, data),
+    dive:    buildDiveSummary(data, arc),
+  }; // both return { text, icon }
 }
 
 
@@ -2221,67 +2389,176 @@ function pickWeatherIcon(data) {
   return '🌊';
 }
 
-function startDSBCountdown(durationMs) {
-  const bar = document.getElementById('dsb-progress');
+function startDSBCountdown() {
+  const bar    = document.getElementById('dsb-progress');
   const banner = document.getElementById('day-summary-banner');
   if (!bar || !banner) return;
 
-  // Animate progress bar draining from 100% → 0%
-  let start = null;
-  function step(ts) {
-    if (!start) start = ts;
-    const elapsed = ts - start;
-    const remaining = Math.max(0, 1 - elapsed / durationMs);
-    bar.style.width = (remaining * 100) + '%';
-    if (elapsed < durationMs) {
-      requestAnimationFrame(step);
-    } else {
-      banner.classList.add('hidden');
-    }
+  // Hide progress bar — banner stays until the user touches/clicks
+  bar.style.display = 'none';
+
+  function dismiss() {
+    banner.classList.add('hidden');
+    document.removeEventListener('touchstart', dismiss);
+    document.removeEventListener('mousedown',  dismiss);
   }
-  requestAnimationFrame(step);
+  // Small delay so the tap that might have opened the app does not instantly dismiss
+  setTimeout(() => {
+    document.addEventListener('touchstart', dismiss, { passive: true });
+    document.addEventListener('mousedown',  dismiss);
+  }, 800);
 }
 
-async function initDaySummaryBanner(data) {
-  const banner    = document.getElementById('day-summary-banner');
-  const summaryEl = document.getElementById('dsb-summary');
-  const iconEl    = document.getElementById('dsb-icon');
-  const eyebrowEl = document.querySelector('.dsb-eyebrow');
+// ── Score analysis helpers for the banner ──────────────────────────────────────
+
+// Compute average score across all sites for a given hourly data point
+function avgScoreForHour(hourData) {
+  const scores = SITES.map(s => calcScore(s, hourData).score);
+  return Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+}
+
+// Get the top N sites by score for a given hour
+function topSitesForHour(hourData, n) {
+  return SITES
+    .map(s => ({ name: s.name, score: calcScore(s, hourData).score }))
+    .sort((a,b) => b.score - a.score)
+    .slice(0, n);
+}
+
+// From the hourly matrix, extract today's (or tomorrow's) hours in the relevant window
+function getTodayHours(matrix, isTomorrow) {
+  const tz = 'Australia/Sydney';
+  const targetDate = new Date();
+  if (isTomorrow) targetDate.setDate(targetDate.getDate() + 1);
+  const targetKey = targetDate.toLocaleDateString('en-CA', { timeZone: tz });
+  return matrix.filter(h => h.dateTime.startsWith(targetKey));
+}
+
+// Describe the score arc across the day window
+function describeScoreArc(todayHours) {
+  if (!todayHours.length) return null;
+  const nowH = new Date().getHours();
+  const morning  = todayHours.filter(h => new Date(h.dateTime).getHours() < 12);
+  const afternoon = todayHours.filter(h => { const hr = new Date(h.dateTime).getHours(); return hr >= 12 && hr < 17; });
+  const evening  = todayHours.filter(h => new Date(h.dateTime).getHours() >= 17);
+
+  const avg = arr => arr.length ? Math.round(arr.reduce((s,h) => s + avgScoreForHour(h), 0) / arr.length) : null;
+  const mAv = avg(morning), aAv = avg(afternoon), eAv = avg(evening);
+
+  const all = todayHours.map(h => avgScoreForHour(h));
+  const peak = Math.max(...all);
+  const peakHour = new Date(todayHours[all.indexOf(peak)].dateTime).getHours();
+  const peakTime = peakHour < 12 ? 'this morning' : peakHour < 17 ? 'this afternoon' : 'this evening';
+
+  // Score colour helper
+  const sc = s => s >= 40 ? 'green' : s >= 20 ? 'yellow' : 'red';
+  const sl = s => s >= 40 ? 'great' : s >= 20 ? 'OK' : 'tough';
+
+  // Describe trend
+  let trendNote = null;
+  if (mAv !== null && eAv !== null) {
+    const diff = eAv - mAv;
+    if (diff > 8)       trendNote = `improving throughout the day — best ${peakTime}`;
+    else if (diff < -8) trendNote = `best in the morning and easing off later`;
+    else if (peak >= 40) trendNote = `consistent ${sl(peak)} conditions all day`;
+  }
+
+  return { mAv, aAv, eAv, peak, peakHour, peakTime, trendNote, sc, sl };
+}
+
+async function initDaySummaryBanner(data, matrix) {
+  const banner      = document.getElementById('day-summary-banner');
+  const summaryEl   = document.getElementById('dsb-summary');
+  const iconEl      = document.getElementById('dsb-icon');
+  const eyebrowEl   = document.getElementById('dsb-eyebrow-label');
+  const diveSectEl  = document.getElementById('dsb-dive-section');
+  const diveTextEl  = document.getElementById('dsb-dive-text');
+  const trendWrapEl = document.getElementById('dsb-trend-wrap');
+  const trendEl     = document.getElementById('dsb-trend');
+  const trendLbl    = document.getElementById('dsb-trend-eyebrow');
   if (!banner || !summaryEl) return;
 
   iconEl.textContent = pickWeatherIcon(data);
 
-  // Set eyebrow label based on time window
-  const { label: timeLabel } = getDayWindow();
-  if (eyebrowEl) {
-    const eyebrowMap = {
-      'today':         "Today's vibe for Sydney divers",
-      'this afternoon':"This afternoon's conditions",
-      'this evening':  "Evening dive conditions",
-      'tomorrow':      "Planning for tomorrow?",
-    };
-    eyebrowEl.textContent = eyebrowMap[timeLabel] || "Today's vibe for Sydney divers";
+  const { label: timeLabel, isTomorrow } = getDayWindow();
+  const eyebrowMap = {
+    'today':          "Today's conditions",
+    'this afternoon': "This afternoon",
+    'this evening':   "This evening",
+    'tomorrow':       "Tomorrow's conditions",
+  };
+  if (eyebrowEl) eyebrowEl.textContent = eyebrowMap[timeLabel] || "Today's conditions";
+
+  // ── Score arc from matrix ──
+  const todayHours = matrix?.length ? getTodayHours(matrix, isTomorrow) : [];
+  const arc = todayHours.length ? describeScoreArc(todayHours) : null;
+
+  // ── Hourly avg-score trend bars (fixed px heights) ──
+  if (todayHours.length && trendWrapEl && trendEl) {
+    const BAR_MAX_PX = 36; // matches .dsb-trend height
+    // Sample every 2 hours, up to 13 bars (full day)
+    const sampled = todayHours.filter(h => new Date(h.dateTime).getHours() % 2 === 0);
+    const nowMs = Date.now();
+
+    trendEl.innerHTML = '';
+    sampled.forEach(h => {
+      const score  = avgScoreForHour(h);
+      const col    = score >= 40 ? '#2ecc71' : score >= 20 ? '#f5c842' : '#e83d3d';
+      const barPx  = Math.max(2, Math.round((score / 60) * BAR_MAX_PX));
+      const hr     = new Date(h.dateTime).getHours();
+      const isPast = new Date(h.dateTime).getTime() < nowMs - 1800000;
+
+      const col2   = document.createElement('div');
+      col2.className = 'dsb-trend-col';
+
+      const bar = document.createElement('div');
+      bar.className = 'dsb-trend-bar';
+      bar.style.cssText = `height:${barPx}px;background:${col};opacity:${isPast ? '0.28' : '0.8'};`;
+
+      const lbl = document.createElement('div');
+      lbl.className = 'dsb-trend-label';
+      lbl.textContent = hr === 0 ? '12a' : hr < 12 ? `${hr}a` : hr === 12 ? '12p' : `${hr - 12}p`;
+
+      col2.appendChild(bar);
+      col2.appendChild(lbl);
+      trendEl.appendChild(col2);
+    });
+
+    if (trendLbl) trendLbl.textContent = isTomorrow ? "Tomorrow — avg score across all sites" : "Today — avg score across all sites";
+    trendWrapEl.style.display = 'block';
   }
 
-  // Wait for splash to finish (2.4s + 0.6s fade) before showing
+  // Wait for splash to finish before showing
   await new Promise(r => setTimeout(r, 3200));
-
-  // Ensure banner is visible
   banner.classList.remove('hidden');
 
+  // ── Generate both summaries ──
   try {
-    const summary = await generateDaySummary(data);
+    const { surface, dive } = await generateBothSummaries(data, arc);
+
+    // Surface: text + icon
     summaryEl.classList.remove('loading');
-    summaryEl.textContent = summary || 'The ocean is calling — hope to see you out there today!';
+    summaryEl.textContent = surface.text;
+    if (iconEl) iconEl.textContent = surface.icon;
+
+    // Dive: text + icon
+    if (diveTextEl && diveSectEl) {
+      diveTextEl.textContent = dive.text;
+      const diveIconEl = document.getElementById('dsb-dive-icon');
+      if (diveIconEl) diveIconEl.textContent = dive.icon;
+      diveSectEl.style.display = 'flex';
+    }
   } catch(e) {
     summaryEl.classList.remove('loading');
-    summaryEl.textContent = 'Conditions are loaded — check the scores below and get amongst it!';
+    summaryEl.textContent = 'Check the scores below — have a great dive!';
     console.warn('DSB summary failed:', e.message);
   }
 
-  // Start 6-second countdown to hide
-  startDSBCountdown(DSB_DURATION_MS);
+  startDSBCountdown();
 }
+
+
+
 
 // Load parameters from Google Sheet first, then start the app.
 // Falls back to hardcoded defaults if sheet is unreachable.
