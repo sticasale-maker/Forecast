@@ -881,15 +881,38 @@
 </div>
 
 <script>
-function submitFeedback() {
-  const text = document.getElementById('feedback-text').value.trim();
+async function submitFeedback() {
+  const textarea = document.getElementById('feedback-text');
+  const btn      = document.querySelector('[onclick="submitFeedback()"]');
+  const text     = textarea.value.trim();
   if (!text) return;
-  const mailto = 'mailto:vizgroupsydney@gmail.com'
-    + '?subject=' + encodeURIComponent('VIZ App Feedback')
-    + '&body=' + encodeURIComponent(text);
-  window.location.href = mailto;
-  document.getElementById('feedback-form').style.display = 'none';
-  document.getElementById('feedback-thanks').style.display = 'block';
+
+  const FORMSPREE_ENDPOINT = 'https://formsubmit.co/ajax/vizgroupsydney@gmail.com';
+
+  btn.disabled    = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res = await fetch(FORMSPREE_ENDPOINT, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body:    JSON.stringify({ message: text }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success === 'true') {
+      document.getElementById('feedback-form').style.display  = 'none';
+      document.getElementById('feedback-thanks').style.display = 'block';
+    } else {
+      btn.disabled    = false;
+      btn.textContent = 'Submit';
+      alert('Could not send feedback — please try again.');
+    }
+  } catch (err) {
+    btn.disabled    = false;
+    btn.textContent = 'Submit';
+    alert('Network error — please check your connection and try again.');
+  }
 }
 </script>
 
