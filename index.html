@@ -896,7 +896,7 @@ async function submitFeedback() {
     const res = await fetch(FORMSPREE_ENDPOINT, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body:    JSON.stringify({ message: text }),
+      body:    JSON.stringify({ message: text, _subject: 'VIZ Forecast App: Feedback' }),
     });
 
     const data = await res.json().catch(() => ({}));
