@@ -2873,7 +2873,7 @@ function admRowsToText(rows) {
     if (s.length < 25) return false;
     const letters = (s.match(/[A-Za-z]/g) || []).length;
     if (letters < 20) return false;
-    const words = s.split(/\\s+/).filter(w => /[A-Za-z]/.test(w));
+    const words = s.split(/\s+/).filter(w => /[A-Za-z]/.test(w));
     if (words.length < 5) return false;
     if (letters / s.length < 0.4) return false;
     return true;
@@ -2883,7 +2883,7 @@ function admRowsToText(rows) {
     if (!Array.isArray(r)) r = Object.values(r);
     r.forEach(cell => { if (isPost(cell)) out.push(String(cell).trim()); });
   });
-  return Array.from(new Set(out)).join('\\n\\n');
+  return Array.from(new Set(out)).join('\n\n');
 }
 async function admFile(inputEl) {
   const file = inputEl.files && inputEl.files[0];
