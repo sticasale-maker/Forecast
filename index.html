@@ -2936,20 +2936,29 @@ async function admFile(inputEl) {
   }
 }
 
+// Turn an invented site_id (e.g. "bushrangers-bay") into a display name ("Bushrangers Bay")
+function prettySiteName(id) {
+  return String(id || '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
 // ── AI summarise: one call, returns JSON keyed by site_id ──
 function admBuildPrompt(posts) {
   const siteLines = SITE_ALIASES.map(s => `- "${s.id}" (${s.name}): ${s.aliases}`).join('\n');
   return `You are sorting recent posts from a Sydney scuba/snorkel Facebook group by dive site, then writing a short public conditions note for each site.
 
-SITES (id, name, aliases divers use):
+KNOWN SITES (id, name, aliases divers use):
 ${siteLines}
 
 Diver shorthand you may encounter: ${DIVER_GLOSSARY}
 
 TASK:
-1. Read the posts below. Assign each relevant post to the site whose aliases best match. Ignore posts that mention no recognisable site or are off-topic.
-2. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising recent sightings and the latest visibility (in metres if stated). Do not invent anything not in the posts. No bullet points, headers, or quotation marks.
-3. Return ONLY a JSON object mapping site_id to its summary string. Include only sites that have relevant posts. No markdown, no code fences, no commentary. Example: {"gordons_bay":"Viz around 8m...","cabbage-tree-bay":"Weedy seadragons..."}
+1. Read the posts below. Assign each relevant post to the site whose aliases best match.
+2. The KNOWN SITES list above is NOT exhaustive. If a post clearly refers to a real Sydney dive or snorkel site that is NOT in the list (e.g. Bushrangers Bay, Coogee, Oak Park, Bare Island, Camp Cove, etc.), still include it: invent a lowercase hyphenated site_id from its name (e.g. "bushrangers-bay", "coogee") and use the site's normal real-world name. Only do this for genuine, recognisable dive/snorkel locations — ignore posts that mention no recognisable site or are off-topic.
+3. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising recent sightings and the latest visibility (in metres if stated). Do not invent anything not in the posts. No bullet points, headers, or quotation marks.
+4. Return ONLY a JSON object mapping site_id to its summary string. Include both known and newly-identified sites that have relevant posts. No markdown, no code fences, no commentary. Example: {"gordons_bay":"Viz around 8m...","bushrangers-bay":"A few divers reported..."}
 
 POSTS:
 ${posts}`;
@@ -2994,7 +3003,7 @@ function admRenderReview(parsed) {
   list.innerHTML = '';
   // Order: known sites first (in table order), then any unexpected ids
   const ordered = SITE_ALIASES.filter(s => parsed[s.id] != null)
-    .concat(Object.keys(parsed).filter(id => !SITE_ALIASES.find(s=>s.id===id)).map(id => ({id, name:id})));
+    .concat(Object.keys(parsed).filter(id => !SITE_ALIASES.find(s=>s.id===id)).map(id => ({id, name: prettySiteName(id)})));
   ordered.forEach(s => {
     const swimFlag = s.swim ? ' <span class="swimflag">→ Swim app</span>' : '';
     const div = document.createElement('div');
@@ -3018,7 +3027,7 @@ async function admPublish() {
     const summary = ta ? ta.value.trim() : '';
     if (!summary) return;
     const meta = SITE_ALIASES.find(s => s.id === id);
-    jobs.push({ site_id:id, site_name: meta ? meta.name : id, summary });
+    jobs.push({ site_id:id, site_name: meta ? meta.name : prettySiteName(id), summary });
   });
   if (!jobs.length) { admStatus('adm-publish-status', 'Nothing ticked to publish.', 'err'); return; }
 
@@ -3068,7 +3077,7 @@ async function admLoadCurrent() {
     rows.forEach(r => {
       const when = r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '';
       const meta = SITE_ALIASES.find(s => s.id === r.site_id);
-      const nm = (meta ? meta.name : (r.site_name || r.site_id));
+      const nm = (meta ? meta.name : (r.site_name || prettySiteName(r.site_id)));
       html += '<div style="margin-top:8px;"><span style="color:var(--teal);">' + nm + '</span>' +
               (when ? ' <span style="opacity:0.6;">· ' + when + '</span>' : '') +
               '<br>' + (r.summary||'').replace(/</g,'&lt;') + '</div>';
@@ -3132,12 +3141,12 @@ function openReportsSheet() {
   sub.textContent = _publicReports.length + ' site' + (_publicReports.length>1?'s':'') + ' with recent reports';
   list.innerHTML = _publicReports.map(r => {
     const meta = SITE_ALIASES.find(s => s.id === r.site_id);
-    const nm = meta ? meta.name : (r.site_name || r.site_id);
+    const nm = meta ? meta.name : (r.site_name || prettySiteName(r.site_id));
     const when = r.updated_at
-      ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'})
+      ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})
       : '';
     return '<div class="rs-site"><div><span class="rs-site-name">' + nm + '</span>' +
-           (when ? '<span class="rs-site-when">' + when + '</span>' : '') + '</div>' +
+           (when ? '<span class="rs-site-when">Last report: ' + when + '</span>' : '') + '</div>' +
            '<div class="rs-site-summary">' + (r.summary||'').replace(/</g,'&lt;') + '</div></div>';
   }).join('');
   document.getElementById('reportsSheetOverlay').classList.add('open');
@@ -3164,7 +3173,7 @@ loadConfig().then(() => init());
   <div id="reportsSheet" onclick="event.stopPropagation()">
     <div id="reportsSheetGrip"></div>
     <div id="reportsSheetHead">
-      <span>Community reports</span>
+      <span><span style="color:var(--yellow);">VIZ</span> COMMUNITY REPORTS</span>
       <button id="reportsSheetClose" onclick="closeReportsSheet()" aria-label="Close">✕</button>
     </div>
     <div id="reportsSheetSub"></div>
