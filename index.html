@@ -2867,12 +2867,23 @@ function admLoadXlsx() {
   });
 }
 function admRowsToText(rows) {
-  if (!rows.length) return '';
-  const keys = Object.keys(rows[0]);
-  const pref = keys.filter(k => /message|text|post|content|description|comment|body|story/i.test(k));
-  const use = pref.length ? pref : keys;
-  return rows.map(r => use.map(k => (r[k]==null?'':String(r[k]).trim())).filter(Boolean).join(' — '))
-             .filter(Boolean).join('\n\n');
+  const isPost = (v) => {
+    if (v == null) return false;
+    const s = String(v).trim();
+    if (s.length < 25) return false;
+    const letters = (s.match(/[A-Za-z]/g) || []).length;
+    if (letters < 20) return false;
+    const words = s.split(/\\s+/).filter(w => /[A-Za-z]/.test(w));
+    if (words.length < 5) return false;
+    if (letters / s.length < 0.4) return false;
+    return true;
+  };
+  const out = [];
+  rows.forEach(r => {
+    if (!Array.isArray(r)) r = Object.values(r);
+    r.forEach(cell => { if (isPost(cell)) out.push(String(cell).trim()); });
+  });
+  return Array.from(new Set(out)).join('\\n\\n');
 }
 async function admFile(inputEl) {
   const file = inputEl.files && inputEl.files[0];
@@ -2880,23 +2891,30 @@ async function admFile(inputEl) {
   admStatus('adm-file-status', 'Reading ' + file.name + '…');
   const nm = file.name.toLowerCase();
   try {
-    let text = '';
     const XLSX = await admLoadXlsx();
+    let wb;
     if (nm.endsWith('.csv')) {
-      const raw = await file.text();
-      const wb = XLSX.read(raw, { type:'string' });
-      text = admRowsToText(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' }));
+      wb = XLSX.read(await file.text(), { type:'string' });
     } else if (nm.endsWith('.xlsx') || nm.endsWith('.xls')) {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type:'array' });
-      text = admRowsToText(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' }));
+      wb = XLSX.read(await file.arrayBuffer(), { type:'array' });
     } else {
       admStatus('adm-file-status', 'Unsupported file — use CSV or XLSX.', 'err'); return;
     }
-    if (!text.trim()) { admStatus('adm-file-status', 'No text found in that file.', 'err'); return; }
+    // Scan every sheet as a raw grid (posts may sit below metric sections, or on another tab)
+    let allRows = [];
+    wb.SheetNames.forEach(sn => {
+      const grid = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header:1, defval:'' });
+      allRows = allRows.concat(grid);
+    });
+    const text = admRowsToText(allRows);
+    if (!text.trim()) {
+      admStatus('adm-file-status', 'No posts found in that file. This looks like an analytics/metrics export — try the posts/content export, or paste posts directly.', 'err');
+      return;
+    }
     const ta = document.getElementById('adm-input');
     ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + text;
-    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + text.split('\n\n').length + ' rows added. Review, then Summarise.', 'ok');
+    const n = text.split('\n\n').length;
+    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + n + ' post' + (n>1?'s':'') + ' extracted. Review, then Summarise.', 'ok');
   } catch (e) {
     admStatus('adm-file-status', 'Could not read file: ' + e.message, 'err');
   } finally {
@@ -2943,7 +2961,7 @@ async function admSummarise() {
     text = text.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
     let parsed;
     try { parsed = JSON.parse(text); }
-    catch(e) { throw new Error('AI did not return valid JSON. Raw start: ' + text.slice(0,80)); }
+    catch(e) { throw new Error('No site reports could be extracted — the input may be analytics data rather than posts, or contained no recognisable sightings. Try the posts/content export, or paste posts directly.'); }
 
     _admResults = parsed;
     const ids = Object.keys(parsed);
