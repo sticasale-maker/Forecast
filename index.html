@@ -360,7 +360,7 @@
   }
   /* Time display is now inline in the section title */
   #snapshotTitle span {
-    color:var(--teal);
+    color:var(--teal); font-size:26px;
   }
   .snapshot-bars {
     display:flex; flex-direction:column; gap:8px; margin-bottom:8px;
@@ -819,7 +819,7 @@
 
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
-    <div class="section-title" id="snapshotTitle">Snapshot — <span id="snapshotTimeDisplay">—</span></div>
+    <div class="section-title" id="snapshotTitle"><span id="snapshotTimeDisplay">—</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" aria-hidden="true">
       <div class="snap-zone-track">
