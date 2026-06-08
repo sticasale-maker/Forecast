@@ -310,9 +310,13 @@
     font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; color:#fff;
   }
   #reportsSheetClose {
-    background:transparent; border:none; color:var(--text-dim); font-size:18px; cursor:pointer;
-    padding:4px 8px; line-height:1;
+    background:rgba(0,194,168,0.15); border:1px solid rgba(0,194,168,0.4);
+    color:var(--teal); font-size:30px; cursor:pointer;
+    width:44px; height:44px; border-radius:50%; line-height:1;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:background 0.15s;
   }
+  #reportsSheetClose:hover { background:rgba(0,194,168,0.3); }
   #reportsSheetSub { font-size:12px; color:var(--text-dim); margin:2px 0 14px; letter-spacing:0.5px; }
   .rs-site {
     border-top:1px solid var(--border); padding:12px 0;
@@ -822,6 +826,8 @@
     </div>
   </header>
 
+  <div id="reportsStrip" onclick="openReportsSheet()" style="display:none;"></div>
+
   <div class="error-banner" id="errorBanner">
     <strong>⚠ Could not load forecast data</strong>
     <span id="errorDetail">The forecast server did not respond.</span>
@@ -960,7 +966,6 @@
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
     <div class="section-title" id="snapshotTitle"><span id="snapshotTimeDisplay">—</span></div>
-    <div id="reportsStrip" onclick="openReportsSheet()" style="display:none;"></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" aria-hidden="true">
       <div class="snap-zone-track">
@@ -2400,7 +2405,15 @@ function hardRefresh() {
     return (window.scrollY || document.documentElement.scrollTop) === 0;
   }
 
+  function sheetOpen() {
+    const ov = document.getElementById('reportsSheetOverlay');
+    return ov && ov.classList.contains('open');
+  }
+
   document.addEventListener('touchstart', e => {
+    // Don't hijack pulls when the community sheet is open or the touch began inside it
+    if (sheetOpen()) return;
+    if (e.target && e.target.closest && e.target.closest('#reportsSheet')) return;
     if (!canPull()) return;
     startY   = e.touches[0].clientY;
     pulling  = true;
@@ -2409,6 +2422,7 @@ function hardRefresh() {
 
   document.addEventListener('touchmove', e => {
     if (!pulling) return;
+    if (sheetOpen()) { pulling = false; indicator.classList.remove('visible'); return; }
     const dy = Math.min(e.touches[0].clientY - startY, MAX_PULL);
     if (dy <= 0) { pulling = false; return; }
 
