@@ -323,7 +323,35 @@
     text-align:center;
   }
   .hour-slider-row input[type=range] {
-    accent-color:var(--teal); flex:1; width:100%; cursor:pointer;
+    -webkit-appearance:none; appearance:none;
+    flex:1; width:100%; cursor:pointer;
+    background:transparent; margin:0; padding:0;
+    /* tall hit area so the thumb is easy to grab with a finger */
+    height:45px;
+  }
+  /* Track */
+  .hour-slider-row input[type=range]::-webkit-slider-runnable-track {
+    height:8px; border-radius:4px;
+    background:rgba(0,194,168,0.25);
+  }
+  .hour-slider-row input[type=range]::-moz-range-track {
+    height:8px; border-radius:4px;
+    background:rgba(0,194,168,0.25);
+  }
+  /* Thumb — ~2x the native size, larger touch target */
+  .hour-slider-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none;
+    width:45px; height:45px; border-radius:50%;
+    background:var(--teal); border:3px solid var(--deep);
+    box-shadow:0 0 0 1px var(--teal), 0 2px 6px rgba(0,0,0,0.4);
+    margin-top:-18.5px; /* centre the thumb on the 8px track */
+    cursor:pointer;
+  }
+  .hour-slider-row input[type=range]::-moz-range-thumb {
+    width:45px; height:45px; border-radius:50%;
+    background:var(--teal); border:3px solid var(--deep);
+    box-shadow:0 0 0 1px var(--teal), 0 2px 6px rgba(0,0,0,0.4);
+    cursor:pointer;
   }
   .hour-tick-labels {
     display:flex; justify-content:space-between;
@@ -334,7 +362,11 @@
   #snapshotTitle span {
     color:var(--teal);
   }
-  .snapshot-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+  .snapshot-bars {
+    display:flex; flex-direction:column; gap:8px; margin-bottom:8px;
+    width:100vw; position:relative; left:50%; transform:translateX(-50%);
+    padding:0 20px; box-sizing:border-box;
+  }
   .snap-row {
     display:flex; align-items:center; gap:10px;
   }
@@ -362,7 +394,11 @@
     background:rgba(255,255,255,0.32); z-index:2; pointer-events:none;
   }
   /* Zone captions under the bars — centred in each scoring band */
-  .snap-zone-axis { display:flex; align-items:center; gap:10px; margin-bottom:40px; }
+  .snap-zone-axis {
+    display:flex; align-items:center; gap:10px; margin-bottom:40px;
+    width:100vw; position:relative; left:50%; transform:translateX(-50%);
+    padding:0 20px; box-sizing:border-box;
+  }
   .snap-zone-spacer { min-width:130px; }
   .snap-zone-track { flex:1; position:relative; height:14px; }
   .snap-zone-label {
@@ -786,12 +822,12 @@
     <div class="section-title" id="snapshotTitle">Snapshot — <span id="snapshotTimeDisplay">—</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" aria-hidden="true">
-      <div class="snap-zone-spacer"></div>
       <div class="snap-zone-track">
         <span class="snap-zone-label" style="left:16.67%;color:var(--red)">Avoid</span>
         <span class="snap-zone-label" style="left:50%;color:var(--yellow)">Caution</span>
         <span class="snap-zone-label" style="left:83.33%;color:var(--green)">Easy</span>
       </div>
+      <div class="snap-zone-spacer"></div>
     </div>
     <div class="snapshot-controls">
       <!-- Day selector buttons — built dynamically from data -->
@@ -1118,7 +1154,7 @@ const SITES = [
    tide:(o,t)=>o*(0.2941*t-0.0588)+(t>1.5?(t-1.5)*16:0)},
   {key:'BIE',        name:'BI East',          tideBase:'all',
    tide:(o,t)=>o*(0.2941*t-0.0588)},
-  {key:'Steps',      name:'Leaps & Steps',    tideBase:'all',
+  {key:'Steps',      name:'Leap & Steps',    tideBase:'all',
    tide:(o,t)=>o*(0.2941*t-0.0588)},
   {key:'Monument',   name:'Monument',         tideBase:'all',
    tide:(o,t)=>o*(0.2941*t-0.0588)},
@@ -1772,12 +1808,12 @@ function renderSnapshot(sliderVal) {
     const row = document.createElement('div');
     row.className = 'snap-row';
     row.innerHTML = `
-      <div class="snap-label">${name}</div>
       <div class="snap-bar-track">
         <div class="snap-bar-fill" style="width:${pct}%;background:${scoreColor(score)}"></div>
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
-      </div>`;
+      </div>
+      <div class="snap-label">${name}</div>`;
     container.appendChild(row);
   });
 
