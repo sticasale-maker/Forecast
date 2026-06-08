@@ -334,7 +334,7 @@
   #snapshotTitle span {
     color:var(--teal);
   }
-  .snapshot-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:40px; }
+  .snapshot-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
   .snap-row {
     display:flex; align-items:center; gap:10px;
   }
@@ -356,6 +356,20 @@
     color:rgba(0,0,0,0.7);
   }
   .snap-score-label { display:none; }
+  /* Fixed amber(20) / green(40) threshold markers on the 0–60 track */
+  .snap-bar-tick {
+    position:absolute; top:0; bottom:0; width:2px;
+    background:rgba(255,255,255,0.32); z-index:2; pointer-events:none;
+  }
+  /* Zone captions under the bars — centred in each scoring band */
+  .snap-zone-axis { display:flex; align-items:center; gap:10px; margin-bottom:40px; }
+  .snap-zone-spacer { min-width:130px; }
+  .snap-zone-track { flex:1; position:relative; height:14px; }
+  .snap-zone-label {
+    position:absolute; transform:translateX(-50%);
+    font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px;
+    text-transform:uppercase; white-space:nowrap;
+  }
 
   /* Tooltip */
   #tl-tooltip {
@@ -771,6 +785,14 @@
   <div class="view-panel active" id="panel-snapshot">
     <div class="section-title" id="snapshotTitle">Snapshot — <span id="snapshotTimeDisplay">—</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
+    <div class="snap-zone-axis" aria-hidden="true">
+      <div class="snap-zone-spacer"></div>
+      <div class="snap-zone-track">
+        <span class="snap-zone-label" style="left:16.67%;color:var(--red)">Avoid</span>
+        <span class="snap-zone-label" style="left:50%;color:var(--yellow)">Caution</span>
+        <span class="snap-zone-label" style="left:83.33%;color:var(--green)">Easy</span>
+      </div>
+    </div>
     <div class="snapshot-controls">
       <!-- Day selector buttons — built dynamically from data -->
       <div class="day-btns" id="dayBtns"></div>
@@ -816,11 +838,6 @@
         <div class="cond-value" id="sTide">—</div>
         <div class="cond-unit">metres</div>
       </div>
-    </div>
-    <div class="legend" style="margin-top:18px;margin-bottom:0;">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Easy (40–60)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Caution (20–39)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Avoid (&lt;20)</div>
     </div>
   </div>
 
@@ -1757,11 +1774,10 @@ function renderSnapshot(sliderVal) {
     row.innerHTML = `
       <div class="snap-label">${name}</div>
       <div class="snap-bar-track">
-        <div class="snap-bar-fill" style="width:${pct}%;background:${scoreColor(score)}">
-          <span class="snap-bar-score">${score}</span>
-        </div>
-      </div>
-      <div class="snap-score-label">${score}/60</div>`;
+        <div class="snap-bar-fill" style="width:${pct}%;background:${scoreColor(score)}"></div>
+        <div class="snap-bar-tick" style="left:33.33%"></div>
+        <div class="snap-bar-tick" style="left:66.67%"></div>
+      </div>`;
     container.appendChild(row);
   });
 
