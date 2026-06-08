@@ -220,6 +220,110 @@
   .view-panel { display:none; }
   .view-panel.active { display:block; margin-top:4px; }
 
+  /* ── Admin (sightings) panel ── */
+  #tab-btn-admin { display:none; }
+  .adm-card {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:20px 22px; backdrop-filter:blur(10px); max-width:760px; margin-bottom:16px;
+  }
+  .adm-card h3 {
+    font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px;
+    color:#fff; margin:0 0 6px;
+  }
+  .adm-hint { font-size:12px; color:var(--text-dim); margin-bottom:12px; line-height:1.6; }
+  .adm-card textarea {
+    width:100%; min-height:150px; resize:vertical;
+    font-family:'DM Mono',monospace; font-size:12px; line-height:1.5;
+    color:var(--text); background:rgba(0,0,0,0.25);
+    border:1px solid var(--border); border-radius:8px; padding:10px; box-sizing:border-box;
+  }
+  .adm-card input[type=file] { font-size:12px; color:var(--text); margin-top:4px; }
+  .adm-btn {
+    font-family:'DM Mono',monospace; font-size:13px; text-transform:uppercase; letter-spacing:1.5px;
+    padding:10px 20px; border:1px solid var(--teal); border-radius:6px;
+    background:var(--teal); color:#000; font-weight:600; cursor:pointer; transition:all 0.15s;
+  }
+  .adm-btn:hover { opacity:0.9; }
+  .adm-btn:disabled { opacity:0.4; cursor:default; }
+  .adm-btn.ghost { background:transparent; color:var(--text-dim); border-color:var(--border); }
+  .adm-btn.go { background:var(--green); border-color:var(--green); }
+  .adm-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .adm-status { font-size:12px; color:var(--text-dim); margin-top:10px; min-height:15px; line-height:1.5; }
+  .adm-status.ok  { color:var(--green); }
+  .adm-status.err { color:var(--red); }
+  /* per-site review cards */
+  .adm-site {
+    border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+    margin-top:10px; background:rgba(0,0,0,0.18);
+  }
+  .adm-site-head {
+    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;
+  }
+  .adm-site-name {
+    font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1.5px; color:var(--teal);
+  }
+  .adm-site-name .swimflag {
+    font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; color:var(--yellow);
+    border:1px solid var(--yellow); border-radius:10px; padding:2px 7px; margin-left:8px;
+    text-transform:uppercase; vertical-align:middle;
+  }
+  .adm-site textarea {
+    width:100%; min-height:64px; resize:vertical;
+    font-family:'DM Mono',monospace; font-size:12px; line-height:1.5; color:var(--text);
+    background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:6px;
+    padding:8px; box-sizing:border-box;
+  }
+  .adm-site label.skip { font-size:11px; color:var(--text-dim); display:flex; gap:6px; align-items:center; margin-top:6px; cursor:pointer; }
+  .adm-current { font-size:11px; color:var(--text-dim); line-height:1.6; border-top:1px dashed var(--border); padding-top:12px; margin-top:14px; }
+  .adm-current b { color:#fff; }
+
+  /* ── Community reports strip + slide-up sheet ── */
+  #reportsStrip {
+    display:flex; align-items:center; gap:10px;
+    background:rgba(0,194,168,0.12); border:1px solid rgba(0,194,168,0.35);
+    border-radius:8px; padding:11px 14px; margin:10px 0 14px; cursor:pointer;
+    transition:background 0.15s;
+  }
+  #reportsStrip:hover { background:rgba(0,194,168,0.18); }
+  #reportsStrip .rs-icon { color:var(--teal); font-size:20px; flex-shrink:0; }
+  #reportsStrip .rs-text { flex:1; font-size:13px; color:var(--text); line-height:1.4; min-width:0; }
+  #reportsStrip .rs-text b { color:var(--teal); font-weight:600; }
+  #reportsStrip .rs-text .rs-when { display:block; font-size:11px; color:var(--text-dim); margin-top:2px; }
+  #reportsStrip .rs-cta { font-size:12px; color:var(--teal); white-space:nowrap; display:flex; align-items:center; gap:4px; }
+
+  #reportsSheetOverlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none; transition:opacity 0.25s; z-index:1000;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  #reportsSheetOverlay.open { opacity:1; pointer-events:auto; }
+  #reportsSheet {
+    width:100%; max-width:640px; max-height:82vh; overflow-y:auto;
+    background:#0a1830; border:1px solid var(--border); border-bottom:none;
+    border-radius:16px 16px 0 0; padding:14px 18px 26px;
+    transform:translateY(100%); transition:transform 0.28s cubic-bezier(0.2,0.7,0.2,1);
+  }
+  #reportsSheetOverlay.open #reportsSheet { transform:translateY(0); }
+  #reportsSheetGrip { width:40px; height:4px; border-radius:2px; background:var(--text-dim); opacity:0.5; margin:0 auto 14px; }
+  #reportsSheetHead {
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; color:#fff;
+  }
+  #reportsSheetClose {
+    background:transparent; border:none; color:var(--text-dim); font-size:18px; cursor:pointer;
+    padding:4px 8px; line-height:1;
+  }
+  #reportsSheetSub { font-size:12px; color:var(--text-dim); margin:2px 0 14px; letter-spacing:0.5px; }
+  .rs-site {
+    border-top:1px solid var(--border); padding:12px 0;
+  }
+  .rs-site:first-child { border-top:none; }
+  .rs-site-name {
+    font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; color:var(--teal);
+  }
+  .rs-site-when { font-size:11px; color:var(--text-dim); margin-left:8px; letter-spacing:0.5px; }
+  .rs-site-summary { font-size:13px; color:var(--text); line-height:1.55; margin-top:5px; }
+
   /* ── Timeline heatmap ── */
   .timeline-wrap {
     overflow-x:auto;
@@ -730,6 +834,7 @@
     <button class="tab-btn active" onclick="switchTab('snapshot')">Snapshot</button>
     <button class="tab-btn" onclick="switchTab('timeline')">5 Days</button>
     <button class="tab-btn" onclick="switchTab('about')">About</button>
+    <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin')">Reports</button>
   </div>
 
   <!-- Hidden elements needed by JS (conditions + status + sites grid) -->
@@ -817,9 +922,45 @@
     </div>
   </div>
 
+  <!-- REPORTS / ADMIN panel (hidden until unlocked via #viz-admin) -->
+  <div class="view-panel" id="panel-admin">
+    <div class="adm-card">
+      <h3>Community Reports — Admin</h3>
+      <div class="adm-hint">
+        Upload the weekly CSV / XLSX export from the VIZ Facebook group (or paste posts below). One AI pass sorts every post to its site using the alias table, then returns a short summary per site. Review and edit each, then publish — they replace the previous summaries for all users. The Cabbage Tree Bay summary also feeds the Manly Swim app.
+      </div>
+      <textarea id="adm-input" placeholder="Paste Facebook posts here, or use the file picker below…"></textarea>
+      <div class="adm-hint" style="margin-top:10px;margin-bottom:4px;">…or upload an export (CSV / XLSX):</div>
+      <input type="file" id="adm-file" accept=".csv,.xlsx,.xls" onchange="admFile(this)">
+      <div class="adm-status" id="adm-file-status" style="min-height:0;"></div>
+      <div class="adm-row">
+        <button class="adm-btn" id="adm-summarise-btn" onclick="admSummarise()">Summarise by site</button>
+        <button class="adm-btn ghost" onclick="admClear()">Clear</button>
+      </div>
+      <div class="adm-status" id="adm-status"></div>
+    </div>
+
+    <div id="adm-review" style="display:none;">
+      <div class="adm-card">
+        <h3>Review &amp; publish</h3>
+        <div class="adm-hint">Edit any summary before publishing. Untick a site to leave its existing summary unchanged. Empty summaries are skipped.</div>
+        <div id="adm-site-list"></div>
+        <div class="adm-row">
+          <button class="adm-btn go" id="adm-publish-btn" onclick="admPublish()">Publish all ticked</button>
+        </div>
+        <div class="adm-status" id="adm-publish-status"></div>
+      </div>
+    </div>
+
+    <div class="adm-card">
+      <div class="adm-current" id="adm-current" style="border-top:none;padding-top:0;margin-top:0;">Loading current published summaries…</div>
+    </div>
+  </div>
+
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
     <div class="section-title" id="snapshotTitle"><span id="snapshotTimeDisplay">—</span></div>
+    <div id="reportsStrip" onclick="openReportsSheet()" style="display:none;"></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" aria-hidden="true">
       <div class="snap-zone-track">
@@ -1590,13 +1731,14 @@ function scheduleNextRefresh(cb) {
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const tabs = ['snapshot','timeline','about'];
+  const tabs = ['snapshot','timeline','about','admin'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabs[i] === name);
   });
   document.querySelectorAll('.view-panel').forEach(p => {
     p.classList.toggle('active', p.id === `panel-${name}`);
   });
+  if (name === 'admin') admLoadCurrent();
 }
 
 // ── Score colour helpers ───────────────────────────────────────────────────────
@@ -2011,6 +2153,7 @@ function retryLoad() {
 }
 
 async function init() {
+  loadPublicReports();
   const DEMO = {
     windKmh:0, windDir:260, windWaveH:0.2, windWaveDir:260,
     swell1H:0.9, swell1Dir:110, swell1P:8,
@@ -2640,9 +2783,361 @@ async function initDaySummaryBanner(data, matrix) {
 
 
 
+// ============================================================
+// COMMUNITY REPORTS — ADMIN (upload → AI sort by site → review → publish)
+// ============================================================
+// Summarises Facebook group posts per-site in one AI pass (alias-guided),
+// then upserts one row per site to the shared Supabase `site_sightings`
+// table. CTB is written as site_id 'cabbage-tree-bay', which the Manly
+// Swim app reads. Summarisation is proxied via the Cloudflare Worker
+// /summarise route (Anthropic key held as a Worker secret).
+// ------------------------------------------------------------
+
+const ADM_SUPABASE_URL  = 'https://gkspukabnfbzrvjoewpc.supabase.co';
+const ADM_SUPABASE_KEY  = 'sb_publishable_TkhnIKIYdRCNQ-DSVLqjLw_dTMcLIqW';
+const ADM_TABLE_URL     = ADM_SUPABASE_URL + '/rest/v1/site_sightings';
+const ADM_WORKER_URL    = 'https://bold-rain-6ded.sticasale.workers.dev/summarise';
+const ADM_PASSPHRASE    = 'cabbagetree';   // change me — gate only, RLS is the real guard
+
+// Site alias table (from the sheet "Sites" tab). site_id is the Supabase key.
+// CTB's id is the one the Manly Swim app reads.
+const SITE_ALIASES = [
+  { id:'cabbage-tree-bay', name:'Cabbage Tree Bay', aliases:'Cabbage Tree Bay, Shelly, Shelly Beach, CTB, Bower, Fairy Bower, Manly', swim:true },
+  { id:'deadmans',     name:"Deadman's",    aliases:"Deadman's" },
+  { id:'bi',           name:'Bare Island',  aliases:'BI West, BI East, Bare Island, BI' },
+  { id:'steps',        name:'Leap & Steps', aliases:'The Steps, Steps, Inscription Point, Inscription, Leap, the Leap' },
+  { id:'monument',     name:'Monument',     aliases:'Monument' },
+  { id:'gordons_bay',  name:"Gordon's Bay", aliases:"Gordon's Bay, Gordon's, Gordons" },
+  { id:'chowder_bay',  name:'Chowder Bay',  aliases:'Chowder Bay, CB, Clifton, Cliftons, Clifton Gardens, CG' },
+  { id:'camp_cove',    name:'Camp Cove',    aliases:'Camp Cove' },
+  { id:'fairlight',    name:'Fairlight',    aliases:'Fairlight' },
+  { id:'freshwater',   name:'Freshwater',   aliases:'Freshwater' },
+  { id:'shark_point',  name:'Shark Point',  aliases:'Shark Point, SP' },
+  { id:'little_bay',   name:'Little Bay',   aliases:'Little Bay, LB' },
+  { id:'oak_park',     name:'Oak Park',     aliases:'Oak Park' },
+  { id:'shiprock',     name:'Shiprock',     aliases:'Shiprock' },
+];
+
+// Diver shorthand glossary (from the "other" row) — helps the AI read posts.
+const DIVER_GLOSSARY =
+  'RHS/LHS = right/left hand side; PJs = Port Jackson sharks; ITW/OTW = In/Out The Water (often + a time); ' +
+  'GNS = Grey Nurse Shark; GWS = Great White Shark; RIF = Red Indianfish; PPH = Pygmy Pipehorse; ' +
+  'Whale snot = suspended white matter that reduces visibility.';
+
+// Holds the AI result during review: { site_id: summaryText }
+let _admResults = {};
+
+function admStatus(id, msg, kind) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg || '';
+  el.className = 'adm-status' + (kind ? ' ' + kind : '');
+}
+
+function admUnlock() {
+  const pass = prompt('Enter admin passphrase:');
+  if (pass === null) return;
+  if (pass === ADM_PASSPHRASE) {
+    document.getElementById('tab-btn-admin').style.display = 'block';
+    switchTab('admin');
+  } else {
+    alert('Incorrect passphrase.');
+  }
+}
+
+function admClear() {
+  document.getElementById('adm-input').value = '';
+  document.getElementById('adm-review').style.display = 'none';
+  document.getElementById('adm-site-list').innerHTML = '';
+  _admResults = {};
+  admStatus('adm-status', '');
+  admStatus('adm-file-status', '');
+}
+
+// ── File parsing (lazy-load SheetJS only when needed) ──
+let _xlsxLib = null;
+function admLoadXlsx() {
+  if (_xlsxLib) return Promise.resolve(_xlsxLib);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => { _xlsxLib = window.XLSX; resolve(_xlsxLib); };
+    s.onerror = () => reject(new Error('Could not load spreadsheet reader'));
+    document.head.appendChild(s);
+  });
+}
+function admRowsToText(rows) {
+  if (!rows.length) return '';
+  const keys = Object.keys(rows[0]);
+  const pref = keys.filter(k => /message|text|post|content|description|comment|body|story/i.test(k));
+  const use = pref.length ? pref : keys;
+  return rows.map(r => use.map(k => (r[k]==null?'':String(r[k]).trim())).filter(Boolean).join(' — '))
+             .filter(Boolean).join('\n\n');
+}
+async function admFile(inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  admStatus('adm-file-status', 'Reading ' + file.name + '…');
+  const nm = file.name.toLowerCase();
+  try {
+    let text = '';
+    const XLSX = await admLoadXlsx();
+    if (nm.endsWith('.csv')) {
+      const raw = await file.text();
+      const wb = XLSX.read(raw, { type:'string' });
+      text = admRowsToText(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' }));
+    } else if (nm.endsWith('.xlsx') || nm.endsWith('.xls')) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type:'array' });
+      text = admRowsToText(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' }));
+    } else {
+      admStatus('adm-file-status', 'Unsupported file — use CSV or XLSX.', 'err'); return;
+    }
+    if (!text.trim()) { admStatus('adm-file-status', 'No text found in that file.', 'err'); return; }
+    const ta = document.getElementById('adm-input');
+    ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + text;
+    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + text.split('\n\n').length + ' rows added. Review, then Summarise.', 'ok');
+  } catch (e) {
+    admStatus('adm-file-status', 'Could not read file: ' + e.message, 'err');
+  } finally {
+    inputEl.value = '';
+  }
+}
+
+// ── AI summarise: one call, returns JSON keyed by site_id ──
+function admBuildPrompt(posts) {
+  const siteLines = SITE_ALIASES.map(s => `- "${s.id}" (${s.name}): ${s.aliases}`).join('\n');
+  return `You are sorting recent posts from a Sydney scuba/snorkel Facebook group by dive site, then writing a short public conditions note for each site.
+
+SITES (id, name, aliases divers use):
+${siteLines}
+
+Diver shorthand you may encounter: ${DIVER_GLOSSARY}
+
+TASK:
+1. Read the posts below. Assign each relevant post to the site whose aliases best match. Ignore posts that mention no recognisable site or are off-topic.
+2. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising recent sightings and the latest visibility (in metres if stated). Do not invent anything not in the posts. No bullet points, headers, or quotation marks.
+3. Return ONLY a JSON object mapping site_id to its summary string. Include only sites that have relevant posts. No markdown, no code fences, no commentary. Example: {"gordons_bay":"Viz around 8m...","cabbage-tree-bay":"Weedy seadragons..."}
+
+POSTS:
+${posts}`;
+}
+
+async function admSummarise() {
+  const input = document.getElementById('adm-input').value.trim();
+  if (!input) { admStatus('adm-status', 'Paste posts or upload a file first.', 'err'); return; }
+  const btn = document.getElementById('adm-summarise-btn');
+  btn.disabled = true;
+  admStatus('adm-status', 'Sorting posts by site and summarising… this can take a moment.');
+  try {
+    const res = await fetch(ADM_WORKER_URL, {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:2000,
+        messages:[{ role:'user', content: admBuildPrompt(input) }]
+      })
+    });
+    if (!res.ok) throw new Error('Worker ' + res.status);
+    const data = await res.json();
+    let text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+    text = text.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch(e) { throw new Error('AI did not return valid JSON. Raw start: ' + text.slice(0,80)); }
+
+    _admResults = parsed;
+    const ids = Object.keys(parsed);
+    if (!ids.length) { admStatus('adm-status', 'No site-specific reports found in those posts.', 'err'); return; }
+    admRenderReview(parsed);
+    admStatus('adm-status', 'Found reports for ' + ids.length + ' site(s). Review below.', 'ok');
+  } catch (e) {
+    admStatus('adm-status', 'Summarise failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function admRenderReview(parsed) {
+  const list = document.getElementById('adm-site-list');
+  list.innerHTML = '';
+  // Order: known sites first (in table order), then any unexpected ids
+  const ordered = SITE_ALIASES.filter(s => parsed[s.id] != null)
+    .concat(Object.keys(parsed).filter(id => !SITE_ALIASES.find(s=>s.id===id)).map(id => ({id, name:id})));
+  ordered.forEach(s => {
+    const swimFlag = s.swim ? ' <span class="swimflag">→ Swim app</span>' : '';
+    const div = document.createElement('div');
+    div.className = 'adm-site';
+    div.innerHTML =
+      '<div class="adm-site-head"><span class="adm-site-name">' + s.name + swimFlag + '</span></div>' +
+      '<textarea data-site="' + s.id + '">' + (parsed[s.id]||'').replace(/</g,'&lt;') + '</textarea>' +
+      '<label class="skip"><input type="checkbox" class="adm-pub-check" data-site="' + s.id + '" checked> publish this site</label>';
+    list.appendChild(div);
+  });
+  document.getElementById('adm-review').style.display = 'block';
+}
+
+async function admPublish() {
+  const checks = Array.from(document.querySelectorAll('.adm-pub-check'));
+  const jobs = [];
+  checks.forEach(c => {
+    if (!c.checked) return;
+    const id = c.dataset.site;
+    const ta = document.querySelector('textarea[data-site="' + id + '"]');
+    const summary = ta ? ta.value.trim() : '';
+    if (!summary) return;
+    const meta = SITE_ALIASES.find(s => s.id === id);
+    jobs.push({ site_id:id, site_name: meta ? meta.name : id, summary });
+  });
+  if (!jobs.length) { admStatus('adm-publish-status', 'Nothing ticked to publish.', 'err'); return; }
+
+  const btn = document.getElementById('adm-publish-btn');
+  btn.disabled = true;
+  admStatus('adm-publish-status', 'Publishing ' + jobs.length + ' site(s)…');
+
+  try {
+    // Upsert: site_id is PK, so on_conflict merges (one row per site)
+    const res = await fetch(ADM_TABLE_URL + '?on_conflict=site_id', {
+      method:'POST',
+      headers:{
+        'apikey': ADM_SUPABASE_KEY,
+        'Authorization': 'Bearer ' + ADM_SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(jobs.map(j => ({
+        site_id: j.site_id, site_name: j.site_name, summary: j.summary, updated_at: new Date().toISOString()
+      })))
+    });
+    if (!res.ok) throw new Error('Supabase ' + res.status);
+    const swam = jobs.find(j => j.site_id === 'cabbage-tree-bay');
+    admStatus('adm-publish-status',
+      'Published ' + jobs.length + ' site(s).' + (swam ? ' Cabbage Tree Bay also sent to the Swim app.' : ''), 'ok');
+    admLoadCurrent();
+    loadPublicReports();
+  } catch (e) {
+    admStatus('adm-publish-status', 'Publish failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function admLoadCurrent() {
+  const el = document.getElementById('adm-current');
+  if (!el) return;
+  try {
+    const res = await fetch(
+      ADM_TABLE_URL + '?select=site_id,site_name,summary,updated_at&order=updated_at.desc',
+      { headers:{ 'apikey': ADM_SUPABASE_KEY, 'Authorization': 'Bearer ' + ADM_SUPABASE_KEY } }
+    );
+    if (!res.ok) throw new Error('Supabase ' + res.status);
+    const rows = await res.json();
+    if (!rows.length) { el.innerHTML = '<b>Currently published:</b> nothing yet.'; return; }
+    let html = '<b>Currently published (' + rows.length + ' site' + (rows.length>1?'s':'') + '):</b>';
+    rows.forEach(r => {
+      const when = r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '';
+      const meta = SITE_ALIASES.find(s => s.id === r.site_id);
+      const nm = (meta ? meta.name : (r.site_name || r.site_id));
+      html += '<div style="margin-top:8px;"><span style="color:var(--teal);">' + nm + '</span>' +
+              (when ? ' <span style="opacity:0.6;">· ' + when + '</span>' : '') +
+              '<br>' + (r.summary||'').replace(/</g,'&lt;') + '</div>';
+    });
+    el.innerHTML = html;
+  } catch (e) {
+    el.textContent = 'Could not load current summaries.';
+  }
+}
+
+// ── Public community reports: strip + slide-up sheet ──
+// Reads the same site_sightings table; shows only sites with a recent report.
+const REPORTS_MAX_AGE_DAYS = 21;
+let _publicReports = [];
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return days + ' days ago';
+  if (days < 14) return 'a week ago';
+  return Math.floor(days/7) + ' weeks ago';
+}
+
+async function loadPublicReports() {
+  try {
+    const res = await fetch(
+      ADM_TABLE_URL + '?select=site_id,site_name,summary,updated_at&order=updated_at.desc',
+      { headers:{ 'apikey': ADM_SUPABASE_KEY, 'Authorization': 'Bearer ' + ADM_SUPABASE_KEY } }
+    );
+    if (!res.ok) throw new Error('Supabase ' + res.status);
+    const rows = await res.json();
+    const cutoff = Date.now() - REPORTS_MAX_AGE_DAYS * 86400000;
+    _publicReports = (rows || []).filter(r =>
+      r.summary && (!r.updated_at || new Date(r.updated_at).getTime() >= cutoff));
+    renderReportsStrip();
+  } catch (e) {
+    // silent — strip simply stays hidden
+  }
+}
+
+function renderReportsStrip() {
+  const strip = document.getElementById('reportsStrip');
+  if (!strip) return;
+  if (!_publicReports.length) { strip.style.display = 'none'; return; }
+  const n = _publicReports.length;
+  const newest = _publicReports[0].updated_at;
+  strip.innerHTML =
+    '<span class="rs-icon" aria-hidden="true">\uD83D\uDC1F</span>' +
+    '<div class="rs-text">Divers reported on <b>' + n + ' site' + (n>1?'s':'') + '</b> recently' +
+      '<span class="rs-when">Updated ' + timeAgo(newest) + '</span></div>' +
+    '<span class="rs-cta">See all →</span>';
+  strip.style.display = 'flex';
+}
+
+function openReportsSheet() {
+  const list = document.getElementById('reportsSheetList');
+  const sub  = document.getElementById('reportsSheetSub');
+  if (!_publicReports.length) return;
+  sub.textContent = _publicReports.length + ' site' + (_publicReports.length>1?'s':'') + ' with recent reports';
+  list.innerHTML = _publicReports.map(r => {
+    const meta = SITE_ALIASES.find(s => s.id === r.site_id);
+    const nm = meta ? meta.name : (r.site_name || r.site_id);
+    const when = r.updated_at
+      ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'})
+      : '';
+    return '<div class="rs-site"><div><span class="rs-site-name">' + nm + '</span>' +
+           (when ? '<span class="rs-site-when">' + when + '</span>' : '') + '</div>' +
+           '<div class="rs-site-summary">' + (r.summary||'').replace(/</g,'&lt;') + '</div></div>';
+  }).join('');
+  document.getElementById('reportsSheetOverlay').classList.add('open');
+}
+
+function closeReportsSheet(e) {
+  if (e && e.target && e.target.id !== 'reportsSheetOverlay' && e.target.id !== 'reportsSheetClose'
+      && !(e.target.closest && e.target.closest('#reportsSheetClose'))) return;
+  document.getElementById('reportsSheetOverlay').classList.remove('open');
+}
+
+// Unlock admin via URL hash
+window.addEventListener('DOMContentLoaded', function() {
+  if (location.hash === '#viz-admin') admUnlock();
+});
+
 // Load parameters from Google Sheet first, then start the app.
 // Falls back to hardcoded defaults if sheet is unreachable.
 loadConfig().then(() => init());
 </script>
+
+<!-- Community reports slide-up sheet -->
+<div id="reportsSheetOverlay" onclick="closeReportsSheet(event)">
+  <div id="reportsSheet" onclick="event.stopPropagation()">
+    <div id="reportsSheetGrip"></div>
+    <div id="reportsSheetHead">
+      <span>Community reports</span>
+      <button id="reportsSheetClose" onclick="closeReportsSheet()" aria-label="Close">✕</button>
+    </div>
+    <div id="reportsSheetSub"></div>
+    <div id="reportsSheetList"></div>
+  </div>
+</div>
 </body>
 </html>
