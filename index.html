@@ -3142,11 +3142,7 @@ function openReportsSheet() {
   list.innerHTML = _publicReports.map(r => {
     const meta = SITE_ALIASES.find(s => s.id === r.site_id);
     const nm = meta ? meta.name : (r.site_name || prettySiteName(r.site_id));
-    const when = r.updated_at
-      ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})
-      : '';
-    return '<div class="rs-site"><div><span class="rs-site-name">' + nm + '</span>' +
-           (when ? '<span class="rs-site-when">Last report: ' + when + '</span>' : '') + '</div>' +
+    return '<div class="rs-site"><div><span class="rs-site-name">' + nm + '</span></div>' +
            '<div class="rs-site-summary">' + (r.summary||'').replace(/</g,'&lt;') + '</div></div>';
   }).join('');
   document.getElementById('reportsSheetOverlay').classList.add('open');
