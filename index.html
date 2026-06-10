@@ -3039,20 +3039,14 @@ async function admPublish() {
   admStatus('adm-publish-status', 'Publishing ' + jobs.length + ' site(s)…');
 
   try {
-    // Upsert: site_id is PK, so on_conflict merges (one row per site)
-    const res = await fetch(ADM_TABLE_URL + '?on_conflict=site_id', {
+    // Write goes through the Worker (service-role key, bypasses RLS) so that
+    // anon writes can be denied at the database. Gated by the admin token.
+    const res = await fetch(ADM_WORKER_URL.replace(/\/summarise$/, '/publish'), {
       method:'POST',
-      headers:{
-        'apikey': ADM_SUPABASE_KEY,
-        'Authorization': 'Bearer ' + ADM_SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
-      },
-      body: JSON.stringify(jobs.map(j => ({
-        site_id: j.site_id, site_name: j.site_name, summary: j.summary, updated_at: new Date().toISOString()
-      })))
+      headers:{ 'Content-Type':'application/json', 'X-Admin-Token': _admToken },
+      body: JSON.stringify({ jobs })
     });
-    if (!res.ok) throw new Error('Supabase ' + res.status);
+    if (!res.ok) throw new Error('Publish ' + res.status);
     const swam = jobs.find(j => j.site_id === 'cabbage-tree-bay');
     admStatus('adm-publish-status',
       'Published ' + jobs.length + ' site(s).' + (swam ? ' Cabbage Tree Bay also sent to the Swim app.' : ''), 'ok');
