@@ -2811,7 +2811,9 @@ const ADM_SUPABASE_URL  = 'https://gkspukabnfbzrvjoewpc.supabase.co';
 const ADM_SUPABASE_KEY  = 'sb_publishable_TkhnIKIYdRCNQ-DSVLqjLw_dTMcLIqW';
 const ADM_TABLE_URL     = ADM_SUPABASE_URL + '/rest/v1/site_sightings';
 const ADM_WORKER_URL    = 'https://bold-rain-6ded.sticasale.workers.dev/summarise';
-const ADM_PASSPHRASE    = 'cabbagetree';   // change me — gate only, RLS is the real guard
+// Passphrase is NOT stored here — it's typed at runtime and verified by the
+// Worker (env.ADMIN_PASSPHRASE). Nothing in this source can authorise a call.
+let _admToken = '';
 
 // Site alias table (from the sheet "Sites" tab). site_id is the Supabase key.
 // CTB's id is the one the Manly Swim app reads.
@@ -2851,11 +2853,12 @@ function admStatus(id, msg, kind) {
 function admUnlock() {
   const pass = prompt('Enter admin passphrase:');
   if (pass === null) return;
-  if (pass === ADM_PASSPHRASE) {
+  if (pass.trim()) {
+    _admToken = pass;                       // verified server-side on summarise
     document.getElementById('tab-btn-admin').style.display = 'block';
     switchTab('admin');
   } else {
-    alert('Incorrect passphrase.');
+    alert('Enter your passphrase.');
   }
 }
 
@@ -2972,7 +2975,7 @@ async function admSummarise() {
   admStatus('adm-status', 'Sorting posts by site and summarising… this can take a moment.');
   try {
     const res = await fetch(ADM_WORKER_URL, {
-      method:'POST', headers:{ 'Content-Type':'application/json' },
+      method:'POST', headers:{ 'Content-Type':'application/json', 'X-Admin-Token': _admToken },
       body: JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:2000,
         messages:[{ role:'user', content: admBuildPrompt(input) }]
