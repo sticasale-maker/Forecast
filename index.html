@@ -206,19 +206,38 @@
 
   /* ── View tabs ── */
   .view-tabs {
-    display:flex; gap:6px; margin-bottom:4px; flex-wrap:wrap;
+    display:flex; gap:6px; margin-bottom:4px; flex-wrap:nowrap;
   }
   .tab-btn {
-    font-family:'DM Mono',monospace; font-size:14px; text-transform:uppercase; letter-spacing:1.5px;
-    padding:10px 22px; border-radius:6px; border:1px solid var(--border);
+    font-family:'DM Mono',monospace; font-size:clamp(10px,2.8vw,14px);
+    text-transform:uppercase; letter-spacing:clamp(0.5px,0.4vw,1.5px);
+    padding:10px clamp(8px,2.5vw,22px); border-radius:6px; border:1px solid var(--border);
     background:transparent; color:var(--text-dim); cursor:pointer;
-    transition:all 0.15s;
+    transition:all 0.15s; white-space:nowrap; flex:1; text-align:center;
   }
   .tab-btn:hover { border-color:var(--teal); color:var(--teal); }
   .tab-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:600; }
 
   .view-panel { display:none; }
   .view-panel.active { display:block; margin-top:4px; }
+
+  /* ── Day View ── */
+  .dv-chip {
+    font-family:'DM Sans',sans-serif; font-size:12px; padding:5px 11px;
+    border-radius:20px; border:1px solid var(--border);
+    background:transparent; color:var(--text-dim); cursor:pointer;
+    transition:all 0.15s;
+  }
+  .dv-chip:hover { border-color:var(--teal); color:var(--teal); }
+  .dv-chip.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:600; }
+  .dv-day-chip {
+    font-family:'DM Mono',monospace; font-size:11px; padding:4px 10px;
+    border-radius:6px; border:1px solid var(--border);
+    background:transparent; color:var(--text-dim); cursor:pointer;
+    transition:all 0.15s;
+  }
+  .dv-day-chip:hover { border-color:var(--teal); color:var(--teal); }
+  .dv-day-chip.active { background:rgba(0,194,168,0.15); border-color:var(--teal); color:var(--teal); }
 
   /* ── Admin (sightings) panel ── */
   #tab-btn-admin { display:none; }
@@ -763,6 +782,77 @@
   .val-demerit-row td { font-size:10px; color:var(--text-dim); padding-top:1px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06); }
   .val-demerit-row.mismatch td { color:var(--red); opacity:0.8; }
   .val-dem { font-family:'DM Mono',monospace; }
+
+  /* ── Responsive ────────────────────────────────────────────────────────────── */
+
+  /* Fluid wrap padding — tighter on small screens */
+  @media (max-width:480px) {
+    .wrap { padding:0 12px 60px; }
+  }
+
+  /* Header: stack logo + text tighter, shrink logo image */
+  @media (max-width:480px) {
+    header { padding:18px 0 16px; gap:12px; margin-bottom:18px; }
+    .logo-img { width:52px !important; height:52px !important; }
+    .logo { font-size:clamp(30px,9vw,48px) !important; }
+    .header-sub { font-size:9px; letter-spacing:1px; }
+  }
+
+  /* Conditions bar: 2 columns on narrow screens */
+  @media (max-width:480px) {
+    .conditions-bar { grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+    .cond-value { font-size:22px; }
+  }
+
+  /* Sites grid: 2 columns on narrow, single on very narrow */
+  @media (max-width:480px) {
+    .sites-grid { grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:24px; }
+    .score-big  { font-size:38px; }
+    .site-name  { font-size:12px; }
+  }
+  @media (max-width:320px) {
+    .sites-grid { grid-template-columns:1fr; }
+  }
+
+  /* Section titles */
+  @media (max-width:480px) {
+    .section-title { font-size:18px; letter-spacing:2px; }
+  }
+
+  /* Snapshot bars panel */
+  @media (max-width:480px) {
+    .snap-bar-track { height:20px; }
+    .snap-label     { font-size:11px; }
+  }
+
+  /* Timeline table: allow horizontal scroll, shrink cells */
+  @media (max-width:600px) {
+    .timeline-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .timeline-table th, .timeline-table td { padding:4px 5px; font-size:9px; }
+    .tl-site-label { font-size:10px; min-width:70px; max-width:70px; padding-right:6px; }
+  }
+
+  /* Day View chips: allow wrapping but keep text readable */
+  @media (max-width:480px) {
+    #dv-site-chips { gap:5px; }
+    .dv-chip  { font-size:11px; padding:4px 9px; }
+    .dv-day-chip { font-size:10px; padding:3px 8px; }
+  }
+
+  /* Reports strip */
+  @media (max-width:480px) {
+    #reportsStrip { padding:10px 12px; gap:10px; }
+  }
+
+  /* About / admin cards */
+  @media (max-width:480px) {
+    .adm-card { padding:14px 14px; }
+  }
+
+  /* Respect user font-size preferences — use rem for key text */
+  @media (prefers-reduced-motion:reduce) {
+    * { transition:none !important; animation:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -838,8 +928,8 @@
   <!-- View tabs -->
   <div class="view-tabs">
     <button class="tab-btn active" onclick="switchTab('snapshot')">Snapshot</button>
+    <button class="tab-btn" onclick="switchTab('dayview')">Day View</button>
     <button class="tab-btn" onclick="switchTab('timeline')">5 Days</button>
-    <button class="tab-btn" onclick="switchTab('about')">About</button>
     <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin')">Reports</button>
   </div>
 
@@ -910,6 +1000,48 @@
     </div>
 
   </div>
+  </div>
+
+  <!-- DAY VIEW: single-site score chart across the day -->
+  <div class="view-panel" id="panel-dayview">
+
+    <!-- Site picker -->
+    <div id="dv-site-chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;"></div>
+
+    <!-- Day picker -->
+    <div id="dv-day-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
+
+    <!-- Score line chart -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 10px 10px;">
+      <svg id="dv-chart" width="100%" viewBox="0 0 680 200" preserveAspectRatio="xMidYMid meet"
+           style="display:block;overflow:visible;"></svg>
+    </div>
+
+    <!-- Demerit stacked bars -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 12px 12px;margin-top:10px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">Demerit breakdown</div>
+      <div id="dv-bars" style="display:flex;gap:3px;align-items:flex-end;height:64px;"></div>
+      <div id="dv-bar-labels" style="display:flex;gap:3px;margin-top:4px;"></div>
+      <!-- legend -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);">
+          <div style="width:9px;height:9px;border-radius:2px;background:#00c2a8;flex-shrink:0;"></div>Swell
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);">
+          <div style="width:9px;height:9px;border-radius:2px;background:#3a9bd5;flex-shrink:0;"></div>Wind wave
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);">
+          <div style="width:9px;height:9px;border-radius:2px;background:#a78bfa;flex-shrink:0;"></div>Wind chop
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);">
+          <div style="width:9px;height:9px;border-radius:2px;background:#f5c842;flex-shrink:0;"></div>Tide
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);">
+          <div style="width:9px;height:9px;border-radius:2px;background:#e83d3d;flex-shrink:0;"></div>Refraction
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- TIMELINE: 13 sites × 5 days × hourly heatmap -->
@@ -1032,6 +1164,23 @@
   <div style="border-top:1px solid var(--border);margin-top:18px;"></div>
 
   <!-- (Validation panel moved to About tab) -->
+
+  <!-- ABOUT button -->
+  <div style="margin-top:40px;">
+    <button onclick="switchTab('about')" style="
+      display:inline-flex;align-items:center;gap:7px;
+      font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+      color:var(--teal);background:transparent;
+      border:1px solid rgba(0,194,168,0.35);border-radius:8px;
+      padding:9px 18px;cursor:pointer;
+      transition:background 0.15s,border-color 0.15s;">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/>
+        <text x="8" y="12" text-anchor="middle" fill="currentColor" font-size="9" font-family="DM Sans,sans-serif" font-weight="700">i</text>
+      </svg>
+      About this app
+    </button>
+  </div>
 
   <!-- FEEDBACK -->
   <div style="margin-top:40px; margin-bottom:48px;">
@@ -1751,7 +1900,7 @@ function scheduleNextRefresh(cb) {
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const tabs = ['snapshot','timeline','about','admin'];
+  const tabs = ['snapshot','dayview','timeline','about','admin'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabs[i] === name);
   });
@@ -1759,6 +1908,7 @@ function switchTab(name) {
     p.classList.toggle('active', p.id === `panel-${name}`);
   });
   if (name === 'admin') admLoadCurrent();
+  if (name === 'dayview') dvRender();
 }
 
 // ── Score colour helpers ───────────────────────────────────────────────────────
@@ -2137,6 +2287,7 @@ function renderForecastViewsFromMatrix(matrix) {
   renderDayButtons(dayIdx);
   renderTimeline(_hourlyMatrix);
   selectDay(_selectedDayKey, dayIdx);
+  dvInit();
 }
 
 function renderForecastViews(raw) {
@@ -2147,13 +2298,225 @@ function renderForecastViews(raw) {
   _dayKeys = Object.keys(dayIdx).sort();
 
   const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
-  _selectedDayKey = _dayKeys.includes(today) ? today : _dayKeys[0];
+  _selectedDayKey = dayKeys.includes(today) ? today : _dayKeys[0];
 
   renderDayButtons(dayIdx);
   renderTimeline(_hourlyMatrix);
   selectDay(_selectedDayKey, dayIdx);
+  dvInit();
 }
 
+
+// ── Day View ───────────────────────────────────────────────────────────────────
+let _dvSiteKey  = null;   // currently selected site key
+let _dvDayKey   = null;   // currently selected day (YYYY-MM-DD)
+
+function dvInit() {
+  // Build site chips
+  const chipWrap = document.getElementById('dv-site-chips');
+  if (!chipWrap) return;
+  chipWrap.innerHTML = '';
+  SITES.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'dv-chip' + (s.key === _dvSiteKey ? ' active' : '');
+    b.textContent = s.name;
+    b.onclick = () => { _dvSiteKey = s.key; dvRender(); };
+    chipWrap.appendChild(b);
+  });
+}
+
+function dvRender() {
+  if (!_hourlyMatrix.length) return;
+
+  // Default site
+  if (!_dvSiteKey) _dvSiteKey = SITES[0].key;
+
+  const site = SITES.find(s => s.key === _dvSiteKey);
+  if (!site) return;
+
+  // Build day index
+  const dayIdx = {};
+  _hourlyMatrix.forEach(h => {
+    const dk = new Date(h.dateTime).toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+    if (!dayIdx[dk]) dayIdx[dk] = [];
+    dayIdx[dk].push(h);
+  });
+  const dayKeys = Object.keys(dayIdx).sort();
+
+  // Default to today or first day
+  if (!_dvDayKey || !dayIdx[_dvDayKey]) {
+    const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+    _dvDayKey = dayKeys.includes(today) ? today : dayKeys[0];
+  }
+
+  // Refresh site chips active state
+  document.querySelectorAll('#dv-site-chips .dv-chip').forEach(b => {
+    const s = SITES.find(x => x.name === b.textContent);
+    b.classList.toggle('active', s && s.key === _dvSiteKey);
+  });
+
+  // Rebuild day chips
+  const dayWrap = document.getElementById('dv-day-chips');
+  dayWrap.innerHTML = '';
+  dayKeys.forEach(dk => {
+    const d = new Date(dk + 'T12:00:00');
+    const label = d.toLocaleDateString('en-AU', {weekday:'short', day:'numeric', month:'short'});
+    const b = document.createElement('button');
+    b.className = 'dv-day-chip' + (dk === _dvDayKey ? ' active' : '');
+    b.textContent = label;
+    b.onclick = () => { _dvDayKey = dk; dvRender(); };
+    dayWrap.appendChild(b);
+  });
+
+  // Filter hours for selected day, clamp to 06:00–22:00 Sydney time
+  const hours = (dayIdx[_dvDayKey] || []).filter(h => {
+    const hr = new Date(h.dateTime).toLocaleString('en-AU', {hour:'numeric', hour12:false, timeZone:'Australia/Sydney'});
+    const n = parseInt(hr, 10);
+    return n >= 6 && n <= 22;
+  });
+
+  if (!hours.length) return;
+
+  // Compute scores + demerits for each hour
+  const pts = hours.map(h => {
+    const {score, demerits} = calcScore(site, h);
+    const hr = parseInt(new Date(h.dateTime).toLocaleString('en-AU', {hour:'numeric', hour12:false, timeZone:'Australia/Sydney'}), 10);
+    return {hr, score, demerits};
+  });
+
+  dvDrawChart(pts);
+  dvDrawBars(pts);
+}
+
+function dvDrawChart(pts) {
+  const svg = document.getElementById('dv-chart');
+  if (!svg) return;
+
+  const W = 680, H = 200;
+  const padL = 32, padR = 12, padT = 18, padB = 28;
+  const gW = W - padL - padR, gH = H - padT - padB;
+
+  const xOf = i => padL + (i / (pts.length - 1 || 1)) * gW;
+  const yOf = s => padT + gH - (s / 60) * gH;
+
+  let html = '';
+
+  // Zone bands
+  const yGreen  = yOf(40), yYellow = yOf(20), yBottom = yOf(0);
+  html += `<rect x="${padL}" y="${padT}" width="${gW}" height="${yGreen - padT}"
+    fill="rgba(46,204,113,0.06)" rx="0"/>`;
+  html += `<rect x="${padL}" y="${yGreen}" width="${gW}" height="${yYellow - yGreen}"
+    fill="rgba(245,200,66,0.07)" rx="0"/>`;
+  html += `<rect x="${padL}" y="${yYellow}" width="${gW}" height="${yBottom - yYellow}"
+    fill="rgba(232,61,61,0.07)" rx="0"/>`;
+
+  // Zone threshold lines
+  html += `<line x1="${padL}" y1="${yGreen}" x2="${padL+gW}" y2="${yGreen}"
+    stroke="rgba(46,204,113,0.25)" stroke-width="1" stroke-dasharray="3,3"/>`;
+  html += `<line x1="${padL}" y1="${yYellow}" x2="${padL+gW}" y2="${yYellow}"
+    stroke="rgba(245,200,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>`;
+
+  // Zone labels on right
+  html += `<text x="${padL+gW+3}" y="${yGreen+4}" fill="rgba(46,204,113,0.5)"
+    font-size="8" font-family="DM Mono,monospace">40</text>`;
+  html += `<text x="${padL+gW+3}" y="${yYellow+4}" fill="rgba(245,200,66,0.5)"
+    font-size="8" font-family="DM Mono,monospace">20</text>`;
+
+  // Coloured polyline segments (colour changes at zone boundaries)
+  for (let i = 0; i < pts.length - 1; i++) {
+    const x1 = xOf(i), y1 = yOf(pts[i].score);
+    const x2 = xOf(i+1), y2 = yOf(pts[i+1].score);
+    const midS = (pts[i].score + pts[i+1].score) / 2;
+    const col = midS >= 40 ? '#2ecc71' : midS >= 20 ? '#f5c842' : '#e83d3d';
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+      stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  }
+
+  // Dots + score labels
+  pts.forEach((p, i) => {
+    const x = xOf(i), y = yOf(p.score);
+    const col = p.score >= 40 ? '#2ecc71' : p.score >= 20 ? '#f5c842' : '#e83d3d';
+    html += `<circle cx="${x}" cy="${y}" r="3.5" fill="${col}" stroke="#061020" stroke-width="1.5"/>`;
+    // Score label — alternate above/below to avoid overlap
+    const lblY = i % 2 === 0 ? y - 7 : y + 14;
+    html += `<text x="${x}" y="${lblY}" text-anchor="middle" fill="${col}"
+      font-size="9" font-family="DM Mono,monospace" font-weight="600">${p.score}</text>`;
+  });
+
+  // X-axis hour labels
+  pts.forEach((p, i) => {
+    const x = xOf(i);
+    const lbl = p.hr === 0 ? '12a' : p.hr < 12 ? `${p.hr}a` : p.hr === 12 ? '12p' : `${p.hr-12}p`;
+    // Only label every 2nd hour to avoid crowding
+    if (i % 2 === 0 || i === pts.length - 1) {
+      html += `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="rgba(200,221,245,0.45)"
+        font-size="9" font-family="DM Mono,monospace">${lbl}</text>`;
+    }
+  });
+
+  // Y-axis label
+  html += `<text x="${padL - 6}" y="${padT + gH/2}" text-anchor="middle"
+    fill="rgba(200,221,245,0.3)" font-size="8" font-family="DM Mono,monospace"
+    transform="rotate(-90,${padL-6},${padT+gH/2})">Score</text>`;
+
+  svg.innerHTML = html;
+}
+
+function dvDrawBars(pts) {
+  const barsEl  = document.getElementById('dv-bars');
+  const labelsEl = document.getElementById('dv-bar-labels');
+  if (!barsEl || !labelsEl) return;
+
+  // Max total demerit for scaling
+  const maxTotal = Math.max(1, ...pts.map(p => {
+    const d = p.demerits;
+    return (d.swell1||0)+(d.swell2||0)+(d.refrac||0)+(d.windWave||0)+(d.wind||0)+Math.max(0,d.tide||0);
+  }));
+
+  barsEl.innerHTML = '';
+  labelsEl.innerHTML = '';
+
+  pts.forEach(p => {
+    const d = p.demerits;
+    const swell  = (d.swell1||0) + (d.swell2||0);
+    const refrac = d.refrac || 0;
+    const ww     = d.windWave || 0;
+    const wind   = d.wind || 0;
+    const tide   = Math.max(0, d.tide || 0);
+    const total  = swell + refrac + ww + wind + tide;
+    const maxH   = 64;
+
+    const seg = (val, color) => {
+      const h = Math.round((val / maxTotal) * maxH);
+      return h > 0
+        ? `<div style="height:${h}px;background:${color};width:100%;flex-shrink:0;"></div>`
+        : '';
+    };
+
+    const barH = Math.round((total / maxTotal) * maxH);
+    const col  = document.createElement('div');
+    col.style.cssText = `flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:0;`;
+    col.innerHTML = `<div style="display:flex;flex-direction:column;height:${maxH}px;justify-content:flex-end;">
+      <div style="display:flex;flex-direction:column;border-radius:2px 2px 0 0;overflow:hidden;">
+        ${seg(tide,  '#f5c842')}
+        ${seg(wind,  '#a78bfa')}
+        ${seg(ww,    '#3a9bd5')}
+        ${seg(refrac,'#e83d3d')}
+        ${seg(swell, '#00c2a8')}
+      </div>
+    </div>`;
+    barsEl.appendChild(col);
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = `flex:1;text-align:center;font-family:'DM Mono',monospace;font-size:8px;color:rgba(200,221,245,0.4);min-width:0;overflow:hidden;`;
+    const hr = p.hr;
+    const t = hr === 0 ? '12a' : hr < 12 ? `${hr}a` : hr === 12 ? '12p' : `${hr-12}p`;
+    // Only show label every 2nd bar
+    const idx = pts.indexOf(p);
+    lbl.textContent = (idx % 2 === 0 || idx === pts.length-1) ? t : '';
+    labelsEl.appendChild(lbl);
+  });
+}
 
 // ── Error banner helpers ───────────────────────────────────────────────────────
 function showErrorBanner(msg) {
