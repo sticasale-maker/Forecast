@@ -979,7 +979,18 @@
 
   <!-- ABOUT panel -->
   <div class="view-panel" id="panel-about">
-    <div style="max-width:600px; padding:32px 0;">
+    <div style="max-width:600px; padding:16px 0 4px;">
+      <button onclick="switchTab('snapshot')" style="
+        display:inline-flex;align-items:center;gap:6px;
+        font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+        color:var(--teal);background:transparent;
+        border:1px solid rgba(0,194,168,0.35);border-radius:8px;
+        padding:8px 16px;cursor:pointer;margin-bottom:12px;
+        transition:background 0.15s,border-color 0.15s;">
+        ← Back
+      </button>
+    </div>
+    <div style="max-width:600px; padding:0 0 32px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px 36px;backdrop-filter:blur(10px);line-height:1.9;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:#fff;margin-bottom:18px;">VIZ FORECAST APP</div>
         <p style="color:var(--text);margin-bottom:16px;font-weight:500;">Why we built VIZ FORECAST</p>
@@ -1944,6 +1955,7 @@ function switchTab(name) {
   });
   if (name === 'admin') admLoadCurrent();
   if (name === 'dayview') dvRender();
+  if (name === 'about') window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── Score colour helpers ───────────────────────────────────────────────────────
