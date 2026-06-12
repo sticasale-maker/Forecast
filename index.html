@@ -2428,7 +2428,7 @@ function dvRender() {
   const pts = hours.map(h => {
     const {score, demerits} = calcScore(site, h);
     const hr = parseInt(new Date(h.dateTime).toLocaleString('en-AU', {hour:'numeric', hour12:false, timeZone:'Australia/Sydney'}), 10);
-    return {hr, score, demerits};
+    return {hr, score, demerits, tideM: h.tideM ?? 1.0};
   });
 
   dvDrawChart(pts);
@@ -2447,6 +2447,54 @@ function dvDrawChart(pts) {
   const yOf = s => padT + gH - (s / 60) * gH;
 
   let html = '';
+
+  // ── Tide curve (filled, behind everything) ───────────────────────────────
+  // Map tide height (m) into the lower 35% of the chart area
+  const tideVals = pts.map(p => p.tideM ?? 1.0);
+  const tideMin  = Math.min(...tideVals);
+  const tideMax  = Math.max(...tideVals);
+  const tideRange = Math.max(tideMax - tideMin, 0.1);
+  const tideAreaH = gH * 0.38;                       // curve lives in bottom 38%
+  const tideBase  = padT + gH;                        // bottom of chart
+  const yTide = (m) => tideBase - ((m - tideMin) / tideRange) * tideAreaH;
+
+  // Smooth curve via Catmull-Rom → cubic bezier (uses neighbouring tangents, no bumps)
+  const tidePts = pts.map((p, i) => ({ x: xOf(i), y: yTide(p.tideM ?? 1.0) }));
+  const alpha = 0.5; // tension
+  const crToCubic = (p0, p1, p2, p3) => {
+    const cp1x = p1.x + (p2.x - p0.x) * alpha / 3;
+    const cp1y = p1.y + (p2.y - p0.y) * alpha / 3;
+    const cp2x = p2.x - (p3.x - p1.x) * alpha / 3;
+    const cp2y = p2.y - (p3.y - p1.y) * alpha / 3;
+    return `C ${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`;
+  };
+  let tidePath = `M ${tidePts[0].x.toFixed(2)},${tidePts[0].y.toFixed(2)}`;
+  for (let i = 0; i < tidePts.length - 1; i++) {
+    const p0 = tidePts[Math.max(i - 1, 0)];
+    const p1 = tidePts[i];
+    const p2 = tidePts[i + 1];
+    const p3 = tidePts[Math.min(i + 2, tidePts.length - 1)];
+    tidePath += ' ' + crToCubic(p0, p1, p2, p3);
+  }
+  // Close path along the bottom to form filled shape
+  const tideClosePath = tidePath
+    + ` L ${tidePts[tidePts.length-1].x.toFixed(2)},${tideBase}`
+    + ` L ${tidePts[0].x.toFixed(2)},${tideBase} Z`;
+
+  html += `<defs>
+    <linearGradient id="tideGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#4a90d9" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#4a90d9" stop-opacity="0.08"/>
+    </linearGradient>
+  </defs>`;
+  html += `<path d="${tideClosePath}" fill="url(#tideGrad)"/>`;
+  html += `<path d="${tidePath}" fill="none" stroke="rgba(74,144,217,0.65)" stroke-width="1.5" stroke-linejoin="round"/>`;
+
+  // "TIDE" label — centred inside the filled area
+  const tideLabelX = padL + gW * 0.06;
+  const tideLabelY = tideBase - tideAreaH * 0.45;
+  html += `<text x="${tideLabelX}" y="${tideLabelY}" fill="rgba(74,144,217,0.55)"
+    font-size="8" font-family="DM Mono,monospace" letter-spacing="1">TIDE</text>`;
 
   // Zone bands
   const yGreen  = yOf(40), yYellow = yOf(20), yBottom = yOf(0);
