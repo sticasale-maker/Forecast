@@ -2476,18 +2476,14 @@ function dvDrawChart(pts) {
     const midS = (pts[i].score + pts[i+1].score) / 2;
     const col = midS >= 40 ? '#2ecc71' : midS >= 20 ? '#f5c842' : '#e83d3d';
     html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
-      stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+      stroke="${col}" stroke-width="10" stroke-linecap="round"/>`;
   }
 
-  // Dots + score labels
+  // Dots
   pts.forEach((p, i) => {
     const x = xOf(i), y = yOf(p.score);
     const col = p.score >= 40 ? '#2ecc71' : p.score >= 20 ? '#f5c842' : '#e83d3d';
     html += `<circle cx="${x}" cy="${y}" r="3.5" fill="${col}" stroke="#061020" stroke-width="1.5"/>`;
-    // Score label — alternate above/below to avoid overlap
-    const lblY = i % 2 === 0 ? y - 7 : y + 14;
-    html += `<text x="${x}" y="${lblY}" text-anchor="middle" fill="${col}"
-      font-size="9" font-family="DM Mono,monospace" font-weight="600">${p.score}</text>`;
   });
 
   // X-axis hour labels
