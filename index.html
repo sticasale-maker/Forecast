@@ -3364,8 +3364,30 @@ function admRowsToText(rows) {
     if (letters / s.length < 0.4) return false;
     return true;
   };
+
+  // If the export has a header row with a "link" column, sort data rows by
+  // that column descending (higher/newer link IDs first) and keep only the
+  // most-recent 15 — Facebook exports have no timestamps, so the link value
+  // is the best available recency proxy.
+  const LINK_LIMIT = 15;
+  let dataRows = rows;
+  if (rows.length > 1) {
+    const header = rows[0].map(c => String(c).trim().toLowerCase());
+    const linkCol = header.indexOf('link');
+    if (linkCol !== -1) {
+      dataRows = rows.slice(1)                              // skip header
+        .filter(r => Array.isArray(r) ? r.some(Boolean) : Object.values(r).some(Boolean))
+        .sort((a, b) => {
+          const va = String(Array.isArray(a) ? a[linkCol] : Object.values(a)[linkCol] || '').trim();
+          const vb = String(Array.isArray(b) ? b[linkCol] : Object.values(b)[linkCol] || '').trim();
+          return vb.localeCompare(va, undefined, { numeric: true, sensitivity: 'base' });
+        })
+        .slice(0, LINK_LIMIT);
+    }
+  }
+
   const out = [];
-  rows.forEach(r => {
+  dataRows.forEach(r => {
     if (!Array.isArray(r)) r = Object.values(r);
     r.forEach(cell => { if (isPost(cell)) out.push(String(cell).trim()); });
   });
@@ -3400,7 +3422,11 @@ async function admFile(inputEl) {
     const ta = document.getElementById('adm-input');
     ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + text;
     const n = text.split('\n\n').length;
-    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + n + ' post' + (n>1?'s':'') + ' extracted. Review, then Summarise.', 'ok');
+    // Detect whether the link-sort + 15-row limit was applied
+    const hasLinkCol = allRows.length > 1 &&
+      allRows[0].map(c => String(c).trim().toLowerCase()).includes('link');
+    const limitNote = hasLinkCol ? ' (top 15 by link, most recent first)' : '';
+    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + n + ' post' + (n>1?'s':'') + ' extracted' + limitNote + '. Review, then Summarise.', 'ok');
   } catch (e) {
     admStatus('adm-file-status', 'Could not read file: ' + e.message, 'err');
   } finally {
