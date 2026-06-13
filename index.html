@@ -3416,20 +3416,35 @@ function admRowsToText(rows) {
   const LINK_LIMIT = 15;
   let dataRows = rows;
   let postCol = -1;   // column holding the actual post text, if detectable
+  // Extract the sortable post-id from a Link value. Facebook permalinks carry a
+  // long, roughly-chronological id (higher = newer). The group id is constant,
+  // so we grab the id that follows a known permalink segment; failing that, the
+  // longest digit run. Compared by length-then-lexicographic so 16-digit ids
+  // sort correctly without floating-point precision loss.
+  const linkSortKey = (v) => {
+    const s = String(v ?? '');
+    const m = s.match(/(?:\/posts\/|\/permalink\/|\/videos\/|story_fbid=|fbid=|multi_permalinks=)(\d{6,})/);
+    if (m) return m[1];
+    const runs = s.match(/\d{6,}/g);
+    if (runs && runs.length) return runs.sort((a, b) => b.length - a.length || (b > a ? 1 : b < a ? -1 : 0))[0];
+    const any = s.match(/\d+/g);
+    return any ? any.join('') : s.toLowerCase();
+  };
   // Find the first row that has a "link" header (may not be rows[0] if multiple
   // sheets were concatenated and only one has that column).
+  const linkNames = ['link', 'permalink', 'post link', 'url', 'post url'];
   const headerIdx = rows.findIndex(r =>
-    Array.isArray(r) && r.map(c => String(c).trim().toLowerCase()).includes('link')
+    Array.isArray(r) && r.map(c => String(c).trim().toLowerCase()).some(h => linkNames.includes(h))
   );
   if (headerIdx !== -1) {
     const header = rows[headerIdx].map(c => String(c).trim().toLowerCase());
-    const linkCol = header.indexOf('link');
+    const linkCol = header.findIndex(h => linkNames.includes(h));
     dataRows = rows.slice(headerIdx + 1)           // skip everything above + the header
       .filter(r => Array.isArray(r) && r.some(Boolean))
       .sort((a, b) => {
-        const va = String(a[linkCol] ?? '').trim();
-        const vb = String(b[linkCol] ?? '').trim();
-        return vb.localeCompare(va, undefined, { numeric: true, sensitivity: 'base' });
+        const ka = linkSortKey(a[linkCol]), kb = linkSortKey(b[linkCol]);
+        if (ka.length !== kb.length) return kb.length - ka.length;   // longer id = newer
+        return kb > ka ? 1 : kb < ka ? -1 : 0;                       // same length → lexicographic desc
       })
       .slice(0, LINK_LIMIT);
     // Try to identify the column that actually holds the post text, in priority
@@ -3501,14 +3516,18 @@ async function admFile(inputEl) {
       return;
     }
     const ta = document.getElementById('adm-input');
-    ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + text;
+    const hadPrevious = ta.value.trim().length > 0;
+    ta.value = text;   // REPLACE, never append — guarantees only this export's 15 newest are summarised
     const n = text.split('\n\n').length;
     // Detect whether the link-sort + 15-row limit was applied
-    const hasLinkCol = allRows.findIndex(r =>
-      Array.isArray(r) && r.map(c => String(c).trim().toLowerCase()).includes('link')
-    ) !== -1;
-    const limitNote = hasLinkCol ? ' (top 15 by link, most recent first)' : '';
-    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + n + ' post' + (n>1?'s':'') + ' extracted' + limitNote + '. Review, then Summarise.', 'ok');
+    const hasLinkCol = (function(){
+      const names = ['link','permalink','post link','url','post url'];
+      return allRows.findIndex(r => Array.isArray(r) &&
+        r.map(c => String(c).trim().toLowerCase()).some(h => names.includes(h))) !== -1;
+    })();
+    const limitNote = hasLinkCol ? ' (top 15 by link, newest first)' : '';
+    const replacedNote = hadPrevious ? ' Previous input was replaced.' : '';
+    admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + n + ' post' + (n>1?'s':'') + ' extracted' + limitNote + '.' + replacedNote + ' Review, then Summarise.', 'ok');
   } catch (e) {
     admStatus('adm-file-status', 'Could not read file: ' + e.message, 'err');
   } finally {
