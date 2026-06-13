@@ -3501,35 +3501,52 @@ async function admSummarise() {
     try { parsed = JSON.parse(text); }
     catch(e) { throw new Error('No site reports could be extracted — the input may be analytics data rather than posts, or contained no recognisable sightings. Try the posts/content export, or paste posts directly.'); }
 
-    // Canonicalise AI-returned keys: if an invented key matches any alias of a
-    // known site, remap it to that site's canonical id. Merge summaries that
-    // collapse to the same id (AI sometimes returns 3 keys for the same place).
+    // Canonicalise AI-returned keys: remap invented keys to known site ids and
+    // merge summaries that collapse to the same id.
+    console.log('[VIZ] Raw AI keys:', Object.keys(parsed));
     parsed = (function canonicalise(raw) {
-      // Normalise a string for fuzzy matching: lowercase, strip apostrophes,
-      // collapse hyphens/underscores/spaces to a single space.
-      const norm = s => String(s).toLowerCase().replace(/['\u2018\u2019]/g, '').replace(/[-_\s]+/g, ' ').trim();
+      // Normalise: lowercase, strip apostrophes (straight + curly), collapse
+      // hyphens/underscores/spaces to a single space.
+      const norm = s => String(s).toLowerCase()
+        .replace(/['\u2018\u2019\u02BC]/g, '')
+        .replace(/[-_\s]+/g, ' ').trim();
+      // Pre-build lookup maps for speed
+      const byAlias = {}, byId = {};
+      SITE_ALIASES.forEach(s => {
+        byId[norm(s.id)] = s;
+        s.aliases.split(',').forEach(a => { byAlias[norm(a)] = s; });
+      });
       const merged = {};
       Object.entries(raw).forEach(([key, summary]) => {
-        // Check if this key IS already a known canonical id
-        let canonical = SITE_ALIASES.find(s => s.id === key);
+        const keyNorm = norm(key);
+        // Pass 1: exact canonical id
+        let canonical = SITE_ALIASES.find(s => s.id === key)
+        // Pass 2: normalised alias exact match
+                     || byAlias[keyNorm]
+        // Pass 3: normalised id exact match
+                     || byId[keyNorm];
+        // Pass 4: word-overlap — every word in a known alias appears in the key
+        //         catches variants like "murrays-beach-jervis-bay-nsw"
         if (!canonical) {
-          // Check normalised key against every alias of every site
-          const keyNorm = norm(key);
-          canonical = SITE_ALIASES.find(s =>
-            s.aliases.split(',').map(a => norm(a)).some(a => a === keyNorm)
-          );
-        }
-        if (!canonical) {
-          // Last resort: check against the canonical ids themselves after normalisation
-          const keyNorm = norm(key);
-          canonical = SITE_ALIASES.find(s => norm(s.id) === keyNorm);
+          const keyWords = new Set(keyNorm.split(' '));
+          let bestScore = 0, bestSite = null;
+          Object.entries(byAlias).forEach(([aliasNorm, site]) => {
+            const aliasWords = aliasNorm.split(' ');
+            const overlap = aliasWords.filter(w => keyWords.has(w)).length;
+            // Require ALL alias words present in the key, prefer longer aliases
+            if (overlap === aliasWords.length && overlap > bestScore) {
+              bestScore = overlap; bestSite = site;
+            }
+          });
+          canonical = bestSite;
         }
         const id = canonical ? canonical.id : key;
-        // Merge: if same id already seen, append the new summary
+        console.log('[VIZ] canonicalise:', key, '→', id);
         merged[id] = merged[id] ? merged[id] + ' ' + summary : summary;
       });
       return merged;
     })(parsed);
+    console.log('[VIZ] After canonicalise:', Object.keys(parsed));
 
     _admResults = parsed;
     const ids = Object.keys(parsed);
