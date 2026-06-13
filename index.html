@@ -3497,6 +3497,29 @@ async function admSummarise() {
     try { parsed = JSON.parse(text); }
     catch(e) { throw new Error('No site reports could be extracted — the input may be analytics data rather than posts, or contained no recognisable sightings. Try the posts/content export, or paste posts directly.'); }
 
+    // Canonicalise AI-returned keys: if an invented key matches any alias of a
+    // known site, remap it to that site's canonical id. Merge summaries that
+    // collapse to the same id (AI sometimes returns 3 keys for the same place).
+    parsed = (function canonicalise(raw) {
+      const merged = {};
+      Object.entries(raw).forEach(([key, summary]) => {
+        // Check if this key IS already a known id
+        let canonical = SITE_ALIASES.find(s => s.id === key);
+        if (!canonical) {
+          // Check if the key (normalised) matches any alias of any site
+          const keyNorm = key.toLowerCase().replace(/[-_\s]+/g, ' ').trim();
+          canonical = SITE_ALIASES.find(s =>
+            s.aliases.split(',').map(a => a.toLowerCase().replace(/[-_\s]+/g,' ').trim())
+              .some(a => a === keyNorm)
+          );
+        }
+        const id = canonical ? canonical.id : key;
+        // Merge: if same id already present, append the new summary
+        merged[id] = merged[id] ? merged[id] + ' ' + summary : summary;
+      });
+      return merged;
+    })(parsed);
+
     _admResults = parsed;
     const ids = Object.keys(parsed);
     if (!ids.length) { admStatus('adm-status', 'No site-specific reports found in those posts.', 'err'); return; }
