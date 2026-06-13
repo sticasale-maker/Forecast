@@ -3689,6 +3689,28 @@ async function admPublish() {
   }
 }
 
+async function admUnpublish(siteId) {
+  if (!siteId) return;
+  if (!confirm('Remove "' + siteId + '" from the published community reports?\n\nThis deletes its row so it disappears for all users.')) return;
+  admStatus('adm-publish-status', 'Removing ' + siteId + '…');
+  try {
+    // Goes through the Worker (service-role key) — same auth as publish.
+    const res = await vizFetch(ADM_WORKER_URL.replace(/\/summarise$/, '/publish'), {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-Admin-Token': _admToken },
+      body: JSON.stringify({ remove: [siteId] })
+    }, 15000);
+    if (!res.ok) throw new Error('Worker ' + res.status);
+    admStatus('adm-publish-status', 'Removed ' + siteId + '.', 'ok');
+    admLoadCurrent();
+    loadPublicReports();
+  } catch (e) {
+    admStatus('adm-publish-status',
+      'Remove failed: ' + e.message + '. If this is a 400/404, the Worker /publish route needs the "remove" handler added (see deploy notes).', 'err');
+  }
+}
+
+
 async function admLoadCurrent() {
   const el = document.getElementById('adm-current');
   if (!el) return;
@@ -3714,6 +3736,9 @@ async function admLoadCurrent() {
       const nm = (meta ? meta.name : (r.site_name || prettySiteName(r.site_id)));
       html += '<div style="margin-top:8px;"><span style="color:var(--teal);">' + nm + '</span>' +
               (when ? ' <span style="opacity:0.6;">· ' + when + '</span>' : '') +
+              ' <button onclick="admUnpublish(\'' + r.site_id + '\')" ' +
+                'style="background:none;border:1px solid var(--red);color:var(--red);border-radius:6px;' +
+                'font-size:10px;padding:1px 7px;cursor:pointer;margin-left:6px;">remove</button>' +
               '<br>' + (r.summary||'').replace(/</g,'&lt;') + '</div>';
     });
     el.innerHTML = html;
