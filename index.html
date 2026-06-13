@@ -3372,19 +3372,22 @@ function admRowsToText(rows) {
   // is the best available recency proxy.
   const LINK_LIMIT = 15;
   let dataRows = rows;
-  if (rows.length > 1) {
-    const header = rows[0].map(c => String(c).trim().toLowerCase());
+  // Find the first row that has a "link" header (may not be rows[0] if multiple
+  // sheets were concatenated and only one has that column).
+  const headerIdx = rows.findIndex(r =>
+    Array.isArray(r) && r.map(c => String(c).trim().toLowerCase()).includes('link')
+  );
+  if (headerIdx !== -1) {
+    const header = rows[headerIdx].map(c => String(c).trim().toLowerCase());
     const linkCol = header.indexOf('link');
-    if (linkCol !== -1) {
-      dataRows = rows.slice(1)                              // skip header
-        .filter(r => Array.isArray(r) ? r.some(Boolean) : Object.values(r).some(Boolean))
-        .sort((a, b) => {
-          const va = String(Array.isArray(a) ? a[linkCol] : Object.values(a)[linkCol] || '').trim();
-          const vb = String(Array.isArray(b) ? b[linkCol] : Object.values(b)[linkCol] || '').trim();
-          return vb.localeCompare(va, undefined, { numeric: true, sensitivity: 'base' });
-        })
-        .slice(0, LINK_LIMIT);
-    }
+    dataRows = rows.slice(headerIdx + 1)           // skip everything above + the header
+      .filter(r => Array.isArray(r) && r.some(Boolean))
+      .sort((a, b) => {
+        const va = String(a[linkCol] ?? '').trim();
+        const vb = String(b[linkCol] ?? '').trim();
+        return vb.localeCompare(va, undefined, { numeric: true, sensitivity: 'base' });
+      })
+      .slice(0, LINK_LIMIT);
   }
 
   const out = [];
@@ -3424,8 +3427,9 @@ async function admFile(inputEl) {
     ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + text;
     const n = text.split('\n\n').length;
     // Detect whether the link-sort + 15-row limit was applied
-    const hasLinkCol = allRows.length > 1 &&
-      allRows[0].map(c => String(c).trim().toLowerCase()).includes('link');
+    const hasLinkCol = allRows.findIndex(r =>
+      Array.isArray(r) && r.map(c => String(c).trim().toLowerCase()).includes('link')
+    ) !== -1;
     const limitNote = hasLinkCol ? ' (top 15 by link, most recent first)' : '';
     admStatus('adm-file-status', 'Loaded ' + file.name + ' — ' + n + ' post' + (n>1?'s':'') + ' extracted' + limitNote + '. Review, then Summarise.', 'ok');
   } catch (e) {
@@ -3501,20 +3505,27 @@ async function admSummarise() {
     // known site, remap it to that site's canonical id. Merge summaries that
     // collapse to the same id (AI sometimes returns 3 keys for the same place).
     parsed = (function canonicalise(raw) {
+      // Normalise a string for fuzzy matching: lowercase, strip apostrophes,
+      // collapse hyphens/underscores/spaces to a single space.
+      const norm = s => String(s).toLowerCase().replace(/['\u2018\u2019]/g, '').replace(/[-_\s]+/g, ' ').trim();
       const merged = {};
       Object.entries(raw).forEach(([key, summary]) => {
-        // Check if this key IS already a known id
+        // Check if this key IS already a known canonical id
         let canonical = SITE_ALIASES.find(s => s.id === key);
         if (!canonical) {
-          // Check if the key (normalised) matches any alias of any site
-          const keyNorm = key.toLowerCase().replace(/[-_\s]+/g, ' ').trim();
+          // Check normalised key against every alias of every site
+          const keyNorm = norm(key);
           canonical = SITE_ALIASES.find(s =>
-            s.aliases.split(',').map(a => a.toLowerCase().replace(/[-_\s]+/g,' ').trim())
-              .some(a => a === keyNorm)
+            s.aliases.split(',').map(a => norm(a)).some(a => a === keyNorm)
           );
         }
+        if (!canonical) {
+          // Last resort: check against the canonical ids themselves after normalisation
+          const keyNorm = norm(key);
+          canonical = SITE_ALIASES.find(s => norm(s.id) === keyNorm);
+        }
         const id = canonical ? canonical.id : key;
-        // Merge: if same id already present, append the new summary
+        // Merge: if same id already seen, append the new summary
         merged[id] = merged[id] ? merged[id] + ' ' + summary : summary;
       });
       return merged;
