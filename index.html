@@ -3534,10 +3534,18 @@ ${siteLines}
 
 Diver shorthand you may encounter: ${DIVER_GLOSSARY}
 
+CRITICAL GROUNDING RULES — read first:
+- The POSTS below are the ONLY source of truth. They are the most recent reports and nothing else is relevant.
+- Use ZERO outside knowledge. Do NOT use anything you may know about these sites from elsewhere. If you "know" a site usually gets good visibility, that knowledge is forbidden here.
+- Every fact in a summary — visibility numbers, marine life, conditions — MUST come from an actual post below. If it is not written in a post, it does not exist.
+- Do NOT add general or aspirational framing such as "up to 20m on the best days", "can be excellent", "a popular spot", "known for". These are inventions. Only state what THESE posts actually report.
+- Do NOT carry over or assume anything from previous reports or summaries. Treat this as the first time you have ever seen these sites. Old information is stale and must not appear.
+- If a site's posts are vague (no viz number, no clear conditions), write a correspondingly vague one-liner — do not pad it with invented detail.
+
 TASK:
 1. Read the posts below. Assign each relevant post to the site whose aliases best match.
-2. The KNOWN SITES list above is NOT exhaustive. If a post clearly refers to a real Sydney dive or snorkel site that is NOT in the list (e.g. Bushrangers Bay, Coogee, Oak Park, Bare Island, Camp Cove, etc.), still include it: invent a lowercase hyphenated site_id from its name (e.g. "bushrangers-bay", "coogee") and use the site's normal real-world name. Only do this for genuine, recognisable dive/snorkel locations — ignore posts that mention no recognisable site or are off-topic.
-3. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising recent sightings and the latest visibility (in metres if stated). Do not invent anything not in the posts. No bullet points, headers, or quotation marks.
+2. The KNOWN SITES list above is NOT exhaustive. If a post clearly refers to a real Sydney dive or snorkel site that is NOT in the list (e.g. Bushrangers Bay, Oak Park, Bare Island, Camp Cove, etc.), still include it: invent a lowercase hyphenated site_id from its name (e.g. "bushrangers-bay", "oak-park") and use the site's normal real-world name. Only do this for genuine, recognisable dive/snorkel locations — ignore posts that mention no recognisable site or are off-topic.
+3. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising ONLY what those posts report (recent sightings, and the latest visibility in metres if a post states one). No bullet points, headers, or quotation marks.
 4. Return ONLY a JSON object mapping site_id to its summary string. Include both known and newly-identified sites that have relevant posts. No markdown, no code fences, no commentary. Example: {"gordons_bay":"Viz around 8m...","bushrangers-bay":"A few divers reported..."}
 
 POSTS:
@@ -3566,7 +3574,7 @@ async function admSummarise() {
     const res = await vizFetch(ADM_WORKER_URL, {
       method:'POST', headers:{ 'Content-Type':'application/json', 'X-Admin-Token': _admToken },
       body: JSON.stringify({
-        model:'claude-sonnet-4-6', max_tokens:2000,
+        model:'claude-sonnet-4-6', max_tokens:2000, temperature:0,
         messages:[{ role:'user', content: admBuildPrompt(promptInput) }]
       })
     }, 60000);
