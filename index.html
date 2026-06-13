@@ -3304,6 +3304,49 @@ const SITE_ALIASES = [
   { id:'murray-beach', name:'Murray Beach', aliases:"Murray's Beach, Murrays Beach, Murray Beach, Murray's Beach Jervis Bay, Murrays Beach Jervis Bay, Jervis Bay" },
 ];
 
+// ── Canonical site resolution (shared by summarise + every Supabase read) ──
+// Resolves any AI-invented key OR stale site_id to its canonical SITE_ALIASES
+// id. This is the single source of truth so duplicates collapse no matter how
+// they entered the system (browser publish, Python watcher, manual, etc).
+const _normSite = s => String(s).toLowerCase()
+  .replace(/['\u2018\u2019\u02BC]/g, '')   // strip straight + curly apostrophes
+  .replace(/[-_\s]+/g, ' ').trim();        // collapse separators to a space
+
+// Pre-built lookup maps (built once)
+const _siteByAlias = {}, _siteById = {};
+SITE_ALIASES.forEach(s => {
+  _siteById[_normSite(s.id)] = s;
+  s.aliases.split(',').forEach(a => { _siteByAlias[_normSite(a)] = s; });
+});
+
+function canonicalSiteId(key) {
+  if (key == null) return key;
+  const keyNorm = _normSite(key);
+  // 1: exact id  2: normalised alias  3: normalised id
+  let hit = SITE_ALIASES.find(s => s.id === key) || _siteByAlias[keyNorm] || _siteById[keyNorm];
+  if (hit) return hit.id;
+  // 4: word-overlap — every word of a known alias appears in the key
+  const keyWords = new Set(keyNorm.split(' '));
+  let bestScore = 0, bestId = null;
+  Object.entries(_siteByAlias).forEach(([aliasNorm, site]) => {
+    const aliasWords = aliasNorm.split(' ');
+    const overlap = aliasWords.filter(w => keyWords.has(w)).length;
+    if (overlap === aliasWords.length && overlap > bestScore) { bestScore = overlap; bestId = site.id; }
+  });
+  return bestId || key;
+}
+
+// Collapse a list of Supabase rows so there's exactly one per canonical site.
+// Rows must already be ordered newest-first; the newest wins, stale ones drop.
+function dedupeReports(rows) {
+  const seen = new Map();
+  (rows || []).forEach(r => {
+    const cid = canonicalSiteId(r.site_id);
+    if (!seen.has(cid)) seen.set(cid, Object.assign({}, r, { site_id: cid }));
+  });
+  return Array.from(seen.values());
+}
+
 // Diver shorthand glossary (from the "other" row) — helps the AI read posts.
 const DIVER_GLOSSARY =
   'RHS/LHS = right/left hand side; PJs = Port Jackson sharks; ITW/OTW = In/Out The Water (often + a time); ' +
@@ -3372,6 +3415,7 @@ function admRowsToText(rows) {
   // is the best available recency proxy.
   const LINK_LIMIT = 15;
   let dataRows = rows;
+  let postCol = -1;   // column holding the actual post text, if detectable
   // Find the first row that has a "link" header (may not be rows[0] if multiple
   // sheets were concatenated and only one has that column).
   const headerIdx = rows.findIndex(r =>
@@ -3388,14 +3432,47 @@ function admRowsToText(rows) {
         return vb.localeCompare(va, undefined, { numeric: true, sensitivity: 'base' });
       })
       .slice(0, LINK_LIMIT);
+    // Try to identify the column that actually holds the post text, in priority
+    // order. Reading just this column avoids picking up captions/descriptions,
+    // which would inflate the count past 15 (and can be repeated boilerplate).
+    const PRIORITY = ['message', 'post message', 'post', 'content', 'description', 'body', 'text', 'caption', 'title'];
+    for (const want of PRIORITY) {
+      const idx = header.findIndex(h => h === want);
+      if (idx !== -1) { postCol = idx; break; }
+    }
+    if (postCol === -1) {
+      // looser: a header that contains one of the priority words but isn't an id/url/metric column
+      const BAD = /\b(id|url|link|permalink|time|date|reach|views|reactions|comments|shares|name|type)\b/;
+      for (const want of PRIORITY) {
+        const idx = header.findIndex(h => h.includes(want) && !BAD.test(h));
+        if (idx !== -1) { postCol = idx; break; }
+      }
+    }
   }
 
   const out = [];
   dataRows.forEach(r => {
     if (!Array.isArray(r)) r = Object.values(r);
-    r.forEach(cell => { if (isPost(cell)) out.push(String(cell).trim()); });
+    let best = '';
+    if (postCol !== -1 && isPost(r[postCol])) {
+      // Preferred: read the detected message column only — exactly one post/row.
+      best = String(r[postCol]).trim();
+    } else {
+      // Fallback (no detectable message column): the longest qualifying cell.
+      r.forEach(cell => {
+        if (isPost(cell)) {
+          const s = String(cell).trim();
+          if (s.length > best.length) best = s;
+        }
+      });
+    }
+    if (best) out.push(best);
   });
-  return Array.from(new Set(out)).join('\n\n');
+  let posts = Array.from(new Set(out));   // dedupe identical posts
+  // When the link-sorted export path ran, hard-cap at 15 as a final guarantee.
+  // (Pasted text with no link column is left intact.)
+  if (headerIdx !== -1) posts = posts.slice(0, LINK_LIMIT);
+  return posts.join('\n\n');
 }
 async function admFile(inputEl) {
   const file = inputEl.files && inputEl.files[0];
@@ -3501,46 +3578,13 @@ async function admSummarise() {
     try { parsed = JSON.parse(text); }
     catch(e) { throw new Error('No site reports could be extracted — the input may be analytics data rather than posts, or contained no recognisable sightings. Try the posts/content export, or paste posts directly.'); }
 
-    // Canonicalise AI-returned keys: remap invented keys to known site ids and
-    // merge summaries that collapse to the same id.
+    // Canonicalise AI-returned keys via the shared resolver, merging summaries
+    // that collapse to the same id.
     console.log('[VIZ] Raw AI keys:', Object.keys(parsed));
     parsed = (function canonicalise(raw) {
-      // Normalise: lowercase, strip apostrophes (straight + curly), collapse
-      // hyphens/underscores/spaces to a single space.
-      const norm = s => String(s).toLowerCase()
-        .replace(/['\u2018\u2019\u02BC]/g, '')
-        .replace(/[-_\s]+/g, ' ').trim();
-      // Pre-build lookup maps for speed
-      const byAlias = {}, byId = {};
-      SITE_ALIASES.forEach(s => {
-        byId[norm(s.id)] = s;
-        s.aliases.split(',').forEach(a => { byAlias[norm(a)] = s; });
-      });
       const merged = {};
       Object.entries(raw).forEach(([key, summary]) => {
-        const keyNorm = norm(key);
-        // Pass 1: exact canonical id
-        let canonical = SITE_ALIASES.find(s => s.id === key)
-        // Pass 2: normalised alias exact match
-                     || byAlias[keyNorm]
-        // Pass 3: normalised id exact match
-                     || byId[keyNorm];
-        // Pass 4: word-overlap — every word in a known alias appears in the key
-        //         catches variants like "murrays-beach-jervis-bay-nsw"
-        if (!canonical) {
-          const keyWords = new Set(keyNorm.split(' '));
-          let bestScore = 0, bestSite = null;
-          Object.entries(byAlias).forEach(([aliasNorm, site]) => {
-            const aliasWords = aliasNorm.split(' ');
-            const overlap = aliasWords.filter(w => keyWords.has(w)).length;
-            // Require ALL alias words present in the key, prefer longer aliases
-            if (overlap === aliasWords.length && overlap > bestScore) {
-              bestScore = overlap; bestSite = site;
-            }
-          });
-          canonical = bestSite;
-        }
-        const id = canonical ? canonical.id : key;
+        const id = canonicalSiteId(key);
         console.log('[VIZ] canonicalise:', key, '→', id);
         merged[id] = merged[id] ? merged[id] + ' ' + summary : summary;
       });
@@ -3628,9 +3672,15 @@ async function admLoadCurrent() {
       8000
     );
     if (!res.ok) throw new Error('Supabase ' + res.status);
-    const rows = await res.json();
+    const rawRows = await res.json();
+    const rows = dedupeReports(rawRows);
     if (!rows.length) { el.innerHTML = '<b>Currently published:</b> nothing yet.'; return; }
     let html = '<b>Currently published (' + rows.length + ' site' + (rows.length>1?'s':'') + '):</b>';
+    if (rawRows.length !== rows.length) {
+      html += '<div style="opacity:0.6;font-size:11px;margin-top:2px;">(' +
+        (rawRows.length - rows.length) + ' duplicate/stale row' +
+        ((rawRows.length - rows.length)>1?'s':'') + ' collapsed in this view — clean up in Supabase if you want them gone for good)</div>';
+    }
     rows.forEach(r => {
       const when = r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '';
       const meta = SITE_ALIASES.find(s => s.id === r.site_id);
@@ -3673,8 +3723,11 @@ async function loadPublicReports() {
     if (!res.ok) throw new Error('Supabase ' + res.status);
     const rows = await res.json();
     const cutoff = Date.now() - REPORTS_MAX_AGE_DAYS * 86400000;
-    _publicReports = (rows || []).filter(r =>
+    const fresh = (rows || []).filter(r =>
       r.summary && (!r.updated_at || new Date(r.updated_at).getTime() >= cutoff));
+    // Collapse any duplicate/stale site_ids (e.g. murrays-beach + murray-beach)
+    // into one canonical row, newest wins — regardless of how they got into the DB.
+    _publicReports = dedupeReports(fresh);
     renderReportsStrip();
   } catch (e) {
     // silent — strip simply stays hidden
