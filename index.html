@@ -505,20 +505,17 @@
   }
   .wx-left { display:flex; align-items:center; gap:12px; min-width:0; }
   .wx-icon { font-size:30px; line-height:1; flex-shrink:0; }
-  .wx-cond {
-    font-family:'DM Sans',sans-serif; font-size:clamp(15px,2.4vw,19px);
-    font-weight:500; color:var(--text); white-space:nowrap;
+  /* Both lines share one font / size / weight / colour, like the reference */
+  .wx-cond, .wx-feels-text {
+    font-family:'DM Mono',monospace;
+    font-size:clamp(15px,2.6vw,20px);
+    font-weight:500;
+    letter-spacing:0.5px;
+    color:var(--text);
+    white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis;
   }
-  .wx-feels { display:flex; align-items:baseline; gap:8px; flex-shrink:0; }
-  .wx-feels-label {
-    font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase;
-    letter-spacing:1.5px; color:var(--text-dim);
-  }
-  .wx-feels-val {
-    font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px;
-    color:var(--teal); line-height:1;
-  }
+  .wx-feels { display:flex; align-items:baseline; flex-shrink:0; }
   /* Time display is now inline in the section title */
   #snapshotTitle span {
     color:var(--teal); font-size:26px;
@@ -1179,8 +1176,7 @@
         <span class="wx-cond" id="wxCond">—</span>
       </div>
       <div class="wx-feels">
-        <span class="wx-feels-label">Feels like</span>
-        <span class="wx-feels-val" id="wxFeels">—</span>
+        <span class="wx-feels-text" id="wxFeels">—</span>
       </div>
     </div>
     <div class="section-title" id="snapshotTitle"><span id="snapshotTimeDisplay">—</span></div>
@@ -1275,6 +1271,26 @@
   <div style="margin-top:40px; margin-bottom:48px;">
     <div class="section-title">Feedback</div>
     <div id="feedback-form" style="max-width:480px;">
+      <input id="feedback-contact" type="text"
+        placeholder="Your name or email (required)"
+        style="
+          width:100%;
+          background:rgba(13,32,64,0.7);
+          border:1px solid var(--border);
+          border-radius:10px;
+          color:var(--text);
+          font-family:'DM Sans',sans-serif;
+          font-size:14px;
+          padding:12px 16px;
+          margin-bottom:10px;
+          outline:none;
+          backdrop-filter:blur(10px);
+          box-sizing:border-box;
+          transition:border-color 0.2s;
+        "
+        onfocus="this.style.borderColor='var(--teal)'"
+        onblur="this.style.borderColor='var(--border)'"
+      >
       <textarea id="feedback-text"
         placeholder="Questions? Ideas? Send a message and don't forget your email if you want to be recontacted. Thanks!"
         style="
@@ -1325,9 +1341,21 @@
 <script>
 async function submitFeedback() {
   const textarea = document.getElementById('feedback-text');
+  const contactEl = document.getElementById('feedback-contact');
   const btn      = document.querySelector('[onclick="submitFeedback()"]');
   const text     = textarea.value.trim();
-  if (!text) return;
+  const contact  = contactEl.value.trim();
+
+  if (!contact) {
+    contactEl.style.borderColor = 'var(--red)';
+    contactEl.focus();
+    return;
+  }
+  if (!text) {
+    textarea.style.borderColor = 'var(--red)';
+    textarea.focus();
+    return;
+  }
 
   const FORMSPREE_ENDPOINT = 'https://formsubmit.co/ajax/vizgroupsydney@gmail.com';
 
@@ -1338,7 +1366,7 @@ async function submitFeedback() {
     const res = await vizFetch(FORMSPREE_ENDPOINT, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body:    JSON.stringify({ message: text, _subject: 'VIZ Forecast App: Feedback' }),
+      body:    JSON.stringify({ name: contact, message: text, _subject: 'VIZ Forecast App: Feedback' }),
     }, 12000);
 
     const data = await res.json().catch(() => ({}));
@@ -2323,7 +2351,7 @@ function renderSnapshot(sliderVal) {
     document.getElementById('wxIcon').textContent = emoji;
     document.getElementById('wxCond').textContent = label;
     document.getElementById('wxFeels').textContent =
-      (h.apparentTemp != null) ? Math.round(h.apparentTemp) + '°' : '—';
+      (h.apparentTemp != null) ? `Feels like ${Math.round(h.apparentTemp)}°` : 'Feels like —';
     wxStrip.style.display = 'flex';
   } else {
     wxStrip.style.display = 'none';
