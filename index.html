@@ -1805,12 +1805,17 @@ const OPENMETEO_URL       = `https://marine-api.open-meteo.com/v1/marine` +
   `&forecast_days=7&wind_speed_unit=kmh&timezone=Australia%2FSydney`;
 
 // Returns { current: {...}, hourly: { [isoDateTime]: {...} } } or null on failure
+// ── Open-Meteo Marine status (for diagnostics) ────────────────────────────────
+let _omStatus = { ok: null, msg: 'not yet fetched', windWaveH: null, swell2H: null };
+
 async function fetchOpenMeteoMarine() {
   // Check cache
   try {
     const cached = JSON.parse(localStorage.getItem(OPENMETEO_CACHE_KEY) || 'null');
     if (cached && (Date.now() - cached.fetchedAt) < OPENMETEO_CACHE_TTL) {
       console.log('Open-Meteo: loaded from cache');
+      const c = cached.data?.current;
+      _omStatus = { ok: true, msg: 'from cache', windWaveH: c?.windWaveH ?? null, swell2H: c?.swell2H ?? null };
       return cached.data;
     }
   } catch(e) {}
@@ -1855,10 +1860,12 @@ async function fetchOpenMeteoMarine() {
     const data = { current, hourly };
     localStorage.setItem(OPENMETEO_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), data }));
     console.log(`Open-Meteo: fetched ${times.length} hourly entries`);
+    _omStatus = { ok: true, msg: `fetched live (${times.length} hrs)`, windWaveH: current.windWaveH, swell2H: current.swell2H };
     return data;
 
   } catch(e) {
     console.warn('Open-Meteo Marine fetch failed, secondary swell/wind wave will be 0:', e.message);
+    _omStatus = { ok: false, msg: e.message, windWaveH: null, swell2H: null };
     return null;
   }
 }
@@ -3054,7 +3061,10 @@ async function validateScores(data) {
     }
 
     const inputSummary = `Tide ${data.tideM}m · Wind ${data.windDir}° ${data.windKmh}km/h · WW ${data.windWaveDir}° ${data.windWaveH}m ${data.windWaveP||0}s · Swell ${data.swell1Dir}° ${data.swell1H}m ${data.swell1P}s · Swell2 ${data.swell2Dir}° ${data.swell2H}m ${data.swell2P}s`;
-    status.textContent = `Validated ${new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} · ${inputSummary}`;
+    const omLabel = _omStatus.ok === null ? 'OM: pending'
+                  : _omStatus.ok         ? `OM ✓ ${_omStatus.msg} · WW ${_omStatus.windWaveH?.toFixed(2) ?? '?'}m · S2 ${_omStatus.swell2H?.toFixed(2) ?? '?'}m`
+                  :                        `OM ✗ ${_omStatus.msg}`;
+    status.textContent = `Validated ${new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} · ${inputSummary} · ${omLabel}`;
 
   } catch(err) {
     badge.textContent  = 'Error';
