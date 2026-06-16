@@ -599,7 +599,7 @@
   .dsb-text-wrap { flex:1; min-width:0; }
   .dsb-eyebrow {
     font-family:'DM Mono',monospace;
-    font-size:10px;
+    font-size:13px;
     text-transform:uppercase;
     letter-spacing:2.5px;
     color:var(--teal);
@@ -675,7 +675,7 @@
   }
   .dsb-section-label {
     font-family:'DM Mono',monospace;
-    font-size:9px;
+    font-size:13px;
     text-transform:uppercase;
     letter-spacing:2px;
     color:var(--teal);
@@ -688,49 +688,6 @@
     font-weight:400;
     color:#eef5ff;
     line-height:1.5;
-  }
-  /* Trend chart */
-  .dsb-trend-wrap {
-    margin-top:14px;
-    padding-top:10px;
-    border-top:1px solid rgba(0,194,168,0.12);
-  }
-  .dsb-trend-eyebrow {
-    font-family:'DM Mono',monospace;
-    font-size:9px;
-    text-transform:uppercase;
-    letter-spacing:1.5px;
-    color:var(--teal);
-    opacity:0.7;
-    margin-bottom:8px;
-  }
-  .dsb-trend {
-    display:flex;
-    align-items:flex-end;
-    gap:2px;
-    height:36px;
-  }
-  .dsb-trend-col {
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-end;
-    height:36px;
-  }
-  .dsb-trend-bar {
-    width:100%;
-    border-radius:2px 2px 0 0;
-    min-height:2px;
-  }
-  .dsb-trend-label {
-    font-family:'DM Mono',monospace;
-    font-size:8px;
-    color:var(--text-dim);
-    text-align:center;
-    margin-top:3px;
-    letter-spacing:0.3px;
-    line-height:1;
   }
   .dsb-progress {
     position:absolute;
@@ -952,11 +909,7 @@
           <div class="dsb-section-text" id="dsb-dive-text"></div>
         </div>
       </div>
-      <!-- Trend chart -->
-      <div class="dsb-trend-wrap" id="dsb-trend-wrap" style="display:none">
-        <div class="dsb-trend-eyebrow" id="dsb-trend-eyebrow">Avg dive score across all sites</div>
-        <div class="dsb-trend" id="dsb-trend"></div>
-      </div>
+
     </div>
   </div>
   <div class="dsb-progress" id="dsb-progress"></div>
@@ -1202,6 +1155,12 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Tide chart -->
+    <div id="tideChartWrap" style="margin-top:18px; display:none;">
+      <svg id="tideChartSvg" viewBox="0 0 560 110" preserveAspectRatio="xMidYMid meet"
+           style="width:100%;height:auto;display:block;overflow:visible;"></svg>
     </div>
 
     <div class="section-title section-toggle" id="inputsToggle" onclick="toggleInputs()" style="margin-top:32px;">
@@ -2106,6 +2065,9 @@ async function fetchForecast() {
       const j      = await fetchOnce();
       let data     = parseWillyWeather(j);
       let matrix   = buildHourlyMatrix(j);
+      const tides  = (j.forecasts?.tides?.days || []).flatMap(d => d.entries || [])
+                       .sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+      _tideEntries = tides;
 
       // Fetch secondary swell + wind wave from Open-Meteo in parallel
       const omData = await fetchOpenMeteoMarine();
@@ -2116,7 +2078,7 @@ async function fetchForecast() {
       const wxData = await fetchOpenMeteoWeather();
       matrix = mergeWeatherIntoMatrix(matrix, wxData);
 
-      saveCache({ fetchedAt: Date.now(), data, matrix });
+      saveCache({ fetchedAt: Date.now(), data, matrix, tides });
       return data;
     } catch(e) {
       lastErr = e;
@@ -2338,6 +2300,7 @@ function renderTimeline(hourlyMatrix) {
 
 // ── Render snapshot bar chart ──────────────────────────────────────────────────
 let _hourlyMatrix = [];
+let _tideEntries  = [];   // raw H/L turning points from WillyWeather
 
 function renderSnapshot(sliderVal) {
   if (!_hourlyMatrix.length) return;
@@ -2507,6 +2470,7 @@ function selectDay(key, dayIdx) {
   }
   slider.value = bestSliderVal;
   _renderFromDaySlider(hoursForDay, parseInt(slider.value));
+  renderTideChart(key);
 }
 
 /** Translate day-slider position → global matrix index, then render. */
@@ -2540,9 +2504,206 @@ function toggleInputs() {
   label.textContent = open ? 'Hide inputs' : 'Expand for inputs';
 }
 
-// ── Hook timeline + snapshot into the data flow ────────────────────────────────
-function renderForecastViewsFromMatrix(matrix) {
+// ── Tide chart ────────────────────────────────────────────────────────────────
+function renderTideChart(dayKey) {
+  const wrap = document.getElementById('tideChartWrap');
+  const svg  = document.getElementById('tideChartSvg');
+  if (!wrap || !svg || !_tideEntries.length) { if (wrap) wrap.style.display = 'none'; return; }
+
+  // Filter tide turning-point entries for the target day (Sydney time) ±buffer
+  // We take entries from the previous and next day too to allow smooth curve at edges
+  const dayMs  = new Date(dayKey + 'T00:00:00+10:00').getTime();
+  const winLo  = dayMs - 6 * 3600000;
+  const winHi  = dayMs + 30 * 3600000;
+  const pts = _tideEntries.filter(e => {
+    const t = new Date(e.dateTime).getTime();
+    return t >= winLo && t <= winHi;
+  });
+  if (pts.length < 2) { wrap.style.display = 'none'; return; }
+
+  // Chart dimensions
+  const W = 560, H = 110;
+  const PAD_L = 34, PAD_R = 18, PAD_T = 24, PAD_B = 26;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  // Time axis: midnight to midnight of dayKey (Sydney)
+  const tMin = dayMs;
+  const tMax = dayMs + 24 * 3600000;
+
+  const allHeights = pts.map(p => p.height);
+  const hMin = Math.max(0, Math.min(...allHeights) - 0.1);
+  const hMax = Math.max(...allHeights) + 0.15;
+
+  const xOf = t => PAD_L + ((t - tMin) / (tMax - tMin)) * chartW;
+  const yOf = h => PAD_T + chartH - ((h - hMin) / (hMax - hMin)) * chartH;
+
+  // Build dense interpolated curve using cosine between consecutive H/L points
+  const curvePts = [];
+  const STEPS = 120;
+  const sorted = [...pts].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const t0 = new Date(sorted[i].dateTime).getTime();
+    const t1 = new Date(sorted[i+1].dateTime).getTime();
+    const h0 = sorted[i].height, h1 = sorted[i+1].height;
+    for (let s = 0; s < STEPS; s++) {
+      const frac = s / STEPS;
+      const t = t0 + frac * (t1 - t0);
+      const h = h0 + (1 - Math.cos(frac * Math.PI)) / 2 * (h1 - h0);
+      curvePts.push({ t, h });
+    }
+  }
+  curvePts.push({ t: new Date(sorted[sorted.length-1].dateTime).getTime(), h: sorted[sorted.length-1].height });
+
+  // Clip to visible window [tMin, tMax]
+  const visible = curvePts.filter(p => p.t >= tMin && p.t <= tMax);
+  if (!visible.length) { wrap.style.display = 'none'; return; }
+
+  // Polyline points
+  const linePoints = visible.map(p => `${xOf(p.t).toFixed(1)},${yOf(p.h).toFixed(1)}`).join(' ');
+
+  // Filled area path (close along bottom)
+  const areaPath = `M${xOf(visible[0].t).toFixed(1)},${yOf(visible[0].h).toFixed(1)} ` +
+    visible.slice(1).map(p => `L${xOf(p.t).toFixed(1)},${yOf(p.h).toFixed(1)}`).join(' ') +
+    ` L${xOf(visible[visible.length-1].t).toFixed(1)},${(PAD_T + chartH).toFixed(1)} L${xOf(visible[0].t).toFixed(1)},${(PAD_T + chartH).toFixed(1)} Z`;
+
+  // Current time indicator
+  const nowMs    = Date.now();
+  const nowInDay = nowMs >= tMin && nowMs <= tMax;
+  const nowX     = xOf(nowMs);
+
+  // Interpolate current tide height for "now" dot
+  let nowH = null;
+  if (nowInDay) {
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const t0 = new Date(sorted[i].dateTime).getTime();
+      const t1 = new Date(sorted[i+1].dateTime).getTime();
+      if (nowMs >= t0 && nowMs <= t1) {
+        const frac = (nowMs - t0) / (t1 - t0);
+        nowH = sorted[i].height + (1 - Math.cos(frac * Math.PI)) / 2 * (sorted[i+1].height - sorted[i].height);
+        break;
+      }
+    }
+  }
+
+  // Hour tick labels: 12a, 6a, 12p, 6p, 12a
+  const tickHours = [0, 6, 12, 18, 24];
+  const tickLabels = ['12a', '6a', '12p', '6p', '12a'];
+
+  // H/L label anchor — only show turning points inside the day window
+  const dayPts = sorted.filter(e => {
+    const t = new Date(e.dateTime).getTime();
+    return t >= tMin && t <= tMax;
+  });
+
+  // Background rect label for current tide
+  const nowLabel = nowH !== null
+    ? nowH.toFixed(2) + 'm'
+    : null;
+  const nowDir = nowH !== null
+    ? (() => {
+        const idx = sorted.findIndex((e,i) => {
+          if (i === sorted.length - 1) return true;
+          return new Date(e.dateTime).getTime() <= nowMs && new Date(sorted[i+1].dateTime).getTime() > nowMs;
+        });
+        if (idx < 0 || idx === sorted.length - 1) return '';
+        return sorted[idx+1].height > sorted[idx].height ? 'rising' : 'falling';
+      })()
+    : '';
+
+  // Build SVG
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k,v));
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const txt = (content, attrs, parent) => {
+    const e = el('text', attrs, parent);
+    e.textContent = content;
+    return e;
+  };
+
+  // Background
+  el('rect', { x:0, y:0, width:W, height:H, rx:10, fill:'rgba(6,16,32,0.55)', stroke:'rgba(0,194,168,0.15)', 'stroke-width':1 }, svg);
+
+  // Defs: gradient fill
+  const defs = el('defs', {}, svg);
+  const grad = el('linearGradient', { id:'tideGrad', x1:'0', y1:'0', x2:'0', y2:'1' }, defs);
+  el('stop', { offset:'0%',   'stop-color':'#00c2a8', 'stop-opacity':'0.35' }, grad);
+  el('stop', { offset:'100%', 'stop-color':'#00c2a8', 'stop-opacity':'0.07' }, grad);
+
+  // Clip path so curve doesn't bleed past chart area
+  const clip = el('clipPath', { id:'tideClip' }, defs);
+  el('rect', { x:PAD_L, y:0, width:chartW, height:H }, clip);
+
+  // Grid lines (horizontal) at 0m, 0.5m, 1m, 1.5m, 2m, 2.5m
+  const gridH = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0].filter(h => h >= hMin && h <= hMax);
+  gridH.forEach(h => {
+    const y = yOf(h);
+    if (y < PAD_T || y > PAD_T + chartH) return;
+    el('line', { x1:PAD_L, y1:y.toFixed(1), x2:PAD_L+chartW, y2:y.toFixed(1), stroke:'rgba(0,194,168,0.08)', 'stroke-width':1 }, svg);
+  });
+
+  // Filled area
+  el('path', { d:areaPath, fill:'url(#tideGrad)', 'clip-path':'url(#tideClip)' }, svg);
+
+  // Curve line
+  el('polyline', { points:linePoints, fill:'none', stroke:'#00c2a8', 'stroke-width':'1.8', 'stroke-linejoin':'round', 'stroke-linecap':'round', 'clip-path':'url(#tideClip)' }, svg);
+
+  // Tick marks + labels
+  tickHours.forEach((hr, i) => {
+    const x = xOf(tMin + hr * 3600000);
+    el('line', { x1:x.toFixed(1), y1:(PAD_T+chartH), x2:x.toFixed(1), y2:(PAD_T+chartH+4).toFixed(1), stroke:'rgba(200,221,245,0.25)', 'stroke-width':1 }, svg);
+    txt(tickLabels[i], { x:x.toFixed(1), y:(PAD_T+chartH+14).toFixed(1), 'text-anchor':'middle', 'font-family':'DM Mono, monospace', 'font-size':'9', fill:'rgba(200,221,245,0.45)', 'letter-spacing':'0.3' }, svg);
+  });
+
+  // H/L turning point dots + labels
+  dayPts.forEach(pt => {
+    const t  = new Date(pt.dateTime).getTime();
+    const x  = xOf(t), y = yOf(pt.height);
+    const isH = (pt.type || '').toLowerCase() === 'high';
+    const lbl = `${isH ? 'H' : 'L'} ${pt.height.toFixed(2)}m`;
+    // time label
+    const d = new Date(pt.dateTime);
+    const hh = d.getHours(), mm = d.getMinutes();
+    const tLbl = `${hh % 12 || 12}:${String(mm).padStart(2,'0')}${hh < 12 ? 'am' : 'pm'}`;
+
+    el('circle', { cx:x.toFixed(1), cy:y.toFixed(1), r:3.5, fill: isH ? '#00c2a8' : 'rgba(13,32,64,0.9)', stroke:'#00c2a8', 'stroke-width':1.5 }, svg);
+
+    // Label above for high, below for low
+    const yOff = isH ? -10 : 10;
+    const anchor = x < PAD_L + 40 ? 'start' : x > PAD_L + chartW - 40 ? 'end' : 'middle';
+    txt(`${lbl} · ${tLbl}`, { x:x.toFixed(1), y:(y + yOff).toFixed(1), 'text-anchor':anchor, 'font-family':'DM Mono, monospace', 'font-size':'8.5', fill:'#c8ddf5', 'letter-spacing':'0.2' }, svg);
+  });
+
+  // Now line + dot + label
+  if (nowInDay && nowH !== null) {
+    const nx = nowX.toFixed(1);
+    const ny = yOf(nowH).toFixed(1);
+    el('line', { x1:nx, y1:PAD_T, x2:nx, y2:(PAD_T+chartH).toFixed(1), stroke:'rgba(200,221,245,0.4)', 'stroke-width':1, 'stroke-dasharray':'3,3' }, svg);
+    el('circle', { cx:nx, cy:ny, r:4.5, fill:'#c8ddf5', stroke:'rgba(6,16,32,0.8)', 'stroke-width':1.5 }, svg);
+
+    // Current height badge — top right
+    const bx = W - PAD_R - 4, by = 8;
+    txt(nowLabel, { x:bx, y:(by+12), 'text-anchor':'end', 'font-family':'Bebas Neue, sans-serif', 'font-size':'18', fill:'#00c2a8', 'letter-spacing':'1' }, svg);
+    txt(nowDir, { x:bx, y:(by+22), 'text-anchor':'end', 'font-family':'DM Mono, monospace', 'font-size':'8', fill:'rgba(200,221,245,0.55)', 'letter-spacing':'1.5' }, svg);
+  }
+
+  // Chart title
+  txt('TIDE · SYDNEY', { x:PAD_L, y:13, 'font-family':'DM Mono, monospace', 'font-size':'9', fill:'rgba(200,221,245,0.4)', 'letter-spacing':'2', 'text-transform':'uppercase' }, svg);
+
+  wrap.style.display = 'block';
+}
+
+
+function renderForecastViewsFromMatrix(matrix, rawTideEntries) {
   _hourlyMatrix = matrix;
+  if (rawTideEntries) _tideEntries = rawTideEntries;
   if (!_hourlyMatrix.length) return;
 
   const dayIdx = _buildDayIndex();
@@ -2873,7 +3034,7 @@ async function init() {
       if (matrix.length) matrix = mergeWeatherIntoMatrix(matrix, wxData);
       updateConditions(data);
       renderSites(data);
-      if (matrix.length) renderForecastViewsFromMatrix(matrix);
+      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadCache()?.tides);
       const ago = Math.round((Date.now() - cache.fetchedAt) / 60000);
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
@@ -2889,7 +3050,7 @@ async function init() {
       hideErrorBanner();
       updateConditions(data); renderSites(data);
       const matrix = loadCache()?.matrix || [];
-      if (matrix.length) renderForecastViewsFromMatrix(matrix);
+      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadCache()?.tides);
       setStatus('Live · WillyWeather (AUSWAVE) — ' +
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
@@ -2901,7 +3062,7 @@ async function init() {
       showErrorBanner(err.message);
       if (cache?.data) {
         updateConditions(cache.data); renderSites(cache.data);
-        if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix);
+        if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix, cache.tides);
         setStatus('⚠ Showing cached data — live fetch failed', true);
         document.getElementById('lastUpdated').textContent =
           'Cached · ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
@@ -3406,9 +3567,6 @@ async function initDaySummaryBanner(data, matrix) {
   const eyebrowEl   = document.getElementById('dsb-eyebrow-label');
   const diveSectEl  = document.getElementById('dsb-dive-section');
   const diveTextEl  = document.getElementById('dsb-dive-text');
-  const trendWrapEl = document.getElementById('dsb-trend-wrap');
-  const trendEl     = document.getElementById('dsb-trend');
-  const trendLbl    = document.getElementById('dsb-trend-eyebrow');
   if (!banner || !summaryEl) return;
 
   iconEl.textContent = pickWeatherIcon(data);
@@ -3426,40 +3584,6 @@ async function initDaySummaryBanner(data, matrix) {
   const todayHours = matrix?.length ? getTodayHours(matrix, isTomorrow) : [];
   const arc = todayHours.length ? describeScoreArc(todayHours) : null;
 
-  // ── Hourly avg-score trend bars (fixed px heights) ──
-  if (todayHours.length && trendWrapEl && trendEl) {
-    const BAR_MAX_PX = 36; // matches .dsb-trend height
-    // Sample every 2 hours, up to 13 bars (full day)
-    const sampled = todayHours.filter(h => new Date(h.dateTime).getHours() % 2 === 0);
-    const nowMs = Date.now();
-
-    trendEl.innerHTML = '';
-    sampled.forEach(h => {
-      const score  = avgScoreForHour(h);
-      const col    = score >= 40 ? '#2ecc71' : score >= 20 ? '#f5c842' : '#e83d3d';
-      const barPx  = Math.max(2, Math.round((score / 60) * BAR_MAX_PX));
-      const hr     = new Date(h.dateTime).getHours();
-      const isPast = new Date(h.dateTime).getTime() < nowMs - 1800000;
-
-      const col2   = document.createElement('div');
-      col2.className = 'dsb-trend-col';
-
-      const bar = document.createElement('div');
-      bar.className = 'dsb-trend-bar';
-      bar.style.cssText = `height:${barPx}px;background:${col};opacity:${isPast ? '0.28' : '0.8'};`;
-
-      const lbl = document.createElement('div');
-      lbl.className = 'dsb-trend-label';
-      lbl.textContent = hr === 0 ? '12a' : hr < 12 ? `${hr}a` : hr === 12 ? '12p' : `${hr - 12}p`;
-
-      col2.appendChild(bar);
-      col2.appendChild(lbl);
-      trendEl.appendChild(col2);
-    });
-
-    if (trendLbl) trendLbl.textContent = isTomorrow ? "Tomorrow — avg score across all sites" : "Today — avg score across all sites";
-    trendWrapEl.style.display = 'block';
-  }
 
   // Wait for splash to finish before showing
   await new Promise(r => setTimeout(r, 3200));
