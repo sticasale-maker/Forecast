@@ -1159,7 +1159,7 @@
 
     <!-- Tide chart -->
     <div id="tideChartWrap" style="margin-top:18px; display:none;">
-      <svg id="tideChartSvg" viewBox="0 0 560 110" preserveAspectRatio="xMidYMid meet"
+      <svg id="tideChartSvg" viewBox="0 0 560 165" preserveAspectRatio="xMidYMid meet"
            style="width:100%;height:auto;display:block;overflow:visible;"></svg>
     </div>
 
@@ -2522,7 +2522,7 @@ function renderTideChart(dayKey) {
   if (pts.length < 2) { wrap.style.display = 'none'; return; }
 
   // Chart dimensions
-  const W = 560, H = 110;
+  const W = 560, H = 165;
   const PAD_L = 34, PAD_R = 18, PAD_T = 24, PAD_B = 26;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
