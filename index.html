@@ -3780,9 +3780,9 @@ CRITICAL GROUNDING RULES — read first:
 
 TASK:
 1. Read the posts below. Assign each relevant post to the site whose aliases best match.
-2. The KNOWN SITES list above is NOT exhaustive. If a post clearly refers to a real Sydney dive or snorkel site that is NOT in the list (e.g. Bushrangers Bay, Oak Park, Bare Island, Camp Cove, etc.), still include it: invent a lowercase hyphenated site_id from its name (e.g. "bushrangers-bay", "oak-park") and use the site's normal real-world name. Only do this for genuine, recognisable dive/snorkel locations — ignore posts that mention no recognisable site or are off-topic.
+2. ONLY use site_ids from the KNOWN SITES list above. If a post refers to a location not in that list, skip it — do not invent new site_ids.
 3. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising ONLY what those posts report (recent sightings, and the latest visibility in metres if a post states one). No bullet points, headers, or quotation marks.
-4. Return ONLY a JSON object mapping site_id to its summary string. Include both known and newly-identified sites that have relevant posts. No markdown, no code fences, no commentary. Example: {"gordons_bay":"Viz around 8m...","bushrangers-bay":"A few divers reported..."}
+4. Return ONLY a JSON object mapping site_id to its summary string. Only include site_ids from the KNOWN SITES list. No markdown, no code fences, no commentary. Example: {\"gordons_bay\":\"Viz around 8m...\",\"cabbage-tree-bay\":\"Flat conditions, viz 6m.\"}
 
 POSTS:
 ${posts}`;
