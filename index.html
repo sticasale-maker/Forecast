@@ -1426,7 +1426,7 @@ function dirLookup(arr, deg) {
 // Sheet mapping (1-based rows, 0-based in parsed CSV):
 //   Row 24 → Wind sens TUNE    (cols C–O = indices 2–14)
 //   Row 25 → Swell sens TUNE   (cols C–O = indices 2–14)
-//   Row 26 → Period power TUNE (cols C–O = indices 2–14)  spm = 81/periodPower
+//   Row 26 → Period power TUNE (cols C–O = indices 2–14)  spm = 144/periodPower
 //   Rows 32–63 → direction table, sites as triplets wind/sea/rif starting col C
 //   Site column offsets (0-based): CTB=2,BIW=5,BIE=8,Steps=11,Monument=14,
 //     Chowder=17,CampCove=20,Fairlight=23,Gordons=26,Freshwater=29,
@@ -1456,7 +1456,7 @@ const CONFIG_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const CONFIG_DEFAULTS = {
   windSens:   [0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3],
   swellSens:  [1.4,  1.4,  1.6,  1.6,  1.6,  0.8,  0.8,  1.0,  2.2,  1.2,  1.8,  0.3,  2.5],
-  // spm = 81 / periodPower  (verified: 81/25=3.24, 81/20=4.05, 81/10=8.1)
+  // spm = 144 / periodPower  (sheet 'Swell period multiplier' row: 144/25=5.76, 144/20=7.2, 144/10=14.4)
   periodPower:[25,   20,   20,   10,   20,   25,   25,   25,   25,   25,   25,   25,   20  ],
   lookup: {
     CTB:       {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
@@ -1527,7 +1527,7 @@ function applySheetConfig(rows) {
   if (rows[24] && rows[24][1] && rows[24][1].includes('Swell sens')) {
     CONFIG.swellSens = SITE_KEYS_ORDERED.map((_,i) => n(rows[24][i+2]));
   }
-  // Row 26 (0-based: 25) — Period power TUNE  →  spm = 81 / periodPower
+  // Row 26 (0-based: 25) — Period power TUNE  →  spm = 144 / periodPower
   if (rows[25] && rows[25][1] && rows[25][1].includes('Period power')) {
     CONFIG.periodPower = SITE_KEYS_ORDERED.map((_,i) => n(rows[25][i+2]));
   }
@@ -1602,7 +1602,7 @@ const SITES = [
 // Formula (corrected to match sheet):
 //   swellPower   = h² × period^1.1
 //   s_demerit    = swellPower × seaHit/100 × swellSens        ← swellSens from CONFIG
-//   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = 81/periodPower from CONFIG
+//   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = 144/periodPower from CONFIG
 //   wind_demerit = windPower(kmh) × windHit/100 × windSens    ← windHit can be negative (bonus)
 //   windWave_d   = swellPower(wwH, 5) × seaHit(wwDir)/100 × swellSens  ← period hardcoded=5 (sheet A24), uses sea hit + swellSens
 //   tide_demerit = site.tide(tideBase, tideM)                 ← tideBase is per-site:
@@ -1614,7 +1614,7 @@ function calcScore(site, d) {
   const lk  = CONFIG.lookup[site.key];
   const windSens  = CONFIG.windSens[si];
   const swellSens = CONFIG.swellSens[si];
-  const spm       = 81 / CONFIG.periodPower[si];   // spm = 81 / periodPower
+  const spm       = 144 / CONFIG.periodPower[si];  // spm = 144 / periodPower (matches sheet 'Swell period multiplier' row)
 
   const {windKmh, windDir, swell1H, swell1Dir, swell1P,
          swell2H, swell2Dir, swell2P, windWaveH, windWaveDir, tideM} = d;
