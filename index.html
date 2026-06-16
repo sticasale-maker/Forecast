@@ -2718,7 +2718,7 @@ function renderTideChart(dayKey) {
 
 function renderForecastViewsFromMatrix(matrix, rawTideEntries) {
   _hourlyMatrix = matrix;
-  if (rawTideEntries) _tideEntries = rawTideEntries;
+  if (rawTideEntries?.length) _tideEntries = rawTideEntries;
   if (!_hourlyMatrix.length) return;
 
   const dayIdx = _buildDayIndex();
@@ -3065,7 +3065,7 @@ async function init() {
       hideErrorBanner();
       updateConditions(data); renderSites(data);
       const matrix = loadCache()?.matrix || [];
-      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadTideCache());
+      if (matrix.length) renderForecastViewsFromMatrix(matrix, _tideEntries.length ? _tideEntries : loadTideCache());
       setStatus('Live · WillyWeather (AUSWAVE) — ' +
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
