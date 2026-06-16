@@ -634,6 +634,13 @@
     position:absolute; top:0; bottom:0; width:2px;
     background:rgba(255,255,255,0.32); z-index:2; pointer-events:none;
   }
+  /* Tap-hint glyph pinned to right of each bar */
+  .snap-info-hint {
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    font-size:14px; line-height:1; color:var(--teal); opacity:0.6;
+    pointer-events:none; z-index:4; user-select:none;
+    font-family:'DM Sans',sans-serif; font-weight:700;
+  }
   /* Zone captions under the bars — centred in each scoring band */
   .snap-zone-axis {
     display:flex; align-items:center; gap:10px; margin-bottom:40px;
@@ -2709,6 +2716,7 @@ function renderSnapshot(sliderVal) {
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
         <span class="snap-name">${name}</span>
+        <span class="snap-info-hint">ⓘ</span>
       </div>`;
     row.addEventListener('click', () => openSiteSheet(site, score, demerits, h));
     container.appendChild(row);
