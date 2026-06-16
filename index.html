@@ -218,7 +218,7 @@
 
   /* ── View tabs ── */
   .view-tabs {
-    display:flex; gap:6px; margin-bottom:4px; flex-wrap:nowrap;
+    display:flex; gap:6px; margin-bottom:0px; flex-wrap:nowrap;
   }
   .tab-btn {
     font-family:'DM Mono',monospace; font-size:clamp(10px,2.8vw,14px);
@@ -231,7 +231,7 @@
   .tab-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:600; }
 
   .view-panel { display:none; }
-  .view-panel.active { display:block; margin-top:4px; }
+  .view-panel.active { display:block; margin-top:0px; }
 
   /* ── Day View ── */
   .dv-chip {
@@ -501,7 +501,7 @@
   .wx-strip {
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     background:var(--card); border:1px solid var(--border); border-radius:14px;
-    padding:14px 20px; margin:0 0 18px;
+    padding:14px 20px; margin:0 0 14px;
   }
   .wx-left { display:flex; align-items:center; gap:12px; min-width:0; }
   .wx-icon { font-size:30px; line-height:1; flex-shrink:0; }
@@ -1132,7 +1132,7 @@
         <span class="wx-feels-text" id="wxFeels">—</span>
       </div>
     </div>
-    <div class="section-title" id="snapshotTitle"><span id="snapshotTimeDisplay">—</span></div>
+    <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" aria-hidden="true">
       <div class="snap-zone-track">
@@ -2328,6 +2328,7 @@ function renderSnapshot(sliderVal) {
   document.getElementById('snapshotTimeDisplay').textContent =
     dt.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}) + '  ' +
     String(dt.getHours()).padStart(2,'0') + ':00';
+  document.getElementById('snapshotTitle').style.display = 'flex';
 
   // Weather + feels-like (from Open-Meteo, tracks the selected hour)
   const wxStrip = document.getElementById('wxStrip');
@@ -2700,7 +2701,7 @@ function renderTideChart(dayKey) {
   if (nowInDay && nowH !== null) {
     const nx = nowX.toFixed(1);
     const ny = yOf(nowH).toFixed(1);
-    el('line', { x1:nx, y1:PAD_T, x2:nx, y2:(PAD_T+chartH).toFixed(1), stroke:'rgba(255,255,255,0.75)', 'stroke-width':2.5, 'stroke-dasharray':'5,4' }, svg);
+    el('line', { x1:nx, y1:PAD_T, x2:nx, y2:(PAD_T+chartH).toFixed(1), stroke:'rgba(200,221,245,0.4)', 'stroke-width':1, 'stroke-dasharray':'3,3' }, svg);
     el('circle', { cx:nx, cy:ny, r:4.5, fill:'#c8ddf5', stroke:'rgba(6,16,32,0.8)', 'stroke-width':1.5 }, svg);
 
     // Current height badge — top right
