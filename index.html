@@ -232,6 +232,7 @@
 
   .view-panel { display:none; }
   .view-panel.active { display:block; margin-top:0px; }
+  #panel-snapshot.active { margin-top:-48px; }
 
   /* ── Day View ── */
   .dv-chip {
@@ -335,7 +336,7 @@
     transform:translateY(100%); transition:transform 0.28s cubic-bezier(0.2,0.7,0.2,1);
   }
   #reportsSheetOverlay.open #reportsSheet { transform:translateY(0); }
-  #reportsSheetGrip { width:40px; height:4px; border-radius:2px; background:var(--text-dim); opacity:0.5; margin:0 auto 14px; }
+  .sheet-grip { width:40px; height:4px; border-radius:2px; background:var(--text-dim); opacity:0.5; margin:0 auto 14px; }
   #reportsSheetHead {
     display:flex; align-items:center; justify-content:space-between;
     font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; color:#fff;
@@ -358,6 +359,59 @@
   }
   .rs-site-when { font-size:11px; color:var(--text-dim); margin-left:8px; letter-spacing:0.5px; }
   .rs-site-summary { font-size:13px; color:var(--text); line-height:1.55; margin-top:5px; }
+
+  /* ── Site detail sheet (tap a snapshot bar) ── */
+  #siteSheetOverlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none; transition:opacity 0.25s; z-index:1000;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  #siteSheetOverlay.open { opacity:1; pointer-events:auto; }
+  #siteSheet {
+    width:100%; max-width:640px; max-height:82vh; overflow-y:auto;
+    background:#0a1830; border:1px solid var(--border); border-bottom:none;
+    border-radius:16px 16px 0 0; padding:14px 18px 26px;
+    transform:translateY(100%); transition:transform 0.28s cubic-bezier(0.2,0.7,0.2,1);
+  }
+  #siteSheetOverlay.open #siteSheet { transform:translateY(0); }
+  #siteSheetHead {
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; color:#fff;
+  }
+  #siteSheetClose {
+    background:rgba(0,194,168,0.15); border:1px solid rgba(0,194,168,0.4);
+    color:var(--teal); font-size:30px; cursor:pointer;
+    width:44px; height:44px; border-radius:50%; line-height:1;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:background 0.15s;
+  }
+  #siteSheetClose:hover { background:rgba(0,194,168,0.3); }
+  #siteSheetBadge {
+    display:inline-flex; align-items:center; gap:8px; margin:10px 0 14px;
+    font-family:'DM Mono',monospace; font-size:13px; letter-spacing:1px;
+    padding:5px 12px; border-radius:20px;
+  }
+  #siteSheetBadge .ss-score { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; line-height:1; }
+  #siteSheetBadge.green  { background:rgba(46,204,113,0.15); border:1px solid rgba(46,204,113,0.4); color:#2ecc71; }
+  #siteSheetBadge.yellow { background:rgba(245,200,66,0.13); border:1px solid rgba(245,200,66,0.4); color:#f5c842; }
+  #siteSheetBadge.red    { background:rgba(232,61,61,0.13);  border:1px solid rgba(232,61,61,0.4);  color:#e83d3d; }
+  #siteSheetDesc {
+    font-family:'DM Sans',sans-serif; font-size:15px; line-height:1.6;
+    color:var(--text); margin:0 0 14px;
+  }
+  #siteSheetWhen { font-size:11px; color:var(--text-dim); letter-spacing:0.5px; margin-bottom:16px; }
+  #siteSheetDemerits {
+    display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
+    border-top:1px solid var(--border); padding-top:14px;
+  }
+  .ssd-row { display:flex; align-items:center; justify-content:space-between; font-size:12px; }
+  .ssd-row .ssd-label { color:var(--text-dim); font-family:'DM Mono',monospace; letter-spacing:0.5px; display:flex; align-items:center; gap:6px; }
+  .ssd-row .ssd-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+  .ssd-row .ssd-val { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:0.5px; color:var(--text); }
+  .ssd-row .ssd-val.zero { color:var(--text-dim); opacity:0.5; }
+  .snap-row.tappable { cursor:pointer; }
+  .snap-row.tappable .snap-bar-track { transition:filter 0.15s; }
+  .snap-row.tappable:active .snap-bar-track { filter:brightness(1.25); }
 
   /* ── Timeline heatmap ── */
   .timeline-wrap {
@@ -505,6 +559,7 @@
   }
   .wx-left { display:flex; align-items:center; gap:12px; min-width:0; }
   .wx-icon { font-size:30px; line-height:1; flex-shrink:0; }
+  .wx-textcol { display:flex; flex-direction:column; gap:2px; min-width:0; }
   /* Both lines share one font / size / weight / colour, like the reference */
   .wx-cond, .wx-feels-text {
     font-family:'DM Mono',monospace;
@@ -515,6 +570,19 @@
     white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis;
   }
+  .wx-sun {
+    font-family:'DM Mono',monospace;
+    font-size:11px; letter-spacing:0.5px;
+    color:var(--text-dim); white-space:nowrap;
+  }
+  .wx-sun:empty { display:none; }
+  .wx-right { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+  .wx-watertemp {
+    font-family:'DM Mono',monospace;
+    font-size:clamp(15px,2.6vw,20px); font-weight:500; letter-spacing:0.5px;
+    color:var(--teal); white-space:nowrap;
+  }
+  .wx-watertemp:empty { display:none; }
   .wx-feels { display:flex; align-items:baseline; flex-shrink:0; }
   /* Time display is now inline in the section title */
   #snapshotTitle span {
@@ -528,18 +596,25 @@
   .snap-row {
     display:flex; align-items:center; gap:10px;
   }
-  .snap-label {
-    font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500;
-    color:var(--text); text-align:right; min-width:130px; white-space:nowrap;
-  }
   .snap-bar-track {
-    flex:1; height:28px; background:rgba(255,255,255,0.05);
+    flex:1; height:30px; background:rgba(255,255,255,0.05);
     border-radius:4px; overflow:hidden; position:relative;
   }
   .snap-bar-fill {
     height:100%; border-radius:4px;
     transition:width 0.4s cubic-bezier(0.16,1,0.3,1), background 0.3s;
     display:flex; align-items:center; justify-content:flex-end; padding-right:8px;
+  }
+  /* Site name overlaid on the bar — outlined so it reads on any fill colour or the dark track */
+  .snap-name {
+    position:absolute; left:11px; top:50%; transform:translateY(-50%);
+    z-index:3; pointer-events:none; white-space:nowrap;
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+    letter-spacing:0.2px; color:#fff;
+    text-shadow:
+      -1px -1px 0 rgba(0,0,0,0.6),  1px -1px 0 rgba(0,0,0,0.6),
+      -1px  1px 0 rgba(0,0,0,0.6),  1px  1px 0 rgba(0,0,0,0.6),
+       0 0 3px rgba(0,0,0,0.55);
   }
   .snap-bar-score {
     font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1px;
@@ -557,7 +632,7 @@
     width:100vw; position:relative; left:50%; transform:translateX(-50%);
     padding:0 20px; box-sizing:border-box;
   }
-  .snap-zone-spacer { min-width:130px; }
+  .snap-zone-spacer { display:none; }
   .snap-zone-track { flex:1; position:relative; height:14px; }
   .snap-zone-label {
     position:absolute; transform:translateX(-50%);
@@ -809,8 +884,8 @@
 
   /* Snapshot bars panel */
   @media (max-width:480px) {
-    .snap-bar-track { height:20px; }
-    .snap-label     { font-size:11px; }
+    .snap-bar-track { height:28px; }
+    .snap-name      { font-size:12px; left:9px; }
   }
 
   /* Timeline table: allow horizontal scroll, shrink cells */
@@ -1126,15 +1201,19 @@
     <div class="wx-strip" id="wxStrip" style="display:none;">
       <div class="wx-left">
         <span class="wx-icon" id="wxIcon">🌡️</span>
-        <span class="wx-cond" id="wxCond">—</span>
+        <div class="wx-textcol">
+          <span class="wx-cond" id="wxCond">—</span>
+          <span class="wx-sun" id="wxSun"></span>
+        </div>
       </div>
-      <div class="wx-feels">
+      <div class="wx-right">
+        <span class="wx-watertemp" id="wxWaterTemp"></span>
         <span class="wx-feels-text" id="wxFeels">—</span>
       </div>
     </div>
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
-    <div class="snap-zone-axis" aria-hidden="true">
+    <div class="snap-zone-axis" id="snapZoneAxis" aria-hidden="true" style="display:none;">
       <div class="snap-zone-track">
         <span class="snap-zone-label" style="left:16.67%;color:var(--red)">Avoid</span>
         <span class="snap-zone-label" style="left:50%;color:var(--yellow)">Caution</span>
@@ -1627,8 +1706,74 @@ function bearingName(deg) {
   const d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return d[Math.round(((deg%360)/360)*16)%16];
 }
+// minutes-of-day (local) → "6:42am"
+function minToTime(min) {
+  if (min == null) return '';
+  let h = Math.floor(min / 60), m = min % 60;
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2,'0')}${ap}`;
+}
+// Plain-language reason for a site's score, from its demerit breakdown + the hour's conditions.
+// Returns a short phrase like "SE swell" or "onshore wind chop", or "" when nothing notable.
+// Full natural-language description of a site's conditions, built from the model's
+// own demerit breakdown + the hour's raw inputs. Pure string-building — no AI, no cost.
+function describeConditions(site, score, demerits, h) {
+  const band = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
+
+  // Rank the hazards by how many points each one is subtracting.
+  const hazards = [
+    { key:'swell1',   val:demerits.swell1,   dir:h.swell1Dir,   noun:'swell',
+      detail:`${h.swell1H.toFixed(1)}m ${bearingName(h.swell1Dir)} swell at ${Math.round(h.swell1P)}s` },
+    { key:'swell2',   val:demerits.swell2,   dir:h.swell2Dir,   noun:'secondary swell',
+      detail:`${h.swell2H.toFixed(1)}m ${bearingName(h.swell2Dir)} secondary swell` },
+    { key:'refrac',   val:demerits.refrac,   dir:h.swell1Dir,   noun:'refraction',
+      detail:`waves wrapping around the headland from the ${bearingName(h.swell1Dir)}` },
+    { key:'windWave', val:demerits.windWave, dir:h.windWaveDir, noun:'wind waves',
+      detail:`${h.windWaveH.toFixed(1)}m ${bearingName(h.windWaveDir)} wind waves` },
+    { key:'wind',     val:demerits.wind,     dir:h.windDir,     noun:'wind chop',
+      detail:`${Math.round(h.windKmh)}km/h ${bearingName(h.windDir)} wind` },
+  ];
+  const active = hazards.filter(x => x.val > 0.3).sort((a,b) => b.val - a.val);
+  const tideHurt = (demerits.tide || 0) > 1;
+  const windBonus = (demerits.wind || 0) < -0.3; // offshore wind helping a sheltered site
+
+  let s = '';
+
+  // Opening clause sets the overall feel.
+  if (band === 'Easy' && !active.length) {
+    s = 'Mostly flat with very little water movement';
+  } else if (band === 'Easy') {
+    s = `Largely settled, with only minor ${active[0].noun}`;
+  } else if (band === 'Caution') {
+    s = `Some movement to be aware of, mainly from ${active.length ? active[0].detail : 'the tide'}`;
+  } else { // Avoid
+    s = `Rough and exposed right now — driven by ${active.length ? active[0].detail : 'strong water movement'}`;
+  }
+
+  // Second hazard if it's also pulling real weight.
+  if (active[1] && active[1].val >= active[0].val * 0.5) {
+    s += `, with added ${active[1].noun} from the ${bearingName(active[1].dir)}`;
+  }
+
+  // Offshore-wind bonus (the model gives sheltered sites a small lift here).
+  if (windBonus) {
+    s += `. The ${bearingName(h.windDir)} wind is offshore here, helping clean it up`;
+  }
+
+  // Tide modifier.
+  if (tideHurt) {
+    s += `. The current ${h.tideM.toFixed(2)}m tide is working against this site`;
+  } else if (band !== 'Avoid' && (demerits.tide || 0) < -0.3) {
+    s += `. The ${h.tideM.toFixed(2)}m tide is in this site's favour`;
+  }
+
+  return s.trim() + '.';
+}
 function cls(s)   { return s>=40?'green':s>=20?'yellow':'red'; }
 function label(s) { return s>=40?'Easy':s>=20?'Caution':'Avoid'; }
+// Display helper: model scores are 0–60 internally; users see 0–100%.
+function toPct(s) { return Math.round((s / 60) * 100); }
 
 // ── Render ─────────────────────────────────────────────────────────────────────
 function renderSites(data) {
@@ -1644,8 +1789,8 @@ function renderSites(data) {
       <div class="rating-badge">${label(score)}</div>
       <div class="site-name">${s.name}</div>
       <div class="score-row">
-        <div class="score-big">${score}</div>
-        <div class="score-max">/60</div>
+        <div class="score-big">${toPct(score)}</div>
+        <div class="score-max">%</div>
       </div>
       <div class="score-bar-track">
         <div class="score-bar-fill" style="width:${pct}%"></div>
@@ -1767,9 +1912,9 @@ const OPENMETEO_LNG       = 151.29166;
 const OPENMETEO_URL       = `https://marine-api.open-meteo.com/v1/marine` +
   `?latitude=${OPENMETEO_LAT}&longitude=${OPENMETEO_LNG}` +
   `&hourly=secondary_swell_wave_height,secondary_swell_wave_direction,secondary_swell_wave_period` +
-  `,wind_wave_height,wind_wave_direction,wind_wave_period` +
+  `,wind_wave_height,wind_wave_direction,wind_wave_period,sea_surface_temperature` +
   `&current=secondary_swell_wave_height,secondary_swell_wave_direction,secondary_swell_wave_period` +
-  `,wind_wave_height,wind_wave_direction,wind_wave_period` +
+  `,wind_wave_height,wind_wave_direction,wind_wave_period,sea_surface_temperature` +
   `&forecast_days=7&wind_speed_unit=kmh&timezone=Australia%2FSydney`;
 
 // Returns { current: {...}, hourly: { [isoDateTime]: {...} } } or null on failure
@@ -1802,6 +1947,7 @@ async function fetchOpenMeteoMarine() {
       windWaveH:  c.wind_wave_height               ?? 0,
       windWaveDir:c.wind_wave_direction             ?? 0,
       windWaveP:  c.wind_wave_period               ?? 0,
+      seaTemp:    c.sea_surface_temperature        ?? null,
     };
 
     // Parse hourly — build a map keyed by ISO datetime string
@@ -1812,6 +1958,7 @@ async function fetchOpenMeteoMarine() {
     const wwh   = j.hourly?.wind_wave_height               || [];
     const wwd   = j.hourly?.wind_wave_direction            || [];
     const wwp   = j.hourly?.wind_wave_period               || [];
+    const sst   = j.hourly?.sea_surface_temperature        || [];
 
     const hourly = {};
     times.forEach((dt, i) => {
@@ -1822,6 +1969,7 @@ async function fetchOpenMeteoMarine() {
         windWaveH:  wwh[i] ?? 0,
         windWaveDir:wwd[i] ?? 0,
         windWaveP:  wwp[i] ?? 0,
+        seaTemp:    sst[i] ?? null,
       };
     });
 
@@ -1925,6 +2073,7 @@ function mergeOpenMeteoIntoMatrix(matrix, omData) {
       windWaveH:  om.windWaveH  || 0,
       windWaveDir:om.windWaveDir || row.windDir,
       windWaveP:  om.windWaveP  || 0,
+      seaTemp:    om.seaTemp ?? row.seaTemp ?? null,
     };
   });
 }
@@ -2015,7 +2164,8 @@ function mergeWeatherIntoMatrix(matrix, wxData) {
     const isNight = (sun && sun.sunrise != null && sun.sunset != null)
       ? (rowMin < sun.sunrise || rowMin >= sun.sunset)
       : (rowMin < 6 * 60 || rowMin >= 18 * 60);
-    return { ...row, airTemp: wx.airTemp, apparentTemp: wx.apparentTemp, weatherCode: wx.weatherCode, isNight };
+    return { ...row, airTemp: wx.airTemp, apparentTemp: wx.apparentTemp, weatherCode: wx.weatherCode, isNight,
+             sunrise: sun?.sunrise ?? null, sunset: sun?.sunset ?? null };
   });
 }
 
@@ -2280,7 +2430,7 @@ function renderTimeline(hourlyMatrix) {
         // Score text on hover
         const span = document.createElement('span');
         span.className = 'tl-cell-score';
-        span.textContent = score;
+        span.textContent = toPct(score);
         td.appendChild(span);
 
         // Tooltip
@@ -2291,7 +2441,7 @@ function renderTimeline(hourlyMatrix) {
             `<b>${site.name}</b><br>` +
             `${dt.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})} ` +
             `${String(dt.getHours()).padStart(2,'0')}:00<br>` +
-            `Score: <b style="color:${scoreColor(score)}">${score}/60</b><br>` +
+            `Score: <b style="color:${scoreColor(score)}">${toPct(score)}%</b><br>` +
             `Swell: ${h.swell1H.toFixed(1)}m ${bearingName(h.swell1Dir)} ${Math.round(h.swell1P)}s<br>` +
             `Wind: ${Math.round(h.windKmh)} km/h ${bearingName(h.windDir)}<br>` +
             `Tide: ${h.tideM.toFixed(2)}m`;
@@ -2338,6 +2488,19 @@ function renderSnapshot(sliderVal) {
     document.getElementById('wxCond').textContent = label;
     document.getElementById('wxFeels').textContent =
       (h.apparentTemp != null) ? `Feels like ${Math.round(h.apparentTemp)}°` : 'Feels like —';
+
+    // Water temperature (Open-Meteo Marine, sea surface)
+    const waterEl = document.getElementById('wxWaterTemp');
+    waterEl.textContent = (h.seaTemp != null) ? `🌊 ${Math.round(h.seaTemp)}° water` : '';
+
+    // Sunrise / sunset for the selected day
+    const sunEl = document.getElementById('wxSun');
+    if (h.sunrise != null && h.sunset != null) {
+      sunEl.textContent = `↑ ${minToTime(h.sunrise)}   ↓ ${minToTime(h.sunset)}`;
+    } else {
+      sunEl.textContent = '';
+    }
+
     wxStrip.style.display = 'flex';
   } else {
     wxStrip.style.display = 'none';
@@ -2345,24 +2508,27 @@ function renderSnapshot(sliderVal) {
 
   // Compute all site scores and sort descending
   const results = SITES.map(site => {
-    const {score} = calcScore(site, h);
-    return {name: site.name, score};
+    const {score, demerits} = calcScore(site, h);
+    return {site, name: site.name, score, demerits};
   }).sort((a,b) => b.score - a.score);
 
   const container = document.getElementById('snapshotBars');
   container.innerHTML = '';
+  const _zoneAxis = document.getElementById('snapZoneAxis');
+  if (_zoneAxis) _zoneAxis.style.display = 'flex';
 
-  results.forEach(({name, score}) => {
+  results.forEach(({site, name, score, demerits}) => {
     const pct = Math.max(0, Math.min(100, (score/60)*100));
     const row = document.createElement('div');
-    row.className = 'snap-row';
+    row.className = 'snap-row tappable';
     row.innerHTML = `
       <div class="snap-bar-track">
         <div class="snap-bar-fill" style="width:${pct}%;background:${scoreColor(score)}"></div>
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
-      </div>
-      <div class="snap-label">${name}</div>`;
+        <span class="snap-name">${name}</span>
+      </div>`;
+    row.addEventListener('click', () => openSiteSheet(site, score, demerits, h));
     container.appendChild(row);
   });
 
@@ -2911,9 +3077,9 @@ function dvDrawChart(pts) {
 
   // Zone labels on right
   html += `<text x="${padL+gW+3}" y="${yGreen+4}" fill="rgba(46,204,113,0.5)"
-    font-size="8" font-family="DM Mono,monospace">40</text>`;
+    font-size="8" font-family="DM Mono,monospace">${toPct(40)}%</text>`;
   html += `<text x="${padL+gW+3}" y="${yYellow+4}" fill="rgba(245,200,66,0.5)"
-    font-size="8" font-family="DM Mono,monospace">20</text>`;
+    font-size="8" font-family="DM Mono,monospace">${toPct(20)}%</text>`;
 
   // Coloured polyline segments (colour changes at zone boundaries)
   for (let i = 0; i < pts.length - 1; i++) {
@@ -3448,8 +3614,8 @@ function buildDiveSummary(data, arc) {
   if (arc) {
     if (arc.trendNote)         trajectory = arc.trendNote;
     else if (arc.peak >= 48)   trajectory = `scores peak ${arc.peakTime} — that\'s your window`;
-    else if (arc.peak >= 35)   trajectory = `best window ${arc.peakTime} with scores around ${arc.peak}/60`;
-    else if (arc.peak >= 20)   trajectory = `challenging all day, best ${arc.peakTime} at ${arc.peak}/60`;
+    else if (arc.peak >= 35)   trajectory = `best window ${arc.peakTime} with scores around ${toPct(arc.peak)}%`;
+    else if (arc.peak >= 20)   trajectory = `challenging all day, best ${arc.peakTime} at ${toPct(arc.peak)}%`;
     else                       trajectory = `tough conditions all day — scores stay low`;
   }
 
@@ -4188,6 +4354,56 @@ function closeReportsSheet(e) {
   document.getElementById('reportsSheetOverlay').classList.remove('open');
 }
 
+// ── Site detail sheet (opened by tapping a snapshot bar) ──────────────────────
+function openSiteSheet(site, score, demerits, h) {
+  const band = score >= 40 ? 'green' : score >= 20 ? 'yellow' : 'red';
+  const bandLabel = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
+
+  document.getElementById('siteSheetName').textContent = site.name;
+
+  const badge = document.getElementById('siteSheetBadge');
+  badge.className = band;
+  badge.innerHTML = `<span class="ss-score">${toPct(score)}%</span> · ${bandLabel}`;
+
+  document.getElementById('siteSheetDesc').textContent =
+    describeConditions(site, score, demerits, h);
+
+  // Time context
+  const dt = new Date(h.dateTime);
+  document.getElementById('siteSheetWhen').textContent =
+    dt.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'short'}) + ' · ' +
+    String(dt.getHours()).padStart(2,'0') + ':00';
+
+  // Demerit breakdown — shown as percentage points so it lines up with the % score
+  const rows = [
+    { label:'Swell',      val:demerits.swell1,   color:'#00c2a8' },
+    { label:'Secondary',  val:demerits.swell2,   color:'#00857a' },
+    { label:'Refraction', val:demerits.refrac,   color:'#f5a623' },
+    { label:'Wind wave',  val:demerits.windWave, color:'#3a9bd5' },
+    { label:'Wind chop',  val:demerits.wind,     color:'#a0c4ff' },
+    { label:'Tide',       val:demerits.tide,     color:'#4a90d9' },
+  ];
+  document.getElementById('siteSheetDemerits').innerHTML = rows.map(r => {
+    const pctPts = (r.val || 0) * (100 / 60);   // demerit points → percentage points
+    const txt = pctPts > 0.5 ? `−${Math.round(pctPts)}%`
+              : pctPts < -0.5 ? `+${Math.round(Math.abs(pctPts))}%`
+              : '0%';
+    const zero = Math.abs(pctPts) < 0.5 ? ' zero' : '';
+    return `<div class="ssd-row">
+      <span class="ssd-label"><span class="ssd-dot" style="background:${r.color}"></span>${r.label}</span>
+      <span class="ssd-val${zero}">${txt}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('siteSheetOverlay').classList.add('open');
+}
+
+function closeSiteSheet(e) {
+  if (e && e.target && e.target.id !== 'siteSheetOverlay' && e.target.id !== 'siteSheetClose'
+      && !(e.target.closest && e.target.closest('#siteSheetClose'))) return;
+  document.getElementById('siteSheetOverlay').classList.remove('open');
+}
+
 // Unlock admin via URL hash
 window.addEventListener('DOMContentLoaded', function() {
   if (location.hash === '#viz-admin') admUnlock();
@@ -4201,13 +4417,27 @@ loadConfig().then(() => init());
 <!-- Community reports slide-up sheet -->
 <div id="reportsSheetOverlay" onclick="closeReportsSheet(event)">
   <div id="reportsSheet" onclick="event.stopPropagation()">
-    <div id="reportsSheetGrip"></div>
+    <div class="sheet-grip"></div>
     <div id="reportsSheetHead">
       <span><span style="color:var(--yellow);">VIZ</span> COMMUNITY REPORTS</span>
       <button id="reportsSheetClose" onclick="closeReportsSheet()" aria-label="Close">✕</button>
     </div>
     <div id="reportsSheetSub"></div>
     <div id="reportsSheetList"></div>
+  </div>
+</div>
+
+<div id="siteSheetOverlay" onclick="closeSiteSheet(event)">
+  <div id="siteSheet" onclick="event.stopPropagation()">
+    <div class="sheet-grip"></div>
+    <div id="siteSheetHead">
+      <span id="siteSheetName">—</span>
+      <button id="siteSheetClose" onclick="closeSiteSheet()" aria-label="Close">✕</button>
+    </div>
+    <div id="siteSheetBadge"></div>
+    <p id="siteSheetDesc"></p>
+    <div id="siteSheetWhen"></div>
+    <div id="siteSheetDemerits"></div>
   </div>
 </div>
 </body>
