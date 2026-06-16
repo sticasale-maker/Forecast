@@ -1683,6 +1683,7 @@ function setStatus(text, isError=false) {
 
 const WORKER_URL          = 'https://bold-rain-6ded.sticasale.workers.dev/forecast';
 const CACHE_KEY           = 'ww_cache';
+const TIDE_CACHE_KEY      = 'ww_tides_cache';
 const REFRESH_HOURS       = [0,2,4,6,8,10,12,14,16,18,20,22];
 const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
@@ -1691,7 +1692,15 @@ function loadCache() {
   try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; }
 }
 function saveCache(obj) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(obj)); } catch {}
+  // Strip tides from the main cache object — stored separately to avoid Safari quota issues
+  const { tides, ...rest } = obj;
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(rest)); } catch {}
+  if (tides?.length) {
+    try { localStorage.setItem(TIDE_CACHE_KEY, JSON.stringify(tides)); } catch {}
+  }
+}
+function loadTideCache() {
+  try { return JSON.parse(localStorage.getItem(TIDE_CACHE_KEY) || 'null'); } catch { return null; }
 }
 function cacheIsFresh(cache) {
   return !!(cache?.fetchedAt && (Date.now() - cache.fetchedAt) < REFRESH_INTERVAL_MS);
@@ -3040,7 +3049,7 @@ async function init() {
       if (matrix.length) matrix = mergeWeatherIntoMatrix(matrix, wxData);
       updateConditions(data);
       renderSites(data);
-      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadCache()?.tides);
+      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadTideCache());
       const ago = Math.round((Date.now() - cache.fetchedAt) / 60000);
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
@@ -3056,7 +3065,7 @@ async function init() {
       hideErrorBanner();
       updateConditions(data); renderSites(data);
       const matrix = loadCache()?.matrix || [];
-      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadCache()?.tides);
+      if (matrix.length) renderForecastViewsFromMatrix(matrix, loadTideCache());
       setStatus('Live · WillyWeather (AUSWAVE) — ' +
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
@@ -3068,7 +3077,7 @@ async function init() {
       showErrorBanner(err.message);
       if (cache?.data) {
         updateConditions(cache.data); renderSites(cache.data);
-        if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix, cache.tides);
+        if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix, loadTideCache());
         setStatus('⚠ Showing cached data — live fetch failed', true);
         document.getElementById('lastUpdated').textContent =
           'Cached · ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
@@ -3245,6 +3254,7 @@ async function validateScores(data) {
 function hardRefresh() {
   // Clear both data cache and config cache so everything reloads fresh
   try { localStorage.removeItem('ww_cache'); } catch(e) {}
+  try { localStorage.removeItem('ww_tides_cache'); } catch(e) {}
   try { localStorage.removeItem('viz_config_cache'); } catch(e) {}
   try { localStorage.removeItem('om_marine_cache'); } catch(e) {}
   try { localStorage.removeItem('om_marine_cache_v2'); } catch(e) {}
