@@ -400,6 +400,14 @@
     color:var(--text); margin:0 0 14px;
   }
   #siteSheetWhen { font-size:11px; color:var(--text-dim); letter-spacing:0.5px; margin-bottom:16px; }
+  #siteSheetTideNote {
+    display:flex; gap:9px; align-items:flex-start;
+    background:rgba(74,144,217,0.1); border:1px solid rgba(74,144,217,0.35);
+    border-radius:10px; padding:11px 13px; margin:0 0 16px;
+    font-family:'DM Sans',sans-serif; font-size:13px; line-height:1.5; color:var(--text);
+  }
+  #siteSheetTideNote .stn-icon { font-size:16px; line-height:1.3; flex-shrink:0; }
+  #siteSheetTideNote b { color:#7bb6e8; font-weight:600; }
   #siteSheetDemerits {
     display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
     border-top:1px solid var(--border); padding-top:14px;
@@ -579,7 +587,7 @@
   .wx-right { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
   .wx-watertemp {
     font-family:'DM Mono',monospace;
-    font-size:clamp(15px,2.6vw,20px); font-weight:500; letter-spacing:0.5px;
+    font-size:11px; letter-spacing:0.5px;
     color:var(--teal); white-space:nowrap;
   }
   .wx-watertemp:empty { display:none; }
@@ -1060,6 +1068,22 @@
         <p style="color:var(--text);font-size:13px;">
           Join the <a href="https://www.facebook.com/groups/sydviz" style="color:var(--teal);text-decoration:none;">VIZ Facebook group</a> for fresh underwater visibility reports.
         </p>
+        <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
+          <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">
+            This app is free, non-profit and built in spare time. If it saved you a bad dive, a coffee goes a long way ☕
+          </p>
+          <a href="https://www.buymeacoffee.com/vizforecast" target="_blank" rel="noopener" style="
+            display:inline-flex;align-items:center;gap:9px;
+            background:#FFDD00;color:#222;
+            font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;
+            border-radius:10px;padding:10px 20px;
+            text-decoration:none;
+            box-shadow:0 2px 12px rgba(255,221,0,0.25);
+            transition:opacity 0.15s;letter-spacing:0.2px;"
+            onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+            ☕ Offer me a coffee
+          </a>
+        </div>
       </div>
     </div>
 
@@ -1207,8 +1231,8 @@
         </div>
       </div>
       <div class="wx-right">
-        <span class="wx-watertemp" id="wxWaterTemp"></span>
         <span class="wx-feels-text" id="wxFeels">—</span>
+        <span class="wx-watertemp" id="wxWaterTemp"></span>
       </div>
     </div>
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
@@ -1770,6 +1794,161 @@ function describeConditions(site, score, demerits, h) {
 
   return s.trim() + '.';
 }
+
+// Day-trend sentence for a site: is it better earlier / later / midday, and why.
+// Compares the site's own score + demerit breakdown across the daylight hours of
+// the day the tapped hour belongs to. Pure JS from the model — no AI, no cost.
+function describeTrend(site, h) {
+  if (!_hourlyMatrix.length) return '';
+
+  // All hours on the same Sydney day as the selected (slider) hour.
+  const dayKey = new Date(h.dateTime).toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  let dayRows = _hourlyMatrix.filter(r =>
+    new Date(r.dateTime).toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'}) === dayKey);
+  if (dayRows.length < 4) return '';
+
+  const minutesOf = r => (+r.dateTime.substring(11,13))*60 + (+r.dateTime.substring(14,16));
+
+  // Prefer daylight hours (diving happens in daylight); fall back to all if sun data missing.
+  const daylight = dayRows.filter(r => {
+    const m = minutesOf(r);
+    return (r.sunrise != null && r.sunset != null)
+      ? (m >= r.sunrise && m <= r.sunset)
+      : (m >= 6*60 && m <= 18*60);
+  });
+  if (daylight.length >= 4) dayRows = daylight;
+  dayRows.sort((a,b) => minutesOf(a) - minutesOf(b));
+
+  // Score + demerits for the site at each hour.
+  const pts = dayRows.map(r => {
+    const { score, demerits } = calcScore(site, r);
+    return { r, score, demerits };
+  });
+
+  // Conditions at the currently selected time (from the slider).
+  const cur = calcScore(site, h);
+  const curScore = cur.score;
+  const curMin = minutesOf(h);
+
+  // Index of the selected hour within the day's points (nearest by time).
+  let curIdx = 0, nearest = Infinity;
+  pts.forEach((p, i) => {
+    const d = Math.abs(minutesOf(p.r) - curMin);
+    if (d < nearest) { nearest = d; curIdx = i; }
+  });
+
+  const earlier = pts.slice(0, curIdx);
+  const later   = pts.slice(curIdx + 1);
+
+  const fmtTime = r => {
+    const d = new Date(r.dateTime); let hr = d.getHours();
+    const ap = hr >= 12 ? 'pm' : 'am'; hr = hr % 12 || 12; return `${hr}${ap}`;
+  };
+
+  const SMALL = 4, NOTABLE = 8;          // on the 0–60 scale (≈7% / ≈13%)
+  const dayRange = Math.max(...pts.map(p => p.score)) - Math.min(...pts.map(p => p.score));
+
+  const bestLater   = later.length   ? later.reduce((b,p)   => p.score > b.score ? p : b)   : null;
+  const bestEarlier = earlier.length ? earlier.reduce((b,p) => p.score > b.score ? p : b)   : null;
+  const improveLater   = bestLater   ? bestLater.score   - curScore : -Infinity;
+  const improveEarlier = bestEarlier ? bestEarlier.score - curScore : -Infinity;
+  const bestDelta = Math.max(improveLater, improveEarlier);
+
+  // Nothing meaningfully better either side of the chosen time.
+  if (bestDelta < SMALL) {
+    if (dayRange < SMALL) return 'Conditions stay much the same through the day.';
+    return 'This is about the best window of the day — it eases off on either side of this time.';
+  }
+
+  // Which direction is the better window, and what is it?
+  let dir, target;
+  if (improveLater >= improveEarlier) { dir = 'later'; target = bestLater; }
+  else                                { dir = 'earlier'; target = bestEarlier; }
+
+  const strong = bestDelta >= NOTABLE;
+  const adv    = strong ? 'noticeably better' : 'a little better';
+  const time   = fmtTime(target.r);
+
+  // Why is the target hour better? The hazard whose demerit drops most from now → target.
+  const cD = cur.demerits, tD = target.demerits;
+  const deltas = [
+    { key:'swell',    d:(cD.swell1 - tD.swell1) + (cD.swell2 - tD.swell2) },
+    { key:'refrac',   d:(cD.refrac - tD.refrac) },
+    { key:'windWave', d:(cD.windWave - tD.windWave) },
+    { key:'wind',     d:(cD.wind - tD.wind) },
+    { key:'tide',     d:(cD.tide - tD.tide) },
+  ].sort((a,b) => b.d - a.d);
+  const main = deltas[0];
+  const rotated = angularDiff(h.swell1Dir, target.r.swell1Dir) >= 20;
+
+  let cause = '';
+  if (main.d > 0.3) {
+    if (dir === 'later') {
+      if (main.key === 'swell')        cause = rotated
+        ? `as the swell eases and rotates toward the ${bearingName(target.r.swell1Dir)}`
+        : 'as the swell eases';
+      else if (main.key === 'refrac')  cause = 'as less swell wraps around the headland';
+      else if (main.key === 'windWave')cause = 'as the wind waves settle';
+      else if (main.key === 'wind')    cause = 'as the wind drops off';
+      else if (main.key === 'tide')    cause = 'as the tide turns in its favour';
+    } else { // earlier
+      if (main.key === 'swell')        cause = rotated
+        ? `before the swell builds and backs round from the ${bearingName(h.swell1Dir)}`
+        : 'before the swell builds';
+      else if (main.key === 'refrac')  cause = 'before more swell wraps around the headland';
+      else if (main.key === 'windWave')cause = 'before the wind waves build';
+      else if (main.key === 'wind')    cause = 'before the wind picks up';
+      else if (main.key === 'tide')    cause = 'before the tide turns against it';
+    }
+  }
+
+  let s = `It's ${adv} ${dir} (around ${time})`;
+  if (cause) s += `, ${cause}`;
+  return s + '.';
+}
+
+// Local-knowledge note for sites near the Botany Bay mouth: the outgoing tide
+// flushes murkier bay water past them, so the incoming tide (before the high)
+// usually fishes clearer. Shown only for the affected sites.
+const BOTANY_TIDE_SITES = new Set(['Steps', 'Monument', 'BIE', 'BIW']);
+function tideVizNote(site, h) {
+  if (!BOTANY_TIDE_SITES.has(site.key)) return '';
+  if (!_tideEntries || !_tideEntries.length) return '';
+
+  const fmtTideTime = iso => {
+    const d = new Date(iso); let hr = d.getHours(); const mm = d.getMinutes();
+    const ap = hr >= 12 ? 'pm' : 'am'; hr = hr % 12 || 12;
+    return `${hr}:${String(mm).padStart(2,'0')}${ap}`;
+  };
+
+  const t = new Date(h.dateTime).getTime();
+  const sorted = [..._tideEntries].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+  // Is the tide rising or falling at the selected time? Look at the next turning point.
+  let nextTP = null;
+  for (const e of sorted) {
+    if (new Date(e.dateTime).getTime() >= t) { nextTP = e; break; }
+  }
+  const rising = nextTP && (nextTP.type || '').toLowerCase() === 'high';
+
+  // The upcoming high (the peak to aim before).
+  let nextHigh = null;
+  for (const e of sorted) {
+    if (new Date(e.dateTime).getTime() >= t && (e.type || '').toLowerCase() === 'high') { nextHigh = e; break; }
+  }
+  const peak = nextHigh ? fmtTideTime(nextHigh.dateTime) : null;
+
+  if (rising && peak) {
+    return `This site usually fishes clearest on the <b>incoming tide</b> — try to be in before the high at <b>${peak}</b>. Once the tide turns and runs out, murkier water draining from Botany Bay passes by here and drops the visibility.`;
+  }
+  if (!rising) {
+    const nextBit = peak ? ` The next high is at <b>${peak}</b>.` : '';
+    return `The tide is currently <b>running out</b>, which tends to carry murkier water from Botany Bay past this site and cut the visibility. It's normally clearer on the <b>incoming tide</b>, before the peak.${nextBit}`;
+  }
+  // Rising but no upcoming high found in the data window.
+  return `This site usually fishes clearest on the <b>incoming tide</b>, before the peak — the outgoing tide carries murkier water from Botany Bay past here and reduces visibility.`;
+}
+
 function cls(s)   { return s>=40?'green':s>=20?'yellow':'red'; }
 function label(s) { return s>=40?'Easy':s>=20?'Caution':'Avoid'; }
 // Display helper: model scores are 0–60 internally; users see 0–100%.
@@ -2652,7 +2831,6 @@ function selectDay(key, dayIdx) {
   }
   slider.value = bestSliderVal;
   _renderFromDaySlider(hoursForDay, parseInt(slider.value));
-  renderTideChart(key);
 }
 
 /** Translate day-slider position → global matrix index, then render. */
@@ -2664,10 +2842,15 @@ function _renderFromDaySlider(hoursForDay, sliderPos) {
   const ampm = hr === 0 ? '12am' : hr < 12 ? `${hr}am` : hr === 12 ? '12pm' : `${hr-12}pm`;
   document.getElementById('hourSliderLabel').textContent = ampm;
   renderSnapshot(matrixIdx);
+  // Mark the selected time on the tide chart (works on any day, not just today).
+  if (_selectedDayKey) renderTideChart(_selectedDayKey, new Date(h.dateTime).getTime());
 }
 
 function onHourSliderChange() {
   if (!_selectedDayKey) return;
+  // If the detail sheet is open, close it — its trend is tied to the previous time.
+  const ss = document.getElementById('siteSheetOverlay');
+  if (ss && ss.classList.contains('open')) ss.classList.remove('open');
   const dayIdx = _buildDayIndex();
   const hoursForDay = dayIdx[_selectedDayKey] || [];
   _renderFromDaySlider(hoursForDay, parseInt(document.getElementById('snapshotSlider').value));
@@ -2687,7 +2870,7 @@ function toggleInputs() {
 }
 
 // ── Tide chart ────────────────────────────────────────────────────────────────
-function renderTideChart(dayKey) {
+function renderTideChart(dayKey, markMs) {
   const wrap = document.getElementById('tideChartWrap');
   const svg  = document.getElementById('tideChartSvg');
   if (!wrap || !svg || !_tideEntries.length) { if (wrap) wrap.style.display = 'none'; return; }
@@ -2749,10 +2932,11 @@ function renderTideChart(dayKey) {
     visible.slice(1).map(p => `L${xOf(p.t).toFixed(1)},${yOf(p.h).toFixed(1)}`).join(' ') +
     ` L${xOf(visible[visible.length-1].t).toFixed(1)},${(PAD_T + chartH).toFixed(1)} L${xOf(visible[0].t).toFixed(1)},${(PAD_T + chartH).toFixed(1)} Z`;
 
-  // Current time indicator
-  const nowMs    = Date.now();
-  const nowInDay = nowMs >= tMin && nowMs <= tMax;
-  const nowX     = xOf(nowMs);
+  // Time indicator — marks the slider-selected hour (falls back to real now).
+  const markTime  = (markMs != null) ? markMs : Date.now();
+  const nowMs      = markTime;
+  const nowInDay   = nowMs >= tMin && nowMs <= tMax;
+  const nowX       = xOf(nowMs);
 
   // Interpolate current tide height for "now" dot
   let nowH = null;
@@ -2867,8 +3051,8 @@ function renderTideChart(dayKey) {
   if (nowInDay && nowH !== null) {
     const nx = nowX.toFixed(1);
     const ny = yOf(nowH).toFixed(1);
-    el('line', { x1:nx, y1:PAD_T, x2:nx, y2:(PAD_T+chartH).toFixed(1), stroke:'rgba(200,221,245,0.4)', 'stroke-width':1, 'stroke-dasharray':'3,3' }, svg);
-    el('circle', { cx:nx, cy:ny, r:4.5, fill:'#c8ddf5', stroke:'rgba(6,16,32,0.8)', 'stroke-width':1.5 }, svg);
+    el('line', { x1:nx, y1:(PAD_T-2).toFixed(1), x2:nx, y2:(PAD_T+chartH+2).toFixed(1), stroke:'#ffffff', 'stroke-width':3, 'stroke-dasharray':'6,4', opacity:'0.9' }, svg);
+    el('circle', { cx:nx, cy:ny, r:6, fill:'#ffffff', stroke:'#00c2a8', 'stroke-width':2.5 }, svg);
 
     // Current height badge — top right
     const bx = W - PAD_R - 4, by = 8;
@@ -4365,8 +4549,20 @@ function openSiteSheet(site, score, demerits, h) {
   badge.className = band;
   badge.innerHTML = `<span class="ss-score">${toPct(score)}%</span> · ${bandLabel}`;
 
-  document.getElementById('siteSheetDesc').textContent =
-    describeConditions(site, score, demerits, h);
+  const descParts = [describeConditions(site, score, demerits, h)];
+  const trend = describeTrend(site, h);
+  if (trend) descParts.push(trend);
+  document.getElementById('siteSheetDesc').textContent = descParts.join(' ');
+
+  // Botany Bay outflow visibility note (tide-sensitive sites only)
+  const tideNoteEl = document.getElementById('siteSheetTideNote');
+  const tideNote = tideVizNote(site, h);
+  if (tideNote) {
+    tideNoteEl.innerHTML = `<span class="stn-icon" aria-hidden="true">🌊</span><span>${tideNote}</span>`;
+    tideNoteEl.style.display = 'flex';
+  } else {
+    tideNoteEl.style.display = 'none';
+  }
 
   // Time context
   const dt = new Date(h.dateTime);
@@ -4436,6 +4632,7 @@ loadConfig().then(() => init());
     </div>
     <div id="siteSheetBadge"></div>
     <p id="siteSheetDesc"></p>
+    <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
     <div id="siteSheetDemerits"></div>
   </div>
