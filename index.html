@@ -961,6 +961,30 @@
 (function(){
   var s = document.getElementById('splash-screen');
   var v = document.getElementById('splash-video');
+
+  // Show the splash at most once per 24h, EXCEPT always show it on a brand-new
+  // page session (fresh tab / navigation), which has no sessionStorage flag yet.
+  var DAY = 24 * 60 * 60 * 1000;
+  var freshSession = false;
+  try {
+    freshSession = !sessionStorage.getItem('viz_splash_session');
+    sessionStorage.setItem('viz_splash_session', '1');
+  } catch (e) { freshSession = true; }
+
+  var lastShown = 0;
+  try { lastShown = parseInt(localStorage.getItem('viz_splash_last') || '0', 10) || 0; } catch (e) {}
+
+  var withinDay = (Date.now() - lastShown) < DAY;
+
+  if (withinDay && !freshSession) {
+    // Already shown in the last 24h and not a new page — skip the splash entirely.
+    s.style.display = 'none';
+    return;
+  }
+
+  // We are showing it: stamp the time.
+  try { localStorage.setItem('viz_splash_last', String(Date.now())); } catch (e) {}
+
   function hide(){
     s.style.transition = 'opacity 0.7s ease';
     s.style.opacity = '0';
