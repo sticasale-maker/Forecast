@@ -2045,6 +2045,12 @@ const TIDE_CACHE_KEY      = 'ww_tides_cache';
 const REFRESH_HOURS       = [0,2,4,6,8,10,12,14,16,18,20,22];
 const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
+// ── TUNE MODE ─────────────────────────────────────────────────────────────────
+// ?tune=1 replays logged history instead of the live forecast, so the slider can
+// scrub back through the past. When false, the live path below is untouched.
+const TUNE           = new URLSearchParams(location.search).has('tune');
+const TUNE_PAST_DAYS = 7;   // slider scrub-back window (history is retained 60d)
+
 // ── Cache helpers ──────────────────────────────────────────────────────────────
 function loadCache() {
   try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; }
@@ -2819,6 +2825,8 @@ function renderDayButtons(dayIdx) {
     let label;
     if (key === today) {
       label = 'Today';
+    } else if (TUNE) {
+      label = d.toLocaleDateString('en-AU', {weekday:'short', day:'numeric'}).toUpperCase();
     } else {
       label = d.toLocaleDateString('en-AU', {weekday:'short'}).toUpperCase();
     }
@@ -3137,6 +3145,100 @@ function renderForecastViews(raw) {
 }
 
 
+// ── TUNE MODE — historical replay from forecast_history ────────────────────────
+// Reads the hourly snapshots the Worker logs to Supabase and rebuilds the matrix
+// from them, so every matrix-driven view (timeline, day picker, slider, snapshot,
+// Day View) works exactly as live — just over the past instead of the forecast.
+async function fetchTuneHistory() {
+  const cutoff = new Date(Date.now() - TUNE_PAST_DAYS * 86400000).toISOString();
+  const url = ADM_SUPABASE_URL + '/rest/v1/forecast_history'
+    + '?select=*'
+    + '&forecast_dt=gte.' + encodeURIComponent(cutoff)
+    + '&order=forecast_dt.asc';
+  const res = await vizFetch(url, {
+    headers: { apikey: ADM_SUPABASE_KEY, Authorization: 'Bearer ' + ADM_SUPABASE_KEY },
+  }, 15000);
+  if (!res.ok) throw new Error('forecast_history read failed (' + res.status + ')');
+  return res.json();
+}
+
+// Map logged rows → the exact matrix-entry shape calcScore/views consume,
+// applying the same swell-2 guard the live Open-Meteo merge applies.
+function buildMatrixFromHistory(rows) {
+  return (rows || [])
+    .filter(r => r && r.forecast_dt)
+    .map(r => {
+      const swell1H   = r.swell1_h   ?? 0;
+      const swell1Dir = r.swell1_dir ?? 0;
+      const swell1P   = r.swell1_p   ?? 8;
+      const guarded = guardSwell2(
+        swell1H, swell1Dir,
+        r.swell2_h ?? 0, r.swell2_dir ?? 0, r.swell2_p ?? 8
+      );
+      return {
+        dateTime:   r.forecast_dt,
+        windKmh:    r.wind_kmh ?? 0,
+        windDir:    r.wind_dir ?? 0,
+        swell1H, swell1Dir, swell1P,
+        ...guarded,
+        windWaveH:  r.windwave_h   ?? 0,
+        windWaveDir:r.windwave_dir ?? (r.wind_dir ?? 0),
+        windWaveP:  r.windwave_p   ?? 0,
+        tideM:      r.tide_m       ?? 1.0,
+        seaTemp:    r.sea_temp     ?? null,
+      };
+    });
+}
+
+function showTuneBanner(rows) {
+  let bar = document.getElementById('tuneBanner');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'tuneBanner';
+    bar.style.cssText =
+      'position:sticky;top:0;z-index:9999;background:var(--yellow,#f5a623);color:#061020;' +
+      'font-family:DM Mono,monospace;font-size:12px;letter-spacing:1px;' +
+      'text-align:center;padding:6px 10px;font-weight:600;';
+    document.body.prepend(bar);
+  }
+  const span = (rows && rows.length)
+    ? rows.length + ' hrs · '
+      + new Date(rows[0].forecast_dt).toLocaleDateString('en-AU',{day:'numeric',month:'short'})
+      + ' → '
+      + new Date(rows[rows.length-1].forecast_dt).toLocaleDateString('en-AU',{day:'numeric',month:'short'})
+    : 'no data';
+  bar.textContent = 'TUNE MODE — historical replay (' + span + ')';
+}
+
+async function loadAndRenderTune() {
+  setStatus('Tune mode — loading history…');
+  try {
+    const rows   = await fetchTuneHistory();
+    const matrix = buildMatrixFromHistory(rows);
+    if (!matrix.length) {
+      setStatus('⚠ Tune mode — no history rows in the last ' + TUNE_PAST_DAYS + ' days', true);
+      showTuneBanner([]);
+      return;
+    }
+    // Feed the hourly tide samples to the tide chart as its point series.
+    const tideEntries = matrix.map(h => ({ dateTime: h.dateTime, height: h.tideM }));
+    // Top "current conditions" widgets: use the most recent logged hour.
+    const nowData = matrix[matrix.length - 1];
+    updateConditions(nowData);
+    renderSites(nowData);
+    renderForecastViewsFromMatrix(matrix, tideEntries);
+    showTuneBanner(rows);
+    setStatus('Tune mode — replay of last ' + TUNE_PAST_DAYS + ' days');
+    document.getElementById('lastUpdated').textContent =
+      'Tune · ' + matrix.length + ' hourly snapshots';
+  } catch (err) {
+    console.error(err);
+    setStatus('⚠ Tune mode — ' + err.message, true);
+    showTuneBanner([]);
+  }
+}
+
+
 // ── Day View ───────────────────────────────────────────────────────────────────
 let _dvSiteKey  = null;   // currently selected site key
 let _dvDayKey   = null;   // currently selected day (YYYY-MM-DD)
@@ -3420,6 +3522,7 @@ async function init() {
   let _dsbShown = false; // show summary banner only once per session
 
   async function loadAndRender(forceRefresh = false) {
+    if (TUNE) { await loadAndRenderTune(); return; }
     const cache = loadCache();
 
     // Serve from cache if fresh
@@ -3477,7 +3580,7 @@ async function init() {
 
   _retryFn = () => loadAndRender(true);
   await loadAndRender();
-  scheduleNextRefresh(() => loadAndRender(true));
+  if (!TUNE) scheduleNextRefresh(() => loadAndRender(true));
 }
 
 // ── Score validation against Google Sheet ─────────────────────────────────────
