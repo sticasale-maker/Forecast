@@ -1073,6 +1073,21 @@
     <button class="retry-btn" onclick="retryLoad()">↺ Try Again</button>
   </div>
 
+  <!-- Current weather + feels-like (tracks the selected time) -->
+  <div class="wx-strip" id="wxStrip" style="display:none;">
+    <div class="wx-left">
+      <span class="wx-icon" id="wxIcon">🌡️</span>
+      <div class="wx-textcol">
+        <span class="wx-cond" id="wxCond">—</span>
+        <span class="wx-sun" id="wxSun"></span>
+      </div>
+    </div>
+    <div class="wx-right">
+      <span class="wx-feels-text" id="wxFeels">—</span>
+      <span class="wx-watertemp" id="wxWaterTemp"></span>
+    </div>
+  </div>
+
   <!-- View tabs -->
   <div class="view-tabs">
     <button class="tab-btn active" onclick="switchTab('snapshot')">Snapshot</button>
@@ -1257,20 +1272,6 @@
 
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
-    <!-- Current weather + feels-like (tracks the selected time) -->
-    <div class="wx-strip" id="wxStrip" style="display:none;">
-      <div class="wx-left">
-        <span class="wx-icon" id="wxIcon">🌡️</span>
-        <div class="wx-textcol">
-          <span class="wx-cond" id="wxCond">—</span>
-          <span class="wx-sun" id="wxSun"></span>
-        </div>
-      </div>
-      <div class="wx-right">
-        <span class="wx-feels-text" id="wxFeels">—</span>
-        <span class="wx-watertemp" id="wxWaterTemp"></span>
-      </div>
-    </div>
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
     <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;">↓ Tap for the best dive window ↓</div>
     <div class="snapshot-bars" id="snapshotBars"></div>
