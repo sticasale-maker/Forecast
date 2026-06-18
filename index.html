@@ -408,6 +408,16 @@
   }
   #siteSheetTideNote .stn-icon { font-size:16px; line-height:1.3; flex-shrink:0; }
   #siteSheetTideNote b { color:#7bb6e8; font-weight:600; }
+  #siteSheetGraphLink {
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.5px;
+    color:var(--teal); cursor:pointer; text-decoration:none; white-space:nowrap;
+    background:rgba(0,194,168,0.1); border:1px solid rgba(0,194,168,0.35);
+    border-radius:20px; padding:8px 14px; margin:0 0 16px;
+    transition:background 0.15s;
+  }
+  #siteSheetGraphLink:hover { background:rgba(0,194,168,0.22); }
+  #siteSheetGraphLink:active { background:rgba(0,194,168,0.3); }
   #siteSheetDemerits {
     display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
     border-top:1px solid var(--border); padding-top:14px;
@@ -4635,9 +4645,15 @@ function closeReportsSheet(e) {
 }
 
 // ── Site detail sheet (opened by tapping a snapshot bar) ──────────────────────
+let _sheetSiteKey = null;   // site key for the currently open detail sheet
+let _sheetDayKey  = null;   // Sydney day (YYYY-MM-DD) of the hour the sheet is showing
 function openSiteSheet(site, score, demerits, h) {
   const band = score >= 40 ? 'green' : score >= 20 ? 'yellow' : 'red';
   const bandLabel = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
+
+  // Remember which site/day this sheet is for, so "See daily graph" can jump straight there.
+  _sheetSiteKey = site.key;
+  _sheetDayKey  = new Date(h.dateTime).toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
 
   document.getElementById('siteSheetName').textContent = site.name;
 
@@ -4696,6 +4712,16 @@ function closeSiteSheet(e) {
   document.getElementById('siteSheetOverlay').classList.remove('open');
 }
 
+// Jump from the detail sheet straight to this site's Day View graph, on the same day.
+// Equivalent to opening Day View, picking the site, and selecting the current day.
+function openDayViewFromSheet() {
+  if (_sheetSiteKey) _dvSiteKey = _sheetSiteKey;
+  if (_sheetDayKey)  _dvDayKey  = _sheetDayKey;
+  document.getElementById('siteSheetOverlay').classList.remove('open');
+  switchTab('dayview');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // Unlock admin via URL hash
 window.addEventListener('DOMContentLoaded', function() {
   if (location.hash === '#viz-admin') admUnlock();
@@ -4728,6 +4754,9 @@ loadConfig().then(() => init());
     </div>
     <div id="siteSheetBadge"></div>
     <p id="siteSheetDesc"></p>
+    <a id="siteSheetGraphLink" role="button" tabindex="0"
+       onclick="openDayViewFromSheet()"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
     <div id="siteSheetDemerits"></div>
