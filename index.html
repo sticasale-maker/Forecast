@@ -616,6 +616,12 @@
     border-radius:999px; padding:6px 14px;
     animation:tapHintPulse 1.1s ease-in-out infinite;
   }
+  .tap-hint-arrow {
+    display:inline-block;
+    font-size:21px; font-weight:700; line-height:0;
+    vertical-align:-2px; color:#00f0d4;
+    text-shadow:0 0 8px rgba(0,194,168,0.95);
+  }
   @keyframes tapHintPulse {
     0%,100% {
       box-shadow:0 0 5px 0 rgba(0,194,168,0.30);
@@ -982,28 +988,23 @@
   var s = document.getElementById('splash-screen');
   var v = document.getElementById('splash-video');
 
-  // Show the splash at most once per 24h, EXCEPT always show it on a brand-new
-  // page session (fresh tab / navigation), which has no sessionStorage flag yet.
-  var DAY = 24 * 60 * 60 * 1000;
-  var freshSession = false;
-  try {
-    freshSession = !sessionStorage.getItem('viz_splash_session');
-    sessionStorage.setItem('viz_splash_session', '1');
-  } catch (e) { freshSession = true; }
+  // Show the splash at most once per calendar day (Sydney time), even across
+  // page refreshes and new tabs. The gate is purely the stored day stamp.
+  var today = '';
+  try { today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }); }
+  catch (e) { today = new Date().toLocaleDateString('en-CA'); }
 
-  var lastShown = 0;
-  try { lastShown = parseInt(localStorage.getItem('viz_splash_last') || '0', 10) || 0; } catch (e) {}
+  var lastShownDay = '';
+  try { lastShownDay = localStorage.getItem('viz_splash_day') || ''; } catch (e) {}
 
-  var withinDay = (Date.now() - lastShown) < DAY;
-
-  if (withinDay && !freshSession) {
-    // Already shown in the last 24h and not a new page — skip the splash entirely.
+  if (lastShownDay === today) {
+    // Already shown today — skip the splash entirely.
     s.style.display = 'none';
     return;
   }
 
-  // We are showing it: stamp the time.
-  try { localStorage.setItem('viz_splash_last', String(Date.now())); } catch (e) {}
+  // We are showing it: stamp today's date.
+  try { localStorage.setItem('viz_splash_day', today); } catch (e) {}
 
   function hide(){
     s.style.transition = 'opacity 0.7s ease';
@@ -1138,14 +1139,6 @@
       </div>
     </div>
 
-    <!-- Visitor counter + since date -->
-    <div style="margin-top:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">
-        Visitors since 6/6/2026:
-      </div>
-      <img src="https://hits.sh/vizgroupsydney.com.svg?color=ffffff&labelColor=00000000&label=%20" style="border:none;vertical-align:middle;height:18px;background:transparent;" alt="visitor counter">
-    </div>
-
     <!-- Score validation panel — about page only -->
     <div style="margin-top:24px;">
       <div id="val-panel">
@@ -1273,7 +1266,7 @@
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
-    <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;">↓ Tap for the best dive window ↓</div>
+    <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap for the best dive window <span class="tap-hint-arrow">↓</span></div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" id="snapZoneAxis" aria-hidden="true" style="display:none;">
       <div class="snap-zone-track">
@@ -1368,8 +1361,8 @@
     </a>
   </div>
 
-  <!-- ABOUT button -->
-  <div style="margin-top:24px;">
+  <!-- ABOUT button + visitor counter -->
+  <div style="margin-top:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
     <button onclick="switchTab('about')" style="
       display:inline-flex;align-items:center;gap:7px;
       font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
@@ -1383,6 +1376,14 @@
       </svg>
       About this app
     </button>
+
+    <!-- Visitor counter + since date -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;">
+        Visitors since 6/6/2026:
+      </div>
+      <img src="https://hits.sh/vizgroupsydney.com.svg?color=ffffff&labelColor=00000000&label=%20" style="border:none;vertical-align:middle;height:18px;background:transparent;" alt="visitor counter">
+    </div>
   </div>
 
   <!-- FEEDBACK -->
