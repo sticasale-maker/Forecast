@@ -1795,6 +1795,34 @@ function minToTime(min) {
   h = h % 12 || 12;
   return `${h}:${String(m).padStart(2,'0')}${ap}`;
 }
+
+// How the *current* tide sits against a site's OWN tide rule.
+// The model's tide term scales a subset of the other demerits (CTB/BIE/BIW/Steps/
+// Monument/LittleBay/Oak) — so it stays positive even at the tide the site likes best.
+// A low tide can therefore still add points yet be the site's most favourable state.
+// To judge favour vs against honestly we probe the site's tide curve across the real
+// Sydney range, find which end it prefers, and see where right now lands on it.
+// Returns null when the tide can't meaningfully move this site's score.
+function tideStanding(site, demerits, tideM) {
+  // Rebuild the demerit base this site's tide formula scales (mirrors calcScore).
+  const sr = (demerits.swell1 || 0) + (demerits.swell2 || 0) + (demerits.refrac || 0);
+  const base = site.tideBase === 'swell_rif'    ? sr
+             : site.tideBase === 'ww_swell_rif' ? sr + (demerits.windWave || 0)
+             :                                    sr + (demerits.windWave || 0) + (demerits.wind || 0);
+
+  const LO = 0.2, HI = 1.8;                          // practical Sydney tide span
+  const dLo = site.tide(base, LO);
+  const dHi = site.tide(base, HI);
+  const dNow = site.tide(base, tideM);
+  const dMin = Math.min(dLo, dHi), dMax = Math.max(dLo, dHi);
+  const span = dMax - dMin;                          // how far the tide can swing the score
+  if (span < 1) return null;                         // tide barely matters here → stay quiet
+
+  const prefersLow = dLo <= dHi;                     // which end of the tide this site likes
+  const frac = (dNow - dMin) / span;                 // 0 = site's best tide, 1 = its worst
+  return { prefersLow, frac };
+}
+
 // Plain-language reason for a site's score, from its demerit breakdown + the hour's conditions.
 // Returns a short phrase like "SE swell" or "onshore wind chop", or "" when nothing notable.
 // Full natural-language description of a site's conditions, built from the model's
@@ -1816,7 +1844,6 @@ function describeConditions(site, score, demerits, h) {
       detail:`${Math.round(h.windKmh)}km/h ${bearingName(h.windDir)} wind` },
   ];
   const active = hazards.filter(x => x.val > 0.3).sort((a,b) => b.val - a.val);
-  const tideHurt = (demerits.tide || 0) > 1;
   const windBonus = (demerits.wind || 0) < -0.3; // offshore wind helping a sheltered site
 
   let s = '';
@@ -1842,11 +1869,18 @@ function describeConditions(site, score, demerits, h) {
     s += `. The ${bearingName(h.windDir)} wind is offshore here, helping clean it up`;
   }
 
-  // Tide modifier.
-  if (tideHurt) {
-    s += `. The current ${h.tideM.toFixed(2)}m tide is working against this site`;
-  } else if (band !== 'Avoid' && (demerits.tide || 0) < -0.3) {
-    s += `. The ${h.tideM.toFixed(2)}m tide is in this site's favour`;
+  // Tide modifier — judged against this site's OWN tide rule, not the raw demerit
+  // sign. The tide term scales the other demerits, so it stays positive even when the
+  // tide is at the site's favourite state; tideStanding reads where the current tide
+  // sits on the site's own curve so a good low tide reads as a good low tide.
+  const tide = tideStanding(site, demerits, h.tideM);
+  if (tide) {
+    const pref = tide.prefersLow ? 'a low tide' : 'a high tide';
+    if (tide.frac >= 0.55) {
+      s += `. The ${h.tideM.toFixed(2)}m tide is working against this site, which is best on ${pref}`;
+    } else if (tide.frac <= 0.45 && band !== 'Avoid') {
+      s += `. The ${h.tideM.toFixed(2)}m tide suits this site, which is best on ${pref}`;
+    }
   }
 
   return s.trim() + '.';
