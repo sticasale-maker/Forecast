@@ -3506,7 +3506,7 @@ async function init() {
       const ago = Math.round((Date.now() - cache.fetchedAt) / 60000);
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
-        'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+        'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       validateScores(data); // run validation against sheet
       if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data, matrix); }
       return;
@@ -3522,7 +3522,7 @@ async function init() {
       setStatus('Live · WillyWeather (AUSWAVE) — ' +
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
-        'Updated ' + new Date().toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+        'Updated ' + new Date().toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       validateScores(data); // run validation against sheet
       if (!_dsbShown) { _dsbShown = true; initDaySummaryBanner(data, loadCache()?.matrix || []); }
     } catch(err) {
@@ -3533,7 +3533,7 @@ async function init() {
         if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix, loadTideCache());
         setStatus('⚠ Showing cached data — live fetch failed', true);
         document.getElementById('lastUpdated').textContent =
-          'Cached · ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'});
+          'Cached · ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       } else {
         updateConditions(DEMO); renderSites(DEMO);
         setStatus('⚠ No data available — showing demo', true);
