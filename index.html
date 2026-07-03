@@ -4176,6 +4176,35 @@ const DIVER_GLOSSARY =
 // Holds the AI result during review: { site_id: summaryText }
 let _admResults = {};
 
+// ── Report dating + recency (community summaries) ──────────────────
+// Every published report must carry a date, and anything older than this
+// many days is dropped before it can reach review/publish. Boundary is
+// inclusive: a report exactly REPORT_MAX_AGE_DAYS old is kept; older goes.
+const REPORT_MAX_AGE_DAYS = 4;
+const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Today's date as {y,m,d} in Sydney, independent of the browser's own zone.
+function _sydneyTodayParts() {
+  const s = new Date().toLocaleDateString('en-CA', { timeZone:'Australia/Sydney' }); // YYYY-MM-DD
+  const [y, m, d] = s.split('-').map(Number);
+  return { y, m, d };
+}
+// Parse a model-supplied date. Accepts 'YYYY-M-D' (optionally with a time
+// suffix). Returns {y,m,d} or null if it isn't a clean leading ISO date.
+function _parseReportDate(v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return { y, m: mo, d };
+}
+// Whole-day difference a − b (both {y,m,d}), timezone-free.
+function _dayDiff(a, b) {
+  return Math.round((Date.UTC(a.y, a.m - 1, a.d) - Date.UTC(b.y, b.m - 1, b.d)) / 86400000);
+}
+// '3 Jul' style label from {y,m,d}.
+function _fmtDayMon(p) { return p.d + ' ' + _MONTHS[p.m - 1]; }
+
 function admStatus(id, msg, kind) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -4366,7 +4395,17 @@ function prettySiteName(id) {
 // ── AI summarise: one call, returns JSON keyed by site_id ──
 function admBuildPrompt(posts) {
   const siteLines = SITE_ALIASES.map(s => `- "${s.id}" (${s.name}): ${s.aliases}`).join('\n');
-  return `You are sorting recent posts from a Sydney scuba/snorkel Facebook group by dive site, then writing a short public conditions note for each site.
+  const today = _sydneyTodayParts();
+  const todayUTC = new Date(Date.UTC(today.y, today.m - 1, today.d));
+  const todayLabel = todayUTC.toLocaleDateString('en-AU',
+    { timeZone:'UTC', weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const iso = p => `${p.y}-${String(p.m).padStart(2,'0')}-${String(p.d).padStart(2,'0')}`;
+  const todayIso = iso(today);
+  const cut = new Date(Date.UTC(today.y, today.m - 1, today.d) - REPORT_MAX_AGE_DAYS * 86400000);
+  const cutoffIso = `${cut.getUTCFullYear()}-${String(cut.getUTCMonth()+1).padStart(2,'0')}-${String(cut.getUTCDate()).padStart(2,'0')}`;
+  return `You are sorting recent posts from a Sydney scuba/snorkel Facebook group by dive site, then writing a short, dated public conditions note for each site.
+
+TODAY is ${todayLabel} (${todayIso}, Australia/Sydney time).
 
 KNOWN SITES (id, name, aliases divers use):
 ${siteLines}
@@ -4379,13 +4418,33 @@ CRITICAL GROUNDING RULES — read first:
 - Every fact in a summary — visibility numbers, marine life, conditions — MUST come from an actual post below. If it is not written in a post, it does not exist.
 - Do NOT add general or aspirational framing such as "up to 20m on the best days", "can be excellent", "a popular spot", "known for". These are inventions. Only state what THESE posts actually report.
 - Do NOT carry over or assume anything from previous reports or summaries. Treat this as the first time you have ever seen these sites. Old information is stale and must not appear.
-- If a site's posts are vague (no viz number, no clear conditions), write a correspondingly vague one-liner — do not pad it with invented detail.
+- If a site's post is vague (no viz number, no clear conditions), write a correspondingly vague one-liner — do not pad it with invented detail.
+
+WHAT COUNTS AS A REPORT:
+- Only posts that actually describe observed in-water conditions or sightings count: visibility, water temp, current/surge, swell/chop at the site, entry/exit hazards, or marine life seen.
+- Posts that are photo requests, questions, event notices, gear sales, general chat, or that merely ask for information are NOT reports. Skip them. Never output a site just to note that there is no report for it.
+
+DATING EVERY REPORT (mandatory):
+- Work out the date each qualifying post describes. Use an explicit date if the post states one; otherwise resolve relative wording ("today", "this morning", "yesterday", "Friday", "on the weekend") against TODAY above. A weekday name means the most recent PAST occurrence of that day.
+- Express each date as YYYY-MM-DD.
+- If a post gives no usable date and none can reasonably be inferred, it does not count — ignore it.
+
+RECENCY (hard cutoff):
+- Ignore any report dated before ${cutoffIso}. Only reports dated ${cutoffIso} through ${todayIso} inclusive are eligible.
+
+ONE ENTRY PER SITE — LATEST ONLY:
+- A site may have several posts. Use ONLY the single most recent eligible report for that site. Ignore the older posts for that site entirely; do not blend them together.
 
 TASK:
-1. Read the posts below. Assign each relevant post to the site whose aliases best match.
-2. ONLY use site_ids from the KNOWN SITES list above. If a post refers to a location not in that list, skip it — do not invent new site_ids.
-3. For each site that has at least one relevant post, write 1-2 warm, concise sentences summarising ONLY what those posts report (recent sightings, and the latest visibility in metres if a post states one). No bullet points, headers, or quotation marks.
-4. Return ONLY a JSON object mapping site_id to its summary string. Only include site_ids from the KNOWN SITES list. No markdown, no code fences, no commentary. Example: {\"gordons_bay\":\"Viz around 8m...\",\"cabbage-tree-bay\":\"Flat conditions, viz 6m.\"}
+1. Assign each eligible post to the site whose aliases best match. ONLY use site_ids from the KNOWN SITES list; skip anything referring to a location not on that list. Do not invent site_ids.
+2. For each site with at least one eligible, dated, in-window report, take its most recent report and write 1-2 warm, concise sentences summarising ONLY what that post states (latest visibility in metres if given, plus notable sightings/conditions). No bullet points, headers, or quotation marks. Do NOT write the date inside the sentence — return it in the separate "date" field.
+3. Omit any site with no eligible dated in-window report.
+
+OUTPUT — return ONLY this JSON object, no markdown, no code fences, no commentary:
+{"site_id":{"summary":"…","date":"YYYY-MM-DD"}, …}
+- "date" is the date of that site's single most recent report (the one you summarised).
+- Include a site ONLY if it has a valid in-window date.
+- Example: {"shiprock":{"summary":"Viz 6–7m, mild current, water ~17°C, with scad, wrasse and silver sweeps about.","date":"${todayIso}"}}
 
 POSTS:
 ${posts}`;
@@ -4425,25 +4484,58 @@ async function admSummarise() {
     try { parsed = JSON.parse(text); }
     catch(e) { throw new Error('No site reports could be extracted — the input may be analytics data rather than posts, or contained no recognisable sightings. Try the posts/content export, or paste posts directly.'); }
 
-    // Canonicalise AI-returned keys via the shared resolver, merging summaries
-    // that collapse to the same id.
+    // Canonicalise AI-returned keys, then apply the report rules:
+    //  · each value is { summary, date } (older bare-string shape tolerated);
+    //  · a site keeps only its most recent report (latest date wins on merge);
+    //  · every kept report MUST carry a parseable date;
+    //  · reports older than REPORT_MAX_AGE_DAYS are dropped;
+    //  · the "(latest report D Mon)" suffix is appended here, deterministically.
     console.log('[VIZ] Raw AI keys:', Object.keys(parsed));
-    parsed = (function canonicalise(raw) {
-      const merged = {};
-      Object.entries(raw).forEach(([key, summary]) => {
-        const id = canonicalSiteId(key);
-        console.log('[VIZ] canonicalise:', key, '→', id);
-        merged[id] = merged[id] ? merged[id] + ' ' + summary : summary;
-      });
-      return merged;
-    })(parsed);
-    console.log('[VIZ] After canonicalise:', Object.keys(parsed));
+    const today = _sydneyTodayParts();
+    const dropped = { empty: [], undated: [], stale: [] };
+
+    const byId = {};
+    Object.entries(parsed).forEach(([key, val]) => {
+      let summary = '', dateRaw = null;
+      if (val && typeof val === 'object') { summary = String(val.summary || '').trim(); dateRaw = val.date; }
+      else { summary = String(val || '').trim(); }
+      // Strip any date suffix the model may have baked in — we re-add our own.
+      summary = summary.replace(/\s*\(latest report[^)]*\)\s*$/i, '').trim();
+      const id = canonicalSiteId(key);
+      const parts = _parseReportDate(dateRaw);
+      const cur = byId[id];
+      // Newer-dated entry wins; a dated entry beats an undated one.
+      if (!cur || (parts && (!cur.parts || _dayDiff(parts, cur.parts) > 0))) byId[id] = { summary, parts };
+    });
+
+    const finalMap = {};
+    Object.entries(byId).forEach(([id, e]) => {
+      if (!e.summary) { dropped.empty.push(id); return; }
+      if (!e.parts)   { dropped.undated.push(id); return; }
+      const age = _dayDiff(today, e.parts);
+      if (age < 0 || age > REPORT_MAX_AGE_DAYS) { dropped.stale.push(id + ' (' + _fmtDayMon(e.parts) + ')'); return; }
+      finalMap[id] = e.summary + ' (latest report ' + _fmtDayMon(e.parts) + ')';
+    });
+    parsed = finalMap;
+    console.log('[VIZ] After filtering:', Object.keys(parsed), 'dropped:', dropped);
 
     _admResults = parsed;
     const ids = Object.keys(parsed);
-    if (!ids.length) { admStatus('adm-status', 'No site-specific reports found in those posts.', 'err'); return; }
+    if (!ids.length) {
+      const why = [];
+      if (dropped.undated.length) why.push(dropped.undated.length + ' undated');
+      if (dropped.stale.length)   why.push(dropped.stale.length + ' older than ' + REPORT_MAX_AGE_DAYS + ' days');
+      admStatus('adm-status',
+        'No publishable reports.' + (why.length ? ' Excluded: ' + why.join(', ') + '.' : ' Nothing datable in those posts.'),
+        'err');
+      return;
+    }
     admRenderReview(parsed);
-    admStatus('adm-status', 'Found reports for ' + ids.length + ' site(s). Review below.', 'ok');
+    const skipped = dropped.undated.length + dropped.stale.length;
+    const skipNote = skipped
+      ? ' (' + skipped + ' excluded — undated or older than ' + REPORT_MAX_AGE_DAYS + ' days)'
+      : '';
+    admStatus('adm-status', 'Found reports for ' + ids.length + ' site(s)' + skipNote + '. Review below.', 'ok');
   } catch (e) {
     admStatus('adm-status', 'Summarise failed: ' + e.message, 'err');
   } finally {
