@@ -9627,13 +9627,13 @@ if ('serviceWorker' in navigator) {
   // ── column auto-detect ────────────────────────────────────────────────────
   // Ordered alias lists (first match wins). Node 103218 series names first.
   var ALIASES = {
-    time:    ['time', 'datetime', 'date_time', 'timestamp', 'date'],
-    swellH:  ['hs_swl', 'swell_h', 'swell_height', 'hs_swell', 'hsig_swell', 'swellh'],
-    swellP:  ['tp_swl', 'swell_p', 'swell_period', 'tp_swell', 'swellp'],
+    time:    ['time', 'utc', 'datetime', 'date_time', 'timestamp', 'date'],
+    swellH:  ['hs_swl', 'swell_height', 'swell_h', 'hs_swell', 'hsig_swell', 'swellh'],
+    swellP:  ['tp_swl', 'swell_period', 'swell_p', 'tp_swell', 'swellp'],
     swellDir:['dp_swl', 'swell_dir', 'swell_direction', 'dp_swell', 'swelldir'],
-    seaH:    ['hs_sea', 'sea_h', 'windsea_h', 'wind_sea_height', 'hs_windsea', 'seah'],
-    seaP:    ['tp_sea', 'sea_p', 'windsea_p', 'wind_sea_period', 'tp_windsea', 'seap'],
-    seaDir:  ['dp_sea', 'sea_dir', 'windsea_dir', 'wind_sea_direction', 'dp_windsea', 'seadir']
+    seaH:    ['hs_sea', 'sea_height', 'sea_h', 'windsea_h', 'wind_sea_height', 'hs_windsea', 'seah'],
+    seaP:    ['tp_sea', 'sea_period', 'sea_p', 'windsea_p', 'wind_sea_period', 'tp_windsea', 'seap'],
+    seaDir:  ['dp_sea', 'sea_dir', 'sea_direction', 'windsea_dir', 'wind_sea_direction', 'dp_windsea', 'seadir']
   };
   function norm(h) { return String(h).toLowerCase().replace(/[^a-z0-9]/g, ''); }
   function guess(headers, aliases) {
@@ -9703,7 +9703,11 @@ if ('serviceWorker' in navigator) {
       '<div class="bt-modal">' +
         '<div class="bt-head"><h3>NS Backtest</h3><button class="bt-x" id="btClose">&times;</button></div>' +
         '<p class="bt-sub">Admin only. Replays historical NS wave CSVs through the live scoring model so you can compare past scores to what swimmers reported and tune. Waves-only \u2014 no historical wind (fetch wind-sea = 0); the NS <b>sea</b> partition still feeds the wind-wave side of Entry &amp; Chop. Nothing is written anywhere.</p>' +
-        '<div class="bt-file"><input type="file" id="btFiles" accept=".csv,text/csv" multiple></div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+          '<button class="bt-btn ghost" id="btBundled">Load bundled history</button>' +
+          '<span class="bt-sub" id="btBundledNote" style="margin:0;">reads <code>ns_hindcast.csv</code> from this folder</span>' +
+        '</div>' +
+        '<div class="bt-file" style="font-size:11px;color:var(--dim,#5a8a9f);">\u2026 or pick CSV files manually: <input type="file" id="btFiles" accept=".csv,text/csv" multiple></div>' +
         '<div class="bt-status" id="btStatus"></div>' +
         '<div class="bt-sec" id="btMapSec" style="display:none;">' +
           '<h4>Column mapping <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim,#5a8a9f);">(auto-detected \u2014 fix any that are wrong)</span></h4>' +
@@ -9724,6 +9728,32 @@ if ('serviceWorker' in navigator) {
     el('btFiles').addEventListener('change', onFiles);
     el('btRun').addEventListener('click', run);
     el('btDownload').addEventListener('click', download);
+    el('btBundled').addEventListener('click', function () { loadBundled(true); });
+  }
+
+  // ── shared: accept parsed {headers, rows} and drive the mapping UI ──────────
+  function applyData(headers, rows, statusMsg) {
+    DATA = { headers: headers, rows: rows };
+    buildMapUI(headers);
+    el('btStatus').textContent = statusMsg;
+  }
+
+  // ── bundled history: fetch ns_hindcast.csv sitting beside this html ─────────
+  var _bundledTried = false;
+  function loadBundled(manual) {
+    var note = el('btBundledNote');
+    fetch('ns_hindcast.csv?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (text) {
+        var parsed = parseCSV(text);
+        if (!parsed || !parsed.rows.length) throw new Error('empty');
+        applyData(parsed.headers, parsed.rows, parsed.rows.length.toLocaleString() + ' rows loaded from bundled ns_hindcast.csv.');
+        if (note) note.innerHTML = '\u2713 bundled <code>ns_hindcast.csv</code> found';
+      })
+      .catch(function (e) {
+        if (note) note.innerHTML = 'no <code>ns_hindcast.csv</code> in this folder yet \u2014 pick files below';
+        if (manual) el('btStatus').textContent = '\u26a0 Could not load bundled ns_hindcast.csv (' + (e.message || e) + ').';
+      });
   }
 
   function show() { var ov = el('btOverlay'); if (ov) ov.classList.add('show'); }
@@ -9932,6 +9962,7 @@ if ('serviceWorker' in navigator) {
     build();
     if (!tok()) { el('btStatus').textContent = '\u26a0 No admin token \u2014 open with ?backtest=1&token=YOUR_ADMIN_TOKEN'; }
     show();
+    if (!_bundledTried) { _bundledTried = true; loadBundled(false); }
   }
 
   if (location.search.indexOf('backtest=1') > -1) {
