@@ -4205,6 +4205,35 @@ function _dayDiff(a, b) {
 // '3 Jul' style label from {y,m,d}.
 function _fmtDayMon(p) { return p.d + ' ' + _MONTHS[p.m - 1]; }
 
+// Extract a report's OWN date from a published summary's "(latest report 3 Jul)"
+// suffix. Summaries carry no year, so resolve the day-month to the most recent
+// occurrence that isn't in the future. Returns {y,m,d}, or null when no usable
+// date is present — e.g. an old row with no suffix, or a
+// "(latest report — date unknown)" fallback from the FB bridge.
+function _reportDateFromSummary(summary) {
+  const m = String(summary || '').match(/\(latest report[^)\d]*(\d{1,2})\s+([A-Za-z]{3,})/i);
+  if (!m) return null;
+  const day = +m[1];
+  const mi = _MONTHS.findIndex(x => x.toLowerCase() === m[2].slice(0, 3).toLowerCase());
+  if (mi < 0 || day < 1 || day > 31) return null;
+  const today = _sydneyTodayParts();
+  const cand = { y: today.y, m: mi + 1, d: day };
+  if (_dayDiff(today, cand) < 0) cand.y -= 1;   // hasn't occurred yet this year → last year
+  return cand;
+}
+
+// Is a published summary still eligible to show, judged by its OWN report date
+// (not the DB row's updated_at)? Mirrors the summarise rules: a date must be
+// present, and it must be within REPORT_MAX_AGE_DAYS. reason ∈ 'undated'|'stale'.
+function reportRecency(summary, today) {
+  today = today || _sydneyTodayParts();
+  const parts = _reportDateFromSummary(summary);
+  if (!parts) return { ok: false, reason: 'undated' };
+  const age = _dayDiff(today, parts);
+  if (age < 0 || age > REPORT_MAX_AGE_DAYS) return { ok: false, reason: 'stale', parts };
+  return { ok: true, parts };
+}
+
 function admStatus(id, msg, kind) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -4623,6 +4652,30 @@ async function admUnpublish(siteId) {
 }
 
 
+// Delete every undated / >REPORT_MAX_AGE_DAYS row currently in the table, for
+// good, via the token-gated /publish remove route. Populated by admLoadCurrent.
+async function admPurgeStale() {
+  const ids = _admStaleIds.slice();
+  if (!ids.length) return;
+  if (!confirm('Delete ' + ids.length + ' undated or stale report(s)?\n\n' +
+               'This removes their rows so they disappear for all users.')) return;
+  admStatus('adm-publish-status', 'Removing ' + ids.length + ' stale report(s)…');
+  try {
+    const res = await vizFetch(ADM_WORKER_URL.replace(/\/summarise$/, '/publish'), {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-Admin-Token': _admToken },
+      body: JSON.stringify({ remove: ids })
+    }, 15000);
+    if (!res.ok) throw new Error('Worker ' + res.status);
+    admStatus('adm-publish-status', 'Removed ' + ids.length + ' stale report(s).', 'ok');
+    admLoadCurrent();
+    loadPublicReports();
+  } catch (e) {
+    admStatus('adm-publish-status',
+      'Purge failed: ' + e.message + '. If 400/404, the Worker /publish route needs the "remove" handler.', 'err');
+  }
+}
+
 async function admLoadCurrent() {
   const el = document.getElementById('adm-current');
   if (!el) return;
@@ -4635,7 +4688,9 @@ async function admLoadCurrent() {
     if (!res.ok) throw new Error('Supabase ' + res.status);
     const rawRows = await res.json();
     const rows = dedupeReports(rawRows);
+    _admStaleIds = [];
     if (!rows.length) { el.innerHTML = '<b>Currently published:</b> nothing yet.'; return; }
+    const today = _sydneyTodayParts();
     let html = '<b>Currently published (' + rows.length + ' site' + (rows.length>1?'s':'') + '):</b>';
     if (rawRows.length !== rows.length) {
       html += '<div style="opacity:0.6;font-size:11px;margin-top:2px;">(' +
@@ -4643,16 +4698,29 @@ async function admLoadCurrent() {
         ((rawRows.length - rows.length)>1?'s':'') + ' collapsed in this view — clean up in Supabase if you want them gone for good)</div>';
     }
     rows.forEach(r => {
+      const rec = reportRecency(r.summary, today);
+      if (!rec.ok) _admStaleIds.push(r.site_id);
       const when = r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '';
       const meta = SITE_ALIASES.find(s => s.id === r.site_id);
       const nm = (meta ? meta.name : (r.site_name || prettySiteName(r.site_id)));
-      html += '<div style="margin-top:8px;"><span style="color:var(--teal);">' + nm + '</span>' +
-              (when ? ' <span style="opacity:0.6;">· ' + when + '</span>' : '') +
+      const flag = rec.ok ? '' :
+        ' <span style="color:var(--red);font-size:10px;">· ' +
+        (rec.reason === 'undated' ? 'no date' : 'older than ' + REPORT_MAX_AGE_DAYS + ' days') +
+        ' — hidden from users</span>';
+      html += '<div style="margin-top:8px;' + (rec.ok ? '' : 'opacity:0.55;') + '">' +
+              '<span style="color:var(--teal);">' + nm + '</span>' +
+              (when ? ' <span style="opacity:0.6;">· ' + when + '</span>' : '') + flag +
               ' <button onclick="admUnpublish(\'' + r.site_id + '\')" ' +
                 'style="background:none;border:1px solid var(--red);color:var(--red);border-radius:6px;' +
                 'font-size:10px;padding:1px 7px;cursor:pointer;margin-left:6px;">remove</button>' +
               '<br>' + (r.summary||'').replace(/</g,'&lt;') + '</div>';
     });
+    if (_admStaleIds.length) {
+      html = '<div style="margin-bottom:10px;"><button onclick="admPurgeStale()" ' +
+        'style="background:var(--red);border:none;color:#fff;border-radius:8px;font-size:12px;' +
+        'padding:5px 12px;cursor:pointer;">Delete ' + _admStaleIds.length +
+        ' undated / stale report' + (_admStaleIds.length>1?'s':'') + ' for good</button></div>' + html;
+    }
     el.innerHTML = html;
   } catch (e) {
     el.textContent = 'Could not load current summaries.';
@@ -4660,9 +4728,10 @@ async function admLoadCurrent() {
 }
 
 // ── Public community reports: strip + slide-up sheet ──
-// Reads the same site_sightings table; shows only sites with a recent report.
-const REPORTS_MAX_AGE_DAYS = 21;
+// Reads the same site_sightings table; shows only sites whose OWN report date
+// is present and within REPORT_MAX_AGE_DAYS.
 let _publicReports = [];
+let _admStaleIds = [];   // undated/stale site_ids found in the admin list, for one-click purge
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -4690,9 +4759,12 @@ async function loadPublicReports() {
     );
     if (!res.ok) throw new Error('Supabase ' + res.status);
     const rows = await res.json();
-    const cutoff = Date.now() - REPORTS_MAX_AGE_DAYS * 86400000;
-    const fresh = (rows || []).filter(r =>
-      r.summary && (!r.updated_at || new Date(r.updated_at).getTime() >= cutoff));
+    // Filter by each report's OWN date (parsed from its summary suffix), not by
+    // updated_at: undated rows and anything older than REPORT_MAX_AGE_DAYS are
+    // hidden for everyone. Anon is SELECT-only, so the public path can only hide;
+    // the admin panel deletes these rows for good.
+    const today = _sydneyTodayParts();
+    const fresh = (rows || []).filter(r => r.summary && reportRecency(r.summary, today).ok);
     // Collapse any duplicate/stale site_ids (e.g. murrays-beach + murray-beach)
     // into one canonical row, newest wins — regardless of how they got into the DB.
     _publicReports = dedupeReports(fresh);
