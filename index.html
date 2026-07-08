@@ -1585,8 +1585,9 @@ const CONFIG_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const CONFIG_DEFAULTS = {
   windSens:   [0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3],
   swellSens:  [1.4,  1.4,  1.6,  1.6,  1.6,  0.8,  0.8,  1.0,  2.2,  1.2,  1.8,  0.3,  2.5],
-  // spm = 144 / periodPower  (sheet 'Swell period multiplier' row: 144/25=5.76, 144/20=7.2, 144/10=14.4)
-  periodPower:[25,   20,   20,   10,   20,   25,   25,   25,   25,   25,   25,   25,   20  ],
+  // MULTIPLIER units — same as the sheet's 'Swell period multiplier' row (144/periodPower already applied).
+  // Used directly as spm in calcScore. (144/25=5.76, 144/20=7.2, 144/10=14.4)
+  periodPower:[5.76, 7.2,  7.2,  14.4, 7.2,  5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 7.2 ],
   lookup: {
     CTB:       {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
                 sea: [20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -1743,7 +1744,7 @@ function calcScore(site, d) {
   const lk  = CONFIG.lookup[site.key];
   const windSens  = CONFIG.windSens[si];
   const swellSens = CONFIG.swellSens[si];
-  const spm       = 144 / CONFIG.periodPower[si];  // spm = 144 / periodPower (matches sheet 'Swell period multiplier' row)
+  const spm       = CONFIG.periodPower[si];  // sheet row already stores the multiplier (144/periodPower) — use directly, do NOT divide again
 
   const {windKmh, windDir, swell1H, swell1Dir, swell1P,
          swell2H, swell2Dir, swell2P, windWaveH, windWaveDir, tideM} = d;
