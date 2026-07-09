@@ -612,7 +612,7 @@
     content:''; flex:1; height:1px; background:var(--border);
   }
   .snapshot-bars {
-    display:flex; flex-direction:column; gap:8px; margin-bottom:8px;
+    display:flex; flex-direction:column; gap:6px; margin-bottom:8px;
     width:100vw; position:relative; left:50%; transform:translateX(-50%);
     padding:0 20px; box-sizing:border-box;
   }
@@ -648,7 +648,7 @@
     display:flex; align-items:center; gap:10px;
   }
   .snap-bar-track {
-    flex:1; height:30px; background:rgba(255,255,255,0.05);
+    flex:1; height:24px; background:rgba(255,255,255,0.05);
     border-radius:4px; overflow:hidden; position:relative;
   }
   .snap-bar-fill {
@@ -660,7 +660,7 @@
   .snap-name {
     position:absolute; left:11px; top:50%; transform:translateY(-50%);
     z-index:3; pointer-events:none; white-space:nowrap;
-    font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600;
+    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
     letter-spacing:0.2px; color:#fff;
     text-shadow:
       -1px -1px 0 rgba(0,0,0,0.6),  1px -1px 0 rgba(0,0,0,0.6),
@@ -668,7 +668,7 @@
        0 0 3px rgba(0,0,0,0.55);
   }
   .snap-bar-score {
-    font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1px;
+    font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:1px;
     color:rgba(0,0,0,0.7);
   }
   .snap-score-label { display:none; }
@@ -935,8 +935,12 @@
 
   /* Snapshot bars panel */
   @media (max-width:480px) {
-    .snap-bar-track { height:28px; }
-    .snap-name      { font-size:14px; left:9px; }
+    .snapshot-bars  { gap:5px; }
+    .snap-bar-track { height:22px; }
+    .snap-name      { font-size:13px; left:9px; }
+    .snap-bar-score { font-size:14px; }
+    .snap-zone-axis { margin-bottom:24px; }
+    .snapshot-controls { gap:10px; margin-top:14px; margin-bottom:18px; }
   }
 
   /* Timeline table: allow horizontal scroll, shrink cells */
