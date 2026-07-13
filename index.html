@@ -445,6 +445,19 @@
   #siteSheetPollution.poor    .pol-verdict { color:var(--red); }
   #siteSheetPollution.unknown .pol-dot { background:var(--text-dim); }
   #siteSheetPollution.unknown .pol-verdict { color:var(--text-dim); }
+  /* ── Pollution-risk-by-site table (snapshot view, Beachwatch) ── */
+  .wq-body.collapsed { display:none; }
+  .wq-table { width:100%; border-collapse:collapse; }
+  .wq-table td { padding:9px 10px; border-bottom:1px solid var(--border); font-size:13px; }
+  .wq-table tr:last-child td { border-bottom:none; }
+  .wq-site { color:var(--text); font-family:'DM Sans',sans-serif; }
+  .wq-status { text-align:right; white-space:nowrap; font-family:'DM Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); }
+  .wq-status .wq-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; background:var(--text-dim); }
+  .wq-status.good    { color:var(--green); }  .wq-status.good    .wq-dot { background:var(--green); }
+  .wq-status.fair    { color:var(--yellow); } .wq-status.fair    .wq-dot { background:var(--yellow); }
+  .wq-status.poor    { color:var(--red); }    .wq-status.poor    .wq-dot { background:var(--red); }
+  .wq-status.unknown { color:var(--text-dim); } .wq-status.unknown .wq-dot { background:var(--text-dim); }
+  .wq-note { font-size:10px; color:var(--text-dim); margin-top:10px; line-height:1.45; }
   .snap-row.tappable { cursor:pointer; }
   .snap-row.tappable .snap-bar-track { transition:filter 0.15s; }
   .snap-row.tappable:active .snap-bar-track { filter:brightness(1.25); }
@@ -1372,6 +1385,15 @@
         <div class="cond-value" id="sTide">—</div>
         <div class="cond-unit">metres</div>
       </div>
+    </div>
+
+    <div class="section-title section-toggle" id="wqToggle" onclick="toggleWaterQuality()" style="margin-top:32px;">
+      <span class="toggle-caret">▸</span>
+      <span>Pollution risk by site</span>
+    </div>
+    <div class="wq-body collapsed" id="wqBody">
+      <table class="wq-table"><tbody id="wqTableBody"></tbody></table>
+      <div class="wq-note">Source: NSW Beachwatch daily forecast — nearest monitored beach per dive site. Updated ~6am &amp; 1:30pm.</div>
     </div>
   </div>
 
@@ -4947,6 +4969,36 @@ function renderSitePollution(site) {
     card.className = 'unknown';
     vEl.textContent = '—';
     sEl.textContent = 'Beachwatch unavailable · tap ↗';
+  });
+}
+// ── Pollution-risk-by-site table (snapshot view) ──────────────────────────
+// Two columns: dive site + the same verdict the site sheet shows. Lazy-loaded
+// on first expand; per-site fetches are cached (shared beaches fetch once).
+let _wqLoaded = false;
+function toggleWaterQuality() {
+  const body   = document.getElementById('wqBody');
+  const toggle = document.getElementById('wqToggle');
+  if (!body || !toggle) return;
+  const open = body.classList.toggle('collapsed') === false;
+  toggle.classList.toggle('open', open);
+  if (open && !_wqLoaded) { _wqLoaded = true; renderWaterQualityTable(); }
+}
+function renderWaterQualityTable() {
+  const tb = document.getElementById('wqTableBody');
+  if (!tb) return;
+  const sites = SITES.filter(s => BW_SITE_BY_KEY[s.key]);
+  tb.innerHTML = sites.map(s =>
+    `<tr><td class="wq-site">${s.name}</td>` +
+    `<td class="wq-status unknown" id="wq-st-${s.key}"><span class="wq-dot"></span>…</td></tr>`
+  ).join('');
+  sites.forEach(s => {
+    const set = (cls, label) => {
+      const cell = document.getElementById('wq-st-' + s.key);
+      if (cell) { cell.className = 'wq-status ' + cls; cell.innerHTML = '<span class="wq-dot"></span>' + label; }
+    };
+    fetchBeachwatchSite(BW_SITE_BY_KEY[s.key])
+      .then(bw => { const v = pollutionVerdict(bw); set(v.cls, v.label || '—'); })
+      .catch(() => set('unknown', '—'));
   });
 }
 function openSiteSheet(site, score, demerits, h) {
