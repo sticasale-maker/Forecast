@@ -427,6 +427,24 @@
   .ssd-row .ssd-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
   .ssd-row .ssd-val { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:0.5px; color:var(--text); }
   .ssd-row .ssd-val.zero { color:var(--text-dim); opacity:0.5; }
+  /* ── Site-sheet pollution indicator (Beachwatch water quality, per site) ── */
+  #siteSheetPollution { display:none; align-items:flex-start; gap:10px; margin:2px 0 16px;
+    padding:11px 12px; background:var(--card); border:1px solid var(--border); border-radius:10px; }
+  #siteSheetPollution .pol-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; margin-top:3px; background:var(--text-dim); }
+  #siteSheetPollution .pol-main { flex:1; min-width:0; }
+  #siteSheetPollution .pol-label { font-family:'DM Mono',monospace; font-size:8px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-dim); margin-bottom:3px; }
+  #siteSheetPollution .pol-verdict { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:0.5px; line-height:1.1; color:var(--text); }
+  #siteSheetPollution .pol-sub { font-size:10px; color:var(--text-dim); margin-top:2px; line-height:1.35; }
+  #siteSheetPollution .pol-link { font-size:14px; color:var(--teal); text-decoration:none; flex-shrink:0; line-height:1; margin-top:1px; }
+  #siteSheetPollution .pol-link:hover { opacity:0.75; }
+  #siteSheetPollution.good    .pol-dot { background:var(--green); }
+  #siteSheetPollution.good    .pol-verdict { color:var(--green); }
+  #siteSheetPollution.fair    .pol-dot { background:var(--yellow); }
+  #siteSheetPollution.fair    .pol-verdict { color:var(--yellow); }
+  #siteSheetPollution.poor    .pol-dot { background:var(--red); }
+  #siteSheetPollution.poor    .pol-verdict { color:var(--red); }
+  #siteSheetPollution.unknown .pol-dot { background:var(--text-dim); }
+  #siteSheetPollution.unknown .pol-verdict { color:var(--text-dim); }
   .snap-row.tappable { cursor:pointer; }
   .snap-row.tappable .snap-bar-track { transition:filter 0.15s; }
   .snap-row.tappable:active .snap-bar-track { filter:brightness(1.25); }
@@ -4842,6 +4860,95 @@ function closeReportsSheet(e) {
 // ── Site detail sheet (opened by tapping a snapshot bar) ──────────────────────
 let _sheetSiteKey = null;   // site key for the currently open detail sheet
 let _sheetDayKey  = null;   // Sydney day (YYYY-MM-DD) of the hour the sheet is showing
+// ── Beachwatch water-quality (pollution risk) per dive site ────────────────
+// Each dive site maps to its nearest Beachwatch-monitored beach. The shared
+// Worker /beachwatch route must forward ?site_name= for anything other than
+// South Steyne; until it does, the name-match guard in fetchBeachwatchSite()
+// shows "—" for unmatched sites rather than another beach's reading (never wrong).
+const BW_PROXY   = 'https://bold-rain-6ded.sticasale.workers.dev/beachwatch';
+const BW_CACHE_K = 'viz_bw_cache_v1';
+const BW_TTL_MS  = 3 * 60 * 60 * 1000;   // 3h — Beachwatch updates ~6am & 1:30pm
+const BW_SITE_BY_KEY = {
+  CTB:'South Steyne Beach', BIW:'Congwong Bay', BIE:'Congwong Bay',
+  Steps:'Silver Beach', Monument:'Silver Beach', Chowder:'Clifton Gardens',
+  CampCove:'Camp Cove', Fairlight:'Fairlight Beach', Gordons:'Gordons Bay (East)',
+  Freshwater:'Freshwater Beach', SharkPoint:'Clovelly Beach',
+  LittleBay:'Little Bay Beach', Oak:'Oak Park Beach'
+};
+const _bwNorm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+function bwCacheGet(name) {
+  try { const all = JSON.parse(localStorage.getItem(BW_CACHE_K) || '{}'); const e = all[name];
+    if (e && (Date.now() - e.t) < BW_TTL_MS) return e.d; } catch (e) {}
+  return null;
+}
+function bwCacheSet(name, d) {
+  try { const all = JSON.parse(localStorage.getItem(BW_CACHE_K) || '{}');
+    all[name] = { t: Date.now(), d }; localStorage.setItem(BW_CACHE_K, JSON.stringify(all)); } catch (e) {}
+}
+async function fetchBeachwatchSite(name) {
+  const cached = bwCacheGet(name);
+  if (cached) return cached;
+  const res = await fetch(BW_PROXY + '?site_name=' + encodeURIComponent(name), { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const j = await res.json();
+  const feats = (j && j.features) || (Array.isArray(j) ? j : []);
+  // Only accept a feature whose siteName matches what we asked for, so a proxy
+  // that ignores site_name (returns another beach) can never show wrong data.
+  const feat = feats.find(f => _bwNorm((f.properties || f).siteName) === _bwNorm(name));
+  const p = feat ? (feat.properties || feat) : null;
+  const out = p ? {
+    site: p.siteName || name,
+    id: p.id || null,
+    forecast: (p.pollutionForecast != null ? p.pollutionForecast : (p.pollution_forecast != null ? p.pollution_forecast : null)),
+    latest: (p.latestResult != null ? p.latestResult : null),
+    latestDate: (p.latestResultObservationDate != null ? p.latestResultObservationDate : null)
+  } : { site: name, id: null, forecast: null, latest: null, latestDate: null, unmatched: true };
+  bwCacheSet(name, out);
+  return out;
+}
+function pollutionVerdict(bw) {
+  if (!bw || bw.unmatched) return { cls: 'unknown', label: '—', sub: 'No Beachwatch reading for this site yet' };
+  if (!bw.forecast)        return { cls: 'unknown', label: 'Not issued', sub: 'Updated ~6am & 1:30pm · tap ↗' };
+  const f = bw.forecast.toLowerCase();
+  if (f.includes('not available') || f.includes('not forecast')) return { cls: 'unknown', label: 'No forecast', sub: '' };
+  if (f.includes('unlikely') || f.includes('good'))              return { cls: 'good', label: 'Unlikely', sub: '' };
+  if (f.includes('possible') || f.includes('fair'))              return { cls: 'fair', label: 'Possible', sub: '' };
+  if (f.includes('likely')   || f.includes('poor'))              return { cls: 'poor', label: 'Likely',   sub: '' };
+  return { cls: 'unknown', label: bw.forecast, sub: '' };
+}
+let _pollutionReqSeq = 0;
+function renderSitePollution(site) {
+  const card = document.getElementById('siteSheetPollution');
+  if (!card) return;
+  const vEl = document.getElementById('siteSheetPollutionVerdict');
+  const sEl = document.getElementById('siteSheetPollutionSub');
+  const lEl = document.getElementById('siteSheetPollutionLink');
+  const name = BW_SITE_BY_KEY[site.key];
+  if (!name) { card.style.display = 'none'; return; }   // no mapped Beachwatch beach
+  const seq = ++_pollutionReqSeq;
+  card.style.display = 'flex';
+  card.className = 'unknown';
+  vEl.textContent = '…';
+  sEl.textContent = 'Checking Beachwatch · ' + name;
+  if (lEl) lEl.href = 'https://www.beachwatch.nsw.gov.au/';
+  fetchBeachwatchSite(name).then(bw => {
+    if (seq !== _pollutionReqSeq) return;   // sheet moved to another site — drop
+    const v = pollutionVerdict(bw);
+    card.className = v.cls;
+    vEl.textContent = v.label;
+    if (v.cls === 'good' || v.cls === 'fair' || v.cls === 'poor') {
+      sEl.textContent = 'Beachwatch · ' + name + (bw.latest ? ' · last sample: ' + bw.latest : '');
+    } else {
+      sEl.textContent = v.sub || ('Beachwatch · ' + name);
+    }
+    if (lEl && bw && bw.id) lEl.href = 'https://www.beachwatch.nsw.gov.au/siteDetails/' + bw.id;
+  }).catch(() => {
+    if (seq !== _pollutionReqSeq) return;
+    card.className = 'unknown';
+    vEl.textContent = '—';
+    sEl.textContent = 'Beachwatch unavailable · tap ↗';
+  });
+}
 function openSiteSheet(site, score, demerits, h) {
   const band = score >= 40 ? 'green' : score >= 20 ? 'yellow' : 'red';
   const bandLabel = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
@@ -4897,6 +5004,9 @@ function openSiteSheet(site, score, demerits, h) {
       <span class="ssd-val${zero}">${txt}</span>
     </div>`;
   }).join('');
+
+  // Per-site Beachwatch water-quality reading (async; guarded against site switch)
+  renderSitePollution(site);
 
   document.getElementById('siteSheetOverlay').classList.add('open');
 }
@@ -4954,8 +5064,388 @@ loadConfig().then(() => init());
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
+    <div id="siteSheetPollution">
+      <span class="pol-dot" aria-hidden="true"></span>
+      <div class="pol-main">
+        <div class="pol-label">Pollution risk · Beachwatch</div>
+        <div class="pol-verdict" id="siteSheetPollutionVerdict">—</div>
+        <div class="pol-sub" id="siteSheetPollutionSub"></div>
+      </div>
+      <a class="pol-link" id="siteSheetPollutionLink" href="https://www.beachwatch.nsw.gov.au/" target="_blank" rel="noopener noreferrer" aria-label="Open Beachwatch">↗</a>
+    </div>
     <div id="siteSheetDemerits"></div>
   </div>
 </div>
+
+<script>
+/* ==========================================================================
+   ANNOUNCEMENTS — one-off broadcasts (ported from the Swim app).
+   Public: popup on app open (once per device, keyed by id+updated_at) + a
+   persistent "What's new" pill to re-open while an announcement is live.
+   Admin: editor at ?announce=1&token=…  with a WYSIWYG toolbar.
+   Backend: shared Supabase project (announcements table + 4 RPCs + the public
+   announce-images Storage bucket). rpc() sends p_app:'viz' and falls back to
+   the un-scoped signature, so this is Forecast-only once the SQL patch is
+   applied and shared until then. Modal is a standalone white card, so colours
+   are hard-coded (the app's --text etc. are light-on-dark and unusable here).
+   ========================================================================== */
+(function () {
+  var SB   = 'https://gkspukabnfbzrvjoewpc.supabase.co';
+  var KEY  = 'sb_publishable_TkhnIKIYdRCNQ-DSVLqjLw_dTMcLIqW';
+  var RPC  = SB + '/rest/v1/rpc/';
+  var hdrs = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' };
+  var SEEN_KEY = 'viz_ann_seen';
+  var ADMIN_MODE = /[?&]announce=1(\b|&|$)/.test(location.search);
+
+  var _active = null;   // the live announcement (or null)
+  var _editId = null;   // admin: id being edited (null = new)
+  var _imgUrl = '';     // admin: image url currently in the form
+  var _rows   = [];     // admin: last loaded list (for edit)
+
+  function $(id){ return document.getElementById(id); }
+  function token(){
+    try { var u = new URLSearchParams(location.search).get('token'); if (u) return u; } catch (e) {}
+    try { return localStorage.getItem('viz_admin_token') || ''; } catch (e) { return ''; }
+  }
+  function escText(s){ return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+  /* ---- RPC helper: Forecast-scoped first, fall back to shared signature ----- */
+  async function rpc(fn, payload){
+    var withApp = Object.assign({ p_app: 'viz' }, payload || {});
+    var r = await fetch(RPC + fn, { method: 'POST', headers: hdrs, body: JSON.stringify(withApp) });
+    if (r.status === 404) {   // RPC signature has no p_app yet (pre-migration) → shared call
+      r = await fetch(RPC + fn, { method: 'POST', headers: hdrs, body: JSON.stringify(payload || {}) });
+    }
+    return r;
+  }
+
+  /* ---- rich-text sanitizer: rebuild a clean tree from an allowlist --------- */
+  var ALLOW = { B:1, STRONG:1, I:1, EM:1, U:1, UL:1, OL:1, LI:1, A:1, BR:1, P:1, DIV:1, SPAN:1 };
+  function clean(src){
+    var tmp = document.createElement('div'); tmp.innerHTML = (src == null ? '' : String(src));
+    var out = document.createElement('div');
+    (function copy(node, dest){
+      Array.prototype.forEach.call(node.childNodes, function (ch) {
+        if (ch.nodeType === 3) { dest.appendChild(document.createTextNode(ch.nodeValue)); return; }
+        if (ch.nodeType !== 1) return;                       // drop comments / others
+        var tag = ch.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE') return;     // drop entirely
+        if (ALLOW[tag]) {
+          var el = document.createElement(tag.toLowerCase());
+          if (tag === 'A') {
+            var href = ch.getAttribute('href') || '';
+            if (/^(https?:|mailto:)/i.test(href)) {
+              el.setAttribute('href', href);
+              el.setAttribute('target', '_blank');
+              el.setAttribute('rel', 'noopener noreferrer');
+            }
+          }
+          copy(ch, el);
+          dest.appendChild(el);
+        } else {
+          copy(ch, dest);                                    // unwrap: keep contents
+        }
+      });
+    })(tmp, out);
+    return out.innerHTML;
+  }
+
+  /* ---- seen tracking ------------------------------------------------------- */
+  function seenVal(a){ return a.id + '|' + (a.updated_at || ''); }
+  function isSeen(a){ try { return localStorage.getItem(SEEN_KEY) === seenVal(a); } catch (e) { return false; } }
+  function markSeen(a){ try { localStorage.setItem(SEEN_KEY, seenVal(a)); } catch (e) {} }
+
+  /* ---- popup + pill -------------------------------------------------------- */
+  function buildPopup(){
+    if ($('annOverlay')) return;
+    var css = document.createElement('style');
+    css.textContent =
+      "#annOverlay{position:fixed;inset:0;z-index:99995;display:none;align-items:center;justify-content:center;padding:12px;background:rgba(6,16,32,0.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}" +
+      "#annOverlay.show{display:flex;}" +
+      "#annPopup{background:#fff;border-radius:14px;max-width:min(94vw,460px);width:100%;overflow:hidden;box-shadow:0 12px 34px rgba(6,16,32,0.4);max-height:92dvh;display:flex;flex-direction:column;}" +
+      "#annImg{width:100%;max-height:64dvh;object-fit:contain;background:#eef2f4;display:none;}" +
+      "#annPopup.ann-imageonly{background:transparent;box-shadow:none;max-width:none;width:auto;max-height:none;overflow:visible;}" +
+      "#annPopup.ann-imageonly #annImg{width:auto;height:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 56px);object-fit:contain;background:transparent;border-radius:12px;}" +
+      "#annPopup.ann-imageonly #annHint{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.7);}" +
+      "#annBody{padding:16px 18px 6px;overflow-y:auto;}" +
+      "#annTitle{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:26px;line-height:1.05;color:#0e2233;margin-bottom:9px;}" +
+      "#annText{font-size:14px;line-height:1.55;color:#16303f;}" +
+      "#annText a{color:#00857a;}" +
+      "#annText ul,#annText ol{margin:7px 0;padding-left:20px;}#annText li{margin-bottom:3px;}" +
+      "#annText p{margin:0 0 7px;}" +
+      "#annHint{text-align:center;color:#5a7183;font-size:11px;padding:11px 0 14px;}" +
+      "#annWhatsNew{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);z-index:99990;display:none;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid #00857a;background:#fff;color:#00857a;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(6,16,32,.28);}" +
+      "#annWhatsNew.show{display:inline-flex;}" +
+      "#annWhatsNew .ann-dot{display:none;width:8px;height:8px;border-radius:50%;background:#e83d3d;}" +
+      "#annWhatsNew.unseen .ann-dot{display:inline-block;}";
+    document.head.appendChild(css);
+    var ov = document.createElement('div'); ov.id = 'annOverlay';
+    ov.innerHTML =
+      '<div id="annPopup" role="dialog" aria-modal="true" aria-label="Announcement">' +
+        '<img id="annImg" alt="">' +
+        '<div id="annBody"><div id="annTitle"></div><div id="annText"></div></div>' +
+        '<div id="annHint">tap anywhere to dismiss</div>' +
+      '</div>';
+    ov.addEventListener('click', dismissPopup);   // tap anywhere closes
+    document.body.appendChild(ov);
+  }
+  function showPopup(a){
+    buildPopup();
+    var img = $('annImg');
+    var hasImg = !!a.image_url;
+    if (hasImg) { img.src = a.image_url; img.style.display = 'block'; }
+    else { img.style.display = 'none'; img.removeAttribute('src'); }
+    var ttl = (a.title || '').trim();
+    $('annTitle').textContent = ttl;
+    $('annTitle').style.display = ttl ? '' : 'none';
+    $('annText').innerHTML = clean(a.body_html || '');
+    var hasText = !!ttl || !!(($('annText').textContent || '').trim());
+    if ($('annBody')) $('annBody').style.display = hasText ? '' : 'none';
+    if ($('annPopup')) $('annPopup').classList.toggle('ann-imageonly', hasImg && !hasText);
+    $('annOverlay').classList.add('show');
+  }
+  function dismissPopup(){
+    var ov = $('annOverlay'); if (ov) ov.classList.remove('show');
+    if (_active) { markSeen(_active); var p = $('annWhatsNew'); if (p) p.classList.remove('unseen'); }
+  }
+  function ensurePill(){
+    if ($('annWhatsNew')) return $('annWhatsNew');
+    buildPopup();   // ensures the pill CSS is present
+    var b = document.createElement('button'); b.id = 'annWhatsNew'; b.type = 'button';
+    b.setAttribute('aria-label', 'See the latest announcement');
+    b.innerHTML = '<span class="ann-dot" aria-hidden="true"></span><span>What’s new</span>';
+    b.addEventListener('click', function () { if (_active) showPopup(_active); });
+    document.body.appendChild(b);
+    return b;
+  }
+  function refreshPill(){
+    var b = ensurePill();
+    if (!_active) { b.classList.remove('show', 'unseen'); return; }
+    b.classList.add('show');
+    b.classList.toggle('unseen', !isSeen(_active));
+  }
+  async function loadActive(){
+    try {
+      var r = await rpc('get_active_announcement', {});
+      if (!r.ok) return;
+      var rows = await r.json();
+      // Forecast-only: only show announcements tagged for this app (app === 'viz').
+      // Pre-migration rows are untagged, so a Swim-app announcement in the shared
+      // table never leaks into the dive app. Once the Supabase app-scope patch is
+      // applied, posts published here (p_app:'viz') carry app='viz' and appear.
+      var top = (Array.isArray(rows) && rows.length) ? rows[0] : null;
+      _active = (top && top.app === 'viz') ? top : null;
+      if (_active && !isSeen(_active) && !ADMIN_MODE) showPopup(_active);
+      refreshPill();
+    } catch (e) {}
+  }
+
+  /* ---- date helpers -------------------------------------------------------- */
+  function dtLocalToISO(v){ if (!v) return null; var d = new Date(v); return isNaN(d) ? null : d.toISOString(); }
+  function isoToDtLocal(iso){
+    if (!iso) return ''; var d = new Date(iso); if (isNaN(d)) return '';
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  /* ---- image upload (downscale to 1280px, JPEG) ---------------------------- */
+  async function uploadImage(file){
+    var blob = await new Promise(function (resolve, reject) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var MAX = 1280, sc = Math.min(1, MAX / Math.max(img.width, img.height));
+        var cw = Math.round(img.width * sc), chh = Math.round(img.height * sc);
+        var cv = document.createElement('canvas'); cv.width = cw; cv.height = chh;
+        cv.getContext('2d').drawImage(img, 0, 0, cw, chh);
+        URL.revokeObjectURL(url);
+        cv.toBlob(function (b) { b ? resolve(b) : reject(new Error('encode failed')); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+      img.src = url;
+    });
+    var nm = ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2))) + '.jpg';
+    var res = await fetch(SB + '/storage/v1/object/announce-images/' + nm, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'false' },
+      body: blob
+    });
+    if (!res.ok) throw new Error('image upload failed (' + res.status + ')');
+    return SB + '/storage/v1/object/public/announce-images/' + nm;
+  }
+
+  /* ---- admin overlay ------------------------------------------------------- */
+  function buildAdminOverlay(){
+    if ($('annAdminOverlay')) return;
+    try { document.execCommand('styleWithCSS', false, false); } catch (e) {}   // emit <b>/<i> tags, not inline styles
+    var css = document.createElement('style');
+    css.textContent =
+      "#annAdminOverlay{position:fixed;inset:0;z-index:99996;display:none;background:rgba(6,16,32,0.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);overflow-y:auto;padding:max(env(safe-area-inset-top),16px) 14px 30px;}" +
+      "#annAdminOverlay.show{display:block;}" +
+      "#annAdminCard{max-width:520px;margin:0 auto;background:#fff;border-radius:16px;padding:16px;}" +
+      ".aa-h{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:22px;color:#0e2233;}" +
+      ".aa-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#5a7183;margin:12px 0 5px;display:block;}" +
+      ".aa-in{width:100%;border:1px solid rgba(0,133,122,.3);border-radius:10px;padding:9px 10px;font-size:14px;color:#16303f;background:#fff;font-family:inherit;}" +
+      ".aa-tb{display:flex;gap:6px;}" +
+      ".aa-tbbtn{width:36px;height:34px;border:1px solid rgba(0,133,122,.3);background:#e7f3f1;border-radius:8px;color:#0e2233;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;}" +
+      ".aa-tbbtn:active{transform:scale(.95);}" +
+      "#annEdBody{border:1px solid rgba(0,133,122,.3);border-radius:0 0 10px 10px;border-top:none;min-height:90px;padding:10px 11px;font-size:14px;line-height:1.5;color:#16303f;outline:none;}" +
+      "#annEdBody:empty:before{content:attr(data-ph);color:#5a7183;}" +
+      ".aa-row{display:flex;gap:10px;}.aa-row>div{flex:1;}" +
+      ".aa-btn{border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;}" +
+      ".aa-pub{background:#00857a;color:#fff;width:100%;margin-top:14px;}" +
+      ".aa-sec{background:#eef6f9;color:#0e2233;width:100%;}" +
+      ".aa-listrow{display:flex;align-items:center;gap:9px;padding:9px 10px;background:#eef3f6;border-radius:9px;margin-bottom:6px;font-size:13px;}" +
+      ".aa-close{float:right;font-size:24px;color:#5a7183;background:none;border:none;cursor:pointer;line-height:1;}" +
+      ".aa-imgwrap{margin-top:8px;position:relative;display:none;}.aa-imgwrap img{width:100%;border-radius:10px;max-height:160px;object-fit:cover;display:block;}" +
+      ".aa-imgrm{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:999px;width:26px;height:26px;cursor:pointer;}";
+    document.head.appendChild(css);
+    var ov = document.createElement('div'); ov.id = 'annAdminOverlay';
+    ov.innerHTML =
+      '<div id="annAdminCard">' +
+        '<button class="aa-close" id="annAdminClose" aria-label="Close">×</button>' +
+        '<div class="aa-h" id="annFormTitle">Publish announcement</div>' +
+        '<label class="aa-lbl">Title (optional)</label>' +
+        '<input class="aa-in" id="annInTitle" placeholder="New tide view">' +
+        '<label class="aa-lbl">Message</label>' +
+        '<div class="aa-tb">' +
+          '<button type="button" class="aa-tbbtn" data-cmd="bold" aria-label="Bold"><b>B</b></button>' +
+          '<button type="button" class="aa-tbbtn" data-cmd="italic" aria-label="Italic"><i>I</i></button>' +
+          '<button type="button" class="aa-tbbtn" data-cmd="insertUnorderedList" aria-label="Bullet list">•</button>' +
+          '<button type="button" class="aa-tbbtn" data-cmd="createLink" aria-label="Link">\u{1F517}</button>' +
+        '</div>' +
+        '<div id="annEdBody" contenteditable="true" data-ph="Write the announcement…"></div>' +
+        '<label class="aa-lbl">Picture (optional)</label>' +
+        '<button type="button" class="aa-btn aa-sec" id="annImgBtn">Upload picture</button>' +
+        '<input type="file" id="annImgInput" accept="image/*" style="display:none;">' +
+        '<div class="aa-imgwrap" id="annImgWrap"><img id="annImgPrev" alt=""><button type="button" class="aa-imgrm" id="annImgRm" aria-label="Remove picture">×</button></div>' +
+        '<div class="aa-row">' +
+          '<div><label class="aa-lbl">Starts</label><input class="aa-in" id="annInStart" type="datetime-local"></div>' +
+          '<div><label class="aa-lbl">Ends</label><input class="aa-in" id="annInEnd" type="datetime-local"></div>' +
+        '</div>' +
+        '<button type="button" class="aa-btn aa-pub" id="annPubBtn">Publish</button>' +
+        '<div id="annPubMsg" style="font-size:12px;text-align:center;margin-top:8px;min-height:14px;color:#5a7183;"></div>' +
+        '<label class="aa-lbl" style="margin-top:16px;">Live &amp; scheduled</label>' +
+        '<div id="annAdminList"></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+
+    $('annAdminClose').addEventListener('click', closeAnnounceAdmin);
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeAnnounceAdmin(); });
+
+    Array.prototype.forEach.call(ov.querySelectorAll('.aa-tbbtn'), function (btn) {
+      btn.addEventListener('mousedown', function (e) { e.preventDefault(); });   // keep editor focus
+      btn.addEventListener('click', function () {
+        var cmd = btn.getAttribute('data-cmd');
+        $('annEdBody').focus();
+        if (cmd === 'createLink') { var u = window.prompt('Link URL', 'https://'); if (u) document.execCommand('createLink', false, u); }
+        else document.execCommand(cmd, false, null);
+      });
+    });
+    $('annImgBtn').addEventListener('click', function () { $('annImgInput').click(); });
+    $('annImgInput').addEventListener('change', async function () {
+      var f = $('annImgInput').files && $('annImgInput').files[0]; if (!f) return;
+      $('annPubMsg').textContent = 'Uploading picture…';
+      try { _imgUrl = await uploadImage(f); $('annImgPrev').src = _imgUrl; $('annImgWrap').style.display = 'block'; $('annPubMsg').textContent = ''; }
+      catch (e) { $('annPubMsg').textContent = 'Picture upload failed.'; }
+    });
+    $('annImgRm').addEventListener('click', function () { _imgUrl = ''; $('annImgWrap').style.display = 'none'; $('annImgPrev').removeAttribute('src'); });
+    $('annPubBtn').addEventListener('click', publish);
+  }
+
+  function resetForm(){
+    _editId = null; _imgUrl = '';
+    if ($('annInTitle')) $('annInTitle').value = '';
+    if ($('annEdBody'))  $('annEdBody').innerHTML = '';
+    if ($('annInStart')) $('annInStart').value = '';
+    if ($('annInEnd'))   $('annInEnd').value = '';
+    if ($('annImgWrap')) $('annImgWrap').style.display = 'none';
+    if ($('annFormTitle')) $('annFormTitle').textContent = 'Publish announcement';
+    if ($('annPubBtn')) $('annPubBtn').textContent = 'Publish';
+  }
+
+  async function publish(){
+    var tk = token(); if (!tk) { $('annPubMsg').textContent = 'No admin token.'; return; }
+    var title = ($('annInTitle').value || '').trim();
+    var bodyHtml = clean($('annEdBody').innerHTML || '');
+    var starts = dtLocalToISO($('annInStart').value);
+    var ends   = dtLocalToISO($('annInEnd').value);
+    var hasBodyText = !!bodyHtml && !!bodyHtml.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    if (!title && !_imgUrl && !hasBodyText) { $('annPubMsg').textContent = 'Add a picture, title, or message.'; return; }
+    if (!starts || !ends) { $('annPubMsg').textContent = 'Set start and end.'; return; }
+    if (new Date(ends) <= new Date(starts)) { $('annPubMsg').textContent = 'End must be after start.'; return; }
+    $('annPubMsg').textContent = 'Publishing…';
+    try {
+      var r = await rpc('admin_save_announcement', {
+        p_token: tk, p_id: _editId, p_title: title, p_body_html: bodyHtml, p_image_url: _imgUrl, p_starts: starts, p_ends: ends
+      });
+      if (!r.ok) { var et = await r.text().catch(function () { return ''; }); throw new Error(r.status + ' ' + et.slice(0, 180)); }
+      $('annPubMsg').textContent = _editId ? 'Updated.' : 'Published.';
+      resetForm();
+      loadAdminList();
+      loadActive();
+    } catch (e) { $('annPubMsg').textContent = 'Save failed: ' + ((e && e.message) ? e.message : 'unknown'); }
+  }
+
+  async function loadAdminList(){
+    var box = $('annAdminList'); if (!box) return;
+    var tk = token();
+    if (!tk) { box.innerHTML = '<div style="color:#5a7183;font-size:13px;">No admin token — add <code>?token=…</code> to the URL.</div>'; return; }
+    box.innerHTML = '<div style="color:#5a7183;font-size:13px;">Loading…</div>';
+    try {
+      var r = await rpc('admin_list_announcements', { p_token: tk });
+      if (!r.ok) { var lt = await r.text().catch(function () { return ''; }); throw new Error(r.status + ' ' + lt.slice(0, 180)); }
+      var rows = await r.json(); if (!Array.isArray(rows)) rows = [];
+      _rows = rows;
+      if (!rows.length) { box.innerHTML = '<div style="color:#5a7183;font-size:13px;">No announcements yet.</div>'; return; }
+      box.innerHTML = rows.map(function (x) {
+        var color = x.status === 'live' ? '#1c8f82' : (x.status === 'scheduled' ? '#d4900a' : '#5a7183');
+        var lab   = x.status === 'live' ? 'LIVE'    : (x.status === 'scheduled' ? 'SCHEDULED' : 'PAST');
+        return '<div class="aa-listrow">' +
+          '<span style="width:7px;height:7px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>' +
+          '<span style="flex:1;color:#16303f;">' + (escText(x.title || '') || (x.image_url ? '(picture)' : '(untitled)')) + '</span>' +
+          '<span style="font-size:10px;font-weight:700;letter-spacing:.4px;color:' + color + ';">' + lab + '</span>' +
+          '<button type="button" data-edit="' + escText(x.id) + '" aria-label="Edit" style="background:none;border:none;cursor:pointer;color:#5a7183;font-size:15px;">✎</button>' +
+          '<button type="button" data-del="' + escText(x.id) + '" aria-label="Delete" style="background:none;border:none;cursor:pointer;color:#e83d3d;font-size:15px;">✖</button>' +
+        '</div>';
+      }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('[data-edit]'), function (b) { b.addEventListener('click', function () { editRow(b.getAttribute('data-edit')); }); });
+      Array.prototype.forEach.call(box.querySelectorAll('[data-del]'),  function (b) { b.addEventListener('click', function () { delRow(b.getAttribute('data-del')); }); });
+    } catch (e) { box.innerHTML = '<div style="color:#5a7183;font-size:13px;">Couldn’t load: ' + escText((e && e.message) ? e.message : 'unknown') + '</div>'; }
+  }
+
+  function editRow(id){
+    var x = _rows.filter(function (r) { return r.id === id; })[0]; if (!x) return;
+    _editId = x.id; _imgUrl = x.image_url || '';
+    $('annInTitle').value = x.title || '';
+    $('annEdBody').innerHTML = clean(x.body_html || '');
+    $('annInStart').value = isoToDtLocal(x.starts_at);
+    $('annInEnd').value   = isoToDtLocal(x.ends_at);
+    if (_imgUrl) { $('annImgPrev').src = _imgUrl; $('annImgWrap').style.display = 'block'; } else { $('annImgWrap').style.display = 'none'; }
+    $('annFormTitle').textContent = 'Edit announcement';
+    $('annPubBtn').textContent = 'Save changes';
+    $('annPubMsg').textContent = '';
+    var ov = $('annAdminOverlay'); if (ov) ov.scrollTop = 0;
+  }
+
+  async function delRow(id){
+    var tk = token(); if (!tk) return;
+    if (!window.confirm('Delete this announcement?')) return;
+    try {
+      var r = await rpc('admin_delete_announcement', { p_token: tk, p_id: id });
+      if (r.ok) { if (_editId === id) resetForm(); loadAdminList(); loadActive(); }
+    } catch (e) {}
+  }
+
+  function openAnnounceAdmin(){ if (!token()) return; buildAdminOverlay(); var ov = $('annAdminOverlay'); if (ov) ov.classList.add('show'); loadAdminList(); }
+  function closeAnnounceAdmin(){ var ov = $('annAdminOverlay'); if (ov) ov.classList.remove('show'); }
+  window.openAnnounceAdmin = openAnnounceAdmin;
+
+  function init(){
+    loadActive();
+    if (ADMIN_MODE) openAnnounceAdmin();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
 </body>
 </html>
