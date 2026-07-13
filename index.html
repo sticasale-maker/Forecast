@@ -518,6 +518,11 @@
   }
   .day-btn:hover { border-color:var(--teal); color:var(--teal); }
   .day-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:700; }
+  .snap-sort { display:flex; align-items:center; gap:8px; justify-content:flex-end; margin:0 0 8px; }
+  .snap-sort-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-right:2px; }
+  .snap-sort-btn { font-family:'DM Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+  .snap-sort-btn:hover { border-color:var(--teal); color:var(--teal); }
+  .snap-sort-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:700; }
   /* Hour slider row */
   .hour-slider-row {
     display:flex; align-items:center; gap:14px;
@@ -1281,6 +1286,11 @@
   <div class="view-panel active" id="panel-snapshot">
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
     <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap for the best dive window <span class="tap-hint-arrow">↓</span></div>
+    <div class="snap-sort" id="snapSort" style="display:none;">
+      <span class="snap-sort-label">Sort</span>
+      <button type="button" class="snap-sort-btn" id="snapSortScore" onclick="setSnapSort('score')">Best score</button>
+      <button type="button" class="snap-sort-btn" id="snapSortName" onclick="setSnapSort('name')">A–Z</button>
+    </div>
     <div class="snapshot-bars" id="snapshotBars"></div>
     <div class="snap-zone-axis" id="snapZoneAxis" aria-hidden="true" style="display:none;">
       <div class="snap-zone-track">
@@ -2752,6 +2762,17 @@ function renderTimeline(hourlyMatrix) {
 let _hourlyMatrix = [];
 let _tideEntries  = [];   // raw H/L turning points from WillyWeather
 
+let _snapSort = (() => { try { return localStorage.getItem('viz_snap_sort') === 'name' ? 'name' : 'score'; } catch (e) { return 'score'; } })();
+function setSnapSort(mode) {
+  _snapSort = (mode === 'name') ? 'name' : 'score';
+  try { localStorage.setItem('viz_snap_sort', _snapSort); } catch (e) {}
+  const scoreBtn = document.getElementById('snapSortScore');
+  const nameBtn = document.getElementById('snapSortName');
+  if (scoreBtn) scoreBtn.classList.toggle('active', _snapSort === 'score');
+  if (nameBtn) nameBtn.classList.toggle('active', _snapSort === 'name');
+  const slider = document.getElementById('snapshotSlider');
+  if (slider) renderSnapshot(parseInt(slider.value, 10) || 0);
+}
 function renderSnapshot(sliderVal) {
   if (!_hourlyMatrix.length) return;
 
@@ -2793,10 +2814,15 @@ function renderSnapshot(sliderVal) {
   }
 
   // Compute all site scores and sort descending
-  const results = SITES.map(site => {
-    const {score, demerits} = calcScore(site, h);
-    return {site, name: site.name, score, demerits};
-  }).sort((a,b) => b.score - a.score);
+  const results = SITES.map(site => { const {score, demerits} = calcScore(site, h); return {site, name: site.name, score, demerits}; }).sort((a,b) => _snapSort === 'name' ? a.name.localeCompare(b.name) : b.score - a.score);
+  const sortRow = document.getElementById('snapSort');
+  if (sortRow) {
+    sortRow.style.display = 'flex';
+    const scoreBtn = document.getElementById('snapSortScore');
+    const nameBtn = document.getElementById('snapSortName');
+    if (scoreBtn) scoreBtn.classList.toggle('active', _snapSort === 'score');
+    if (nameBtn) nameBtn.classList.toggle('active', _snapSort === 'name');
+  }
 
   const container = document.getElementById('snapshotBars');
   container.innerHTML = '';
