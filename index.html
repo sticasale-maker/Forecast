@@ -87,6 +87,15 @@
   .header-right { margin-left:auto; text-align:right; }
   .last-updated { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:1px; }
 
+  .app-banner {
+    display:block;
+    width:100%;
+    height:auto;
+    border-radius:12px;
+    margin-bottom:28px;
+    box-shadow:0 0 20px rgba(0,194,168,0.15);
+  }
+
   .conditions-bar {
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
@@ -1114,6 +1123,8 @@
     <div class="header-right">
     </div>
   </header>
+
+  <img src="banner.jpg" alt="" class="app-banner">
 
   <div id="reportsStrip" onclick="openReportsSheet()" style="display:none;"></div>
 
