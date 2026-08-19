@@ -1567,9 +1567,11 @@ function applySheetConfig(rows) {
   if (rows[24] && rows[24][1] && rows[24][1].includes('Swell sens')) {
     CONFIG.swellSens = SITE_KEYS_ORDERED.map((_,i) => n(rows[24][i+2]));
   }
-  // Row 26 (0-based: 25) — Period power TUNE  →  spm = 144 / periodPower
-  if (rows[25] && rows[25][1] && rows[25][1].includes('Period power')) {
-    CONFIG.periodPower = SITE_KEYS_ORDERED.map((_,i) => n(rows[25][i+2]));
+  // Row 27 (0-based: 26) — Swell period multiplier (spm), read directly from the
+  // sheet cell (C27 etc.) in multiplier units — calcScore uses it as spm without
+  // re-deriving. Do NOT read row 26 'Period power' (raw units, wrong scale).
+  if (rows[26] && rows[26][1] && rows[26][1].toLowerCase().includes('multiplier')) {
+    CONFIG.periodPower = SITE_KEYS_ORDERED.map((_,i) => n(rows[26][i+2]));
   }
 
   // Rows 32–63 (0-based: 31–62) — direction table
