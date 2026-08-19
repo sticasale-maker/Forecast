@@ -3552,7 +3552,17 @@ async function validateScores(data) {
       swell2P:     Math.round(data.swell2P),
     });
 
-    const res = await vizFetch(APPS_SCRIPT_URL + '?' + params.toString(), {}, 10000);
+    // Apps Script cold starts can exceed 10s — allow 25s and retry once.
+    let res;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        res = await vizFetch(APPS_SCRIPT_URL + '?' + params.toString(), {}, 25000);
+        break;
+      } catch (e) {
+        if (attempt >= 2) throw e;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
     if (!res.ok) throw new Error(`Script returned ${res.status}`);
     const json = await res.json();
     if (json.error) throw new Error(json.error);
