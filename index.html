@@ -4355,6 +4355,10 @@ async function admLoadCurrent() {
 // ── Public community reports: strip + slide-up sheet ──
 // Reads the same site_sightings table; shows only sites whose OWN report date
 // is present and within REPORT_MAX_AGE_DAYS.
+// KILL SWITCH — Sep 2026: community reports hidden while the FB scraper account
+// is under review (possible compromise). Set back to true to restore the strip
+// and sheet; no other change needed. Admin panel is unaffected.
+const COMMUNITY_REPORTS_ENABLED = false;
 let _publicReports = [];
 let _admStaleIds = [];   // undated/stale site_ids found in the admin list, for one-click purge
 
@@ -4376,6 +4380,11 @@ function timeAgo(iso) {
 }
 
 async function loadPublicReports() {
+  if (!COMMUNITY_REPORTS_ENABLED) {
+    _publicReports = [];
+    renderReportsStrip();   // empty list → strip hides itself; sheet can't open
+    return;
+  }
   try {
     const res = await vizFetch(
       ADM_TABLE_URL + '?select=site_id,site_name,summary,updated_at&order=updated_at.desc',
