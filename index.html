@@ -232,7 +232,7 @@
   .tab-btn {
     font-family:'DM Mono',monospace; font-size:clamp(10px,2.8vw,14px);
     text-transform:uppercase; letter-spacing:clamp(0.5px,0.4vw,1.5px);
-    padding:10px clamp(8px,2.5vw,22px); border-radius:6px; border:1px solid var(--border);
+    padding:8px clamp(8px,2.5vw,22px); border-radius:6px; border:1px solid var(--border);
     background:transparent; color:var(--text-dim); cursor:pointer;
     transition:all 0.15s; white-space:nowrap; flex:1; text-align:center;
   }
@@ -543,7 +543,7 @@
 
   /* ── Snapshot bar chart ── */
   .snapshot-controls {
-    display:flex; flex-direction:column; gap:14px; margin-top:20px; margin-bottom:24px;
+    display:flex; flex-direction:column; gap:10px; margin-top:12px; margin-bottom:18px;
   }
   /* Day buttons row */
   .day-btns {
@@ -551,14 +551,14 @@
   }
   .day-btn {
     font-family:'DM Mono',monospace; font-size:12px; text-transform:uppercase;
-    letter-spacing:1px; padding:10px 18px; border-radius:8px;
+    letter-spacing:1px; padding:8px 14px; border-radius:8px;
     border:1px solid var(--border); background:transparent;
     color:var(--text-dim); cursor:pointer; transition:all 0.15s;
     white-space:nowrap;
   }
   .day-btn:hover { border-color:var(--teal); color:var(--teal); }
   .day-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:700; }
-  .snap-sort { display:flex; align-items:center; gap:8px; justify-content:flex-end; margin:0 0 8px; }
+  .snap-sort { display:flex; align-items:center; gap:8px; justify-content:flex-end; margin:0 0 6px; }
   .snap-sort-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-right:2px; }
   .snap-sort-btn { font-family:'DM Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; transition:all 0.15s; white-space:nowrap; }
   .snap-sort-btn:hover { border-color:var(--teal); color:var(--teal); }
@@ -618,7 +618,7 @@
   .wx-strip {
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     background:var(--card); border:1px solid var(--border); border-radius:14px;
-    padding:14px 20px; margin:0 0 14px;
+    padding:11px 16px; margin:0 0 10px;
   }
   .wx-left { display:flex; align-items:center; gap:12px; min-width:0; }
   .wx-icon { font-size:30px; line-height:1; flex-shrink:0; }
@@ -649,21 +649,28 @@
   .wx-feels { display:flex; align-items:baseline; flex-shrink:0; }
   /* Time display is now inline in the section title */
   #snapshotTitle span {
-    color:#fff; font-size:28px;
+    color:#fff; font-size:25px;
   }
-  /* Centre the time between two rules instead of left-aligned with a trailing rule */
-  #snapshotTitle { justify-content:center; }
+  /* Centre the time between two rules instead of left-aligned with a trailing rule.
+     Sticky so the day/time stays on screen while you reach the hour slider below. */
+  #snapshotTitle {
+    justify-content:center;
+    position:sticky; top:0; z-index:12;
+    margin-bottom:9px; padding:7px 0 5px;
+    background:rgba(6,16,32,0.92);
+    backdrop-filter:blur(6px);
+  }
   #snapshotTitle::before {
     content:''; flex:1; height:1px; background:var(--border);
   }
   .snapshot-bars {
-    display:flex; flex-direction:column; gap:6px; margin-bottom:8px;
+    display:flex; flex-direction:column; gap:5px; margin-bottom:6px;
     width:100vw; position:relative; left:50%; transform:translateX(-50%);
     padding:0 20px; box-sizing:border-box;
   }
   .snap-tap-hint {
     display:block; width:fit-content; max-width:calc(100% - 40px);
-    margin:-2px auto 14px; text-align:center;
+    margin:-2px auto 10px; text-align:center;
     font-family:'DM Mono',monospace; font-size:14.5px; font-weight:500;
     letter-spacing:0.5px; color:#fff;
     background:rgba(0,194,168,0.12);
@@ -724,7 +731,7 @@
   }
   /* Zone captions under the bars — centred in each scoring band */
   .snap-zone-axis {
-    display:flex; align-items:center; gap:10px; margin-bottom:40px;
+    display:flex; align-items:center; gap:10px; margin-bottom:18px;
     width:100vw; position:relative; left:50%; transform:translateX(-50%);
     padding:0 20px; box-sizing:border-box;
   }
@@ -815,6 +822,47 @@
   .val-demerit-row.mismatch td { color:var(--red); opacity:0.8; }
   .val-dem { font-family:'DM Mono',monospace; }
 
+  /* ── Share this app ────────────────────────────────────────────────────────── */
+  .share-block { margin-top:40px; margin-bottom:48px; }
+  .share-card {
+    display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:20px 22px; backdrop-filter:blur(10px); max-width:620px;
+  }
+  /* White plate behind the code — scanners want the quiet zone light */
+  .share-qr {
+    flex-shrink:0; width:132px; height:132px;
+    background:#fff; border-radius:10px; padding:7px;
+    box-shadow:0 0 18px rgba(0,194,168,0.18);
+  }
+  .share-qr svg { display:block; width:100%; height:100%; }
+  .share-copy { flex:1; min-width:200px; }
+  .share-lead { font-size:14px; line-height:1.5; color:var(--text); margin-bottom:10px; }
+  .share-url {
+    font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.5px;
+    color:var(--teal); word-break:break-all; margin-bottom:14px;
+  }
+  .share-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .share-btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 22px; background:var(--teal); color:#000; border:none; border-radius:6px;
+    font-family:'DM Mono',monospace; font-size:13px; font-weight:700;
+    text-transform:uppercase; letter-spacing:1.5px; cursor:pointer;
+    transition:opacity 0.15s;
+  }
+  .share-btn:hover  { opacity:0.85; }
+  .share-btn:active { opacity:0.7; }
+  .share-msg {
+    font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px;
+    color:var(--teal); min-height:14px;
+  }
+  @media (max-width:480px) {
+    .share-block { margin-top:32px; margin-bottom:36px; }
+    .share-card  { gap:16px; padding:16px; justify-content:center; }
+    .share-qr    { width:118px; height:118px; }
+    .share-lead  { font-size:13px; }
+  }
+
   /* ── Responsive ────────────────────────────────────────────────────────────── */
 
   /* Fluid wrap padding — tighter on small screens */
@@ -824,8 +872,8 @@
 
   /* Header: stack logo + text tighter, shrink logo image */
   @media (max-width:480px) {
-    header { padding:18px 0 16px; gap:12px; margin-bottom:18px; }
-    .logo-img { width:52px !important; height:52px !important; }
+    header { padding:10px 0 10px; gap:10px; margin-bottom:12px; }
+    .logo-img { width:46px !important; height:46px !important; }
     .logo { font-size:clamp(30px,9vw,48px) !important; }
     .header-sub { font-size:9px; letter-spacing:1px; }
   }
@@ -851,14 +899,53 @@
     .section-title { font-size:18px; letter-spacing:2px; }
   }
 
-  /* Snapshot bars panel */
+  /* Snapshot bars panel — kept tight so the hour slider stays above the fold */
   @media (max-width:480px) {
-    .snapshot-bars  { gap:5px; }
-    .snap-bar-track { height:22px; }
-    .snap-name      { font-size:13px; left:9px; }
-    .snap-bar-score { font-size:14px; }
-    .snap-zone-axis { margin-bottom:24px; }
-    .snapshot-controls { gap:10px; margin-top:14px; margin-bottom:18px; }
+    .snapshot-bars  { gap:4px; }
+    .snap-bar-track { height:19px; }
+    .snap-name      { font-size:12.5px; left:9px; }
+    .snap-bar-score { font-size:13px; }
+    .snap-zone-axis { margin-bottom:12px; }
+    .snapshot-controls { gap:8px; margin-top:10px; margin-bottom:14px; }
+    .wx-strip       { padding:9px 13px; margin:0 0 9px; }
+    .wx-icon        { font-size:26px; }
+    #snapshotTitle span { font-size:21px; }
+    #snapshotTitle  { margin-bottom:7px; padding:6px 0 4px; }
+    .snap-tap-hint  { font-size:13px; padding:5px 12px; margin:-2px auto 8px; }
+    .tap-hint-arrow { font-size:19px; }
+    .snap-sort      { margin:0 0 5px; gap:6px; }
+    .snap-sort-btn  { padding:4px 10px; font-size:10px; }
+    .day-btn        { padding:7px 11px; font-size:11px; }
+    .day-btns       { gap:6px; }
+  }
+
+  /* Short viewports: squeeze the snapshot stack so the day buttons + hour slider
+     stay within reach of the fold. Keyed on height, not width — on a laptop it is
+     vertical room that runs out, and 13 site bars is the bulk of the scroll. */
+  @media (max-height:900px) {
+    .snapshot-bars  { gap:4px; }
+    .snap-bar-track { height:19px; }
+    .snap-tap-hint  { margin:-2px auto 8px; }
+    .snap-zone-axis { margin-bottom:12px; }
+    .snapshot-controls { gap:8px; margin-top:9px; margin-bottom:14px; }
+    .wx-strip       { padding:9px 14px; margin:0 0 9px; }
+  }
+  /* The big desktop header is worth trimming too once the window is short. */
+  @media (max-height:900px) and (min-width:481px) {
+    header    { padding:14px 0 12px; margin-bottom:12px; }
+    .logo-img { width:clamp(52px,5.2vw,66px); height:clamp(52px,5.2vw,66px); }
+  }
+  @media (max-height:720px) {
+    .snapshot-bars  { gap:3px; }
+    .snap-bar-track { height:18px; }
+    .snap-tap-hint  { font-size:12.5px; padding:4px 11px; margin:-2px auto 7px; }
+    .snap-zone-axis { margin-bottom:10px; }
+    .snapshot-controls { gap:7px; margin-top:8px; margin-bottom:12px; }
+    .wx-strip       { padding:8px 13px; margin:0 0 8px; }
+  }
+  @media (max-height:720px) and (max-width:480px) {
+    header    { padding:8px 0 8px; margin-bottom:10px; }
+    .logo-img { width:44px !important; height:44px !important; }
   }
 
   /* Timeline table: allow horizontal scroll, shrink cells */
@@ -1375,6 +1462,28 @@
     </div>
   </div>
 
+  <!-- SHARE THIS APP -->
+  <div class="share-block">
+    <div class="section-title">Share this app</div>
+    <div class="share-card">
+      <div class="share-qr" id="shareQr"></div>
+      <div class="share-copy">
+        <div class="share-lead">Point a phone camera at the code, or send the link to a dive buddy.</div>
+        <div class="share-url" id="shareUrl"></div>
+        <div class="share-actions">
+          <button type="button" class="share-btn" id="shareBtn">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M11 5.5a2 2 0 1 0-1.9-2.6L6.4 4.4a2 2 0 1 0 0 3.2l2.7 1.5a2 2 0 1 0 .5-.9L6.9 6.7a2 2 0 0 0 0-1.4l2.7-1.5A2 2 0 0 0 11 5.5Z"
+                    fill="currentColor"/>
+            </svg>
+            Share this app
+          </button>
+          <span class="share-msg" id="shareMsg" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1424,6 +1533,338 @@ async function submitFeedback() {
   }
 }
 </script>
+<script>
+/* ── Share this app ───────────────────────────────────────────────────────────
+   Self-contained QR encoder (byte mode, versions 1-6) rendered as inline SVG —
+   no library, no image file, no network call. Verified against a reference
+   encoder and round-tripped through a real scanner for v1-v6 at every EC level.
+
+   SHARE_URL is deliberately a constant, not derived from location.href: the app
+   is also opened as ...?token=<admin token>, and a QR built from the live URL
+   would bake that token into anything anyone shares. */
+(function () {
+  var SHARE_URL   = 'https://app.viz.net.au/Forecast/';
+  var SHARE_LABEL = 'app.viz.net.au/Forecast';
+
+  function qrMatrix(text, ecl) {
+    ecl = ecl || 'M';
+    var ECL_BITS = { L: 1, M: 0, Q: 3, H: 2 };
+    // [ecPerBlock, blocks1, data1, blocks2, data2] indexed [version][ecl]
+    var EC = {
+      1: { L: [7, 1, 19, 0, 0],  M: [10, 1, 16, 0, 0], Q: [13, 1, 13, 0, 0], H: [17, 1, 9, 0, 0] },
+      2: { L: [10, 1, 34, 0, 0], M: [16, 1, 28, 0, 0], Q: [22, 1, 22, 0, 0], H: [28, 1, 16, 0, 0] },
+      3: { L: [15, 1, 55, 0, 0], M: [26, 1, 44, 0, 0], Q: [18, 2, 17, 0, 0], H: [22, 2, 13, 0, 0] },
+      4: { L: [20, 1, 80, 0, 0], M: [18, 2, 32, 0, 0], Q: [26, 2, 24, 0, 0], H: [16, 4, 9, 0, 0] },
+      5: { L: [26, 1, 108, 0, 0],M: [24, 2, 43, 0, 0], Q: [18, 2, 15, 2, 16],H: [22, 2, 11, 2, 12] },
+      6: { L: [18, 2, 68, 0, 0], M: [16, 4, 27, 0, 0], Q: [24, 4, 19, 0, 0], H: [28, 4, 15, 0, 0] }
+    };
+    var ALIGN = { 1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34] };
+
+    // ── UTF-8 bytes ────────────────────────────────────────────────────────────
+    var bytes = [];
+    for (var i = 0; i < text.length; i++) {
+      var c = text.charCodeAt(i);
+      if (c < 0x80) bytes.push(c);
+      else if (c < 0x800) bytes.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0xD800 || c >= 0xE000) bytes.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else { // surrogate pair
+        i++;
+        var cp = 0x10000 + (((c & 0x3FF) << 10) | (text.charCodeAt(i) & 0x3FF));
+        bytes.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+      }
+    }
+
+    // ── Pick the smallest version that fits ────────────────────────────────────
+    var ver = 0, spec = null;
+    for (var v = 1; v <= 6; v++) {
+      var s = EC[v][ecl];
+      var cap = s[1] * s[2] + s[3] * s[4];
+      if (bytes.length + 2 <= cap) { ver = v; spec = s; break; }   // +2 = mode nibble + 8-bit count
+    }
+    if (!ver) throw new Error('QR: text too long');
+
+    var ecLen = spec[0], nb1 = spec[1], dc1 = spec[2], nb2 = spec[3], dc2 = spec[4];
+    var totalData = nb1 * dc1 + nb2 * dc2;
+
+    // ── Bit stream: mode 0100, 8-bit length, data, terminator, pad ─────────────
+    var bits = [];
+    function push(val, len) { for (var b = len - 1; b >= 0; b--) bits.push((val >> b) & 1); }
+    push(4, 4);
+    push(bytes.length, 8);                      // versions 1-9, byte mode → 8-bit count
+    for (var i2 = 0; i2 < bytes.length; i2++) push(bytes[i2], 8);
+    var capBits = totalData * 8;
+    for (var t = 0; t < 4 && bits.length < capBits; t++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    var data = [];
+    for (var i3 = 0; i3 < bits.length; i3 += 8) {
+      var byte = 0;
+      for (var b2 = 0; b2 < 8; b2++) byte = (byte << 1) | bits[i3 + b2];
+      data.push(byte);
+    }
+    var pads = [0xEC, 0x11], p = 0;
+    while (data.length < totalData) data.push(pads[p++ % 2]);
+
+    // ── GF(256) tables ─────────────────────────────────────────────────────────
+    var EXP = new Array(512), LOG = new Array(256);
+    for (var x = 0, e = 1; x < 255; x++) { EXP[x] = e; LOG[e] = x; e <<= 1; if (e & 256) e ^= 0x11D; }
+    for (var x2 = 255; x2 < 512; x2++) EXP[x2] = EXP[x2 - 255];
+    function mul(a, b) { return (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]]; }
+
+    // Generator polynomial for `deg` EC codewords
+    function genPoly(deg) {
+      var g = [1];
+      for (var d = 0; d < deg; d++) {
+        var ng = new Array(g.length + 1).fill(0);
+        // g(x) * (x + a^d), coefficients stored leading-first
+        for (var j = 0; j < g.length; j++) {
+          ng[j] ^= g[j];                        // the x term
+          ng[j + 1] ^= mul(g[j], EXP[d]);       // the a^d term
+        }
+        g = ng;
+      }
+      return g;
+    }
+    var gp = genPoly(ecLen);
+    function ecFor(block) {
+      var rem = new Array(ecLen).fill(0);
+      for (var j = 0; j < block.length; j++) {
+        var factor = block[j] ^ rem[0];
+        rem.shift(); rem.push(0);
+        for (var k = 0; k < ecLen; k++) rem[k] ^= mul(gp[k + 1], factor);
+      }
+      return rem;
+    }
+
+    // ── Split into blocks, compute EC, interleave ──────────────────────────────
+    var dBlocks = [], eBlocks = [], off = 0;
+    for (var b3 = 0; b3 < nb1 + nb2; b3++) {
+      var len = b3 < nb1 ? dc1 : dc2;
+      var blk = data.slice(off, off + len); off += len;
+      dBlocks.push(blk); eBlocks.push(ecFor(blk));
+    }
+    var out = [];
+    var maxD = Math.max(dc1, dc2);
+    for (var i4 = 0; i4 < maxD; i4++)
+      for (var b4 = 0; b4 < dBlocks.length; b4++)
+        if (i4 < dBlocks[b4].length) out.push(dBlocks[b4][i4]);
+    for (var i5 = 0; i5 < ecLen; i5++)
+      for (var b5 = 0; b5 < eBlocks.length; b5++) out.push(eBlocks[b5][i5]);
+
+    // ── Build the matrix ───────────────────────────────────────────────────────
+    var size = ver * 4 + 17;
+    var mod = [], res = [];   // mod = module value, res = reserved (function pattern)
+    for (var r = 0; r < size; r++) { mod.push(new Array(size).fill(0)); res.push(new Array(size).fill(0)); }
+
+    function setF(r2, c2, val) { mod[r2][c2] = val; res[r2][c2] = 1; }
+
+    // Finder patterns + separators
+    function finder(row, col) {
+      for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) {
+        var rr = row + dr, cc = col + dc;
+        if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue;
+        var inRing = (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) &&
+          (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4));
+        setF(rr, cc, inRing ? 1 : 0);
+      }
+    }
+    finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+
+    // Timing patterns
+    for (var i6 = 8; i6 < size - 8; i6++) { setF(6, i6, i6 % 2 === 0 ? 1 : 0); setF(i6, 6, i6 % 2 === 0 ? 1 : 0); }
+
+    // Alignment patterns
+    var ac = ALIGN[ver];
+    for (var a1 = 0; a1 < ac.length; a1++) for (var a2 = 0; a2 < ac.length; a2++) {
+      var ar = ac[a1], acol = ac[a2];
+      if (res[ar][acol]) continue;   // skip where it would overlap a finder
+      for (var dr2 = -2; dr2 <= 2; dr2++) for (var dc2 = -2; dc2 <= 2; dc2++)
+        setF(ar + dr2, acol + dc2, (Math.abs(dr2) === 2 || Math.abs(dc2) === 2 || (dr2 === 0 && dc2 === 0)) ? 1 : 0);
+    }
+
+    // Reserve format-info areas (values written after masking)
+    for (var i7 = 0; i7 < 9; i7++) { if (!res[8][i7]) setF(8, i7, 0); if (!res[i7][8]) setF(i7, 8, 0); }
+    for (var i8 = 0; i8 < 8; i8++) { if (!res[8][size - 1 - i8]) setF(8, size - 1 - i8, 0); if (!res[size - 1 - i8][8]) setF(size - 1 - i8, 8, 0); }
+    setF(size - 8, 8, 1);   // dark module
+
+    // ── Place data in the zigzag ───────────────────────────────────────────────
+    var bitIdx = 0;
+    function nextBit() {
+      if (bitIdx >= out.length * 8) return 0;
+      var bit = (out[bitIdx >> 3] >> (7 - (bitIdx & 7))) & 1;
+      bitIdx++;
+      return bit;
+    }
+    var upward = true;
+    for (var col = size - 1; col > 0; col -= 2) {
+      if (col === 6) col--;                       // skip the vertical timing column
+      for (var n = 0; n < size; n++) {
+        var row = upward ? size - 1 - n : n;
+        for (var c3 = 0; c3 < 2; c3++) {
+          var cc2 = col - c3;
+          if (res[row][cc2]) continue;
+          mod[row][cc2] = nextBit();
+        }
+      }
+      upward = !upward;
+    }
+
+    // ── Masking ────────────────────────────────────────────────────────────────
+    function maskFn(m, r3, c4) {
+      switch (m) {
+        case 0: return (r3 + c4) % 2 === 0;
+        case 1: return r3 % 2 === 0;
+        case 2: return c4 % 3 === 0;
+        case 3: return (r3 + c4) % 3 === 0;
+        case 4: return (Math.floor(r3 / 2) + Math.floor(c4 / 3)) % 2 === 0;
+        case 5: return ((r3 * c4) % 2) + ((r3 * c4) % 3) === 0;
+        case 6: return (((r3 * c4) % 2) + ((r3 * c4) % 3)) % 2 === 0;
+        default: return (((r3 + c4) % 2) + ((r3 * c4) % 3)) % 2 === 0;
+      }
+    }
+    function formatBits(m) {
+      var d = (ECL_BITS[ecl] << 3) | m, rem2 = d;
+      for (var k2 = 0; k2 < 10; k2++) rem2 = (rem2 << 1) ^ (((rem2 >> 9) & 1) * 0x537);
+      return (((d << 10) | rem2) ^ 0x5412);
+    }
+    // The 15 format modules, in bit order: position p carries bit (14 - p), i.e. MSB first.
+    var FMT1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+    var FMT2 = [[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],
+                [8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]];
+    function applyFormat(grid, m) {
+      var f = formatBits(m);
+      for (var p2 = 0; p2 < 15; p2++) {
+        var bit = (f >> (14 - p2)) & 1;
+        grid[FMT1[p2][0]][FMT1[p2][1]] = bit;
+        grid[FMT2[p2][0]][FMT2[p2][1]] = bit;
+      }
+      grid[size - 8][8] = 1;   // dark module (overwrites FMT2 position 7's column twin)
+    }
+    function penalty(grid) {
+      var pen = 0, n2 = size;
+      // Rule 1 — runs of 5+
+      for (var r4 = 0; r4 < n2; r4++) {
+        for (var dir = 0; dir < 2; dir++) {
+          var run = 1, prev = -1;
+          for (var c5 = 0; c5 < n2; c5++) {
+            var val = dir === 0 ? grid[r4][c5] : grid[c5][r4];
+            if (val === prev) { run++; if (run === 5) pen += 3; else if (run > 5) pen++; }
+            else { prev = val; run = 1; }
+          }
+        }
+      }
+      // Rule 2 — 2x2 blocks
+      for (var r5 = 0; r5 < n2 - 1; r5++) for (var c6 = 0; c6 < n2 - 1; c6++) {
+        var v0 = grid[r5][c6];
+        if (v0 === grid[r5][c6 + 1] && v0 === grid[r5 + 1][c6] && v0 === grid[r5 + 1][c6 + 1]) pen += 3;
+      }
+      // Rule 3 — finder-like 1:1:3:1:1 patterns with 4 light modules either side
+      var p1 = [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0], p2 = [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1];
+      for (var r6 = 0; r6 < n2; r6++) for (var c7 = 0; c7 <= n2 - 11; c7++) {
+        var okA = true, okB = true, okC = true, okD = true;
+        for (var k4 = 0; k4 < 11; k4++) {
+          if (grid[r6][c7 + k4] !== p1[k4]) okA = false;
+          if (grid[r6][c7 + k4] !== p2[k4]) okB = false;
+          if (grid[c7 + k4][r6] !== p1[k4]) okC = false;
+          if (grid[c7 + k4][r6] !== p2[k4]) okD = false;
+        }
+        if (okA) pen += 40; if (okB) pen += 40; if (okC) pen += 40; if (okD) pen += 40;
+      }
+      // Rule 4 — dark/light balance
+      var dark = 0;
+      for (var r7 = 0; r7 < n2; r7++) for (var c8 = 0; c8 < n2; c8++) dark += grid[r7][c8];
+      pen += Math.floor(Math.abs(dark * 100 / (n2 * n2) - 50) / 5) * 10;
+      return pen;
+    }
+
+    var best = null, bestPen = Infinity;
+    for (var m2 = 0; m2 < 8; m2++) {
+      var g2 = mod.map(function (row2) { return row2.slice(); });
+      for (var r8 = 0; r8 < size; r8++) for (var c9 = 0; c9 < size; c9++)
+        if (!res[r8][c9] && maskFn(m2, r8, c9)) g2[r8][c9] ^= 1;
+      applyFormat(g2, m2);
+      var pn = penalty(g2);
+      if (pn < bestPen) { bestPen = pn; best = g2; }
+    }
+    return best;
+  }
+
+  // ── Render the matrix as one SVG path ──────────────────────────────────────
+  function qrSvg(text) {
+    var m = qrMatrix(text, 'M');
+    var n = m.length, q = 4, side = n + q * 2;      // 4-module quiet zone, per spec
+    var d = '';
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        if (!m[r][c]) continue;
+        // merge horizontal runs so the path stays small
+        var start = c;
+        while (c + 1 < n && m[r][c + 1]) c++;
+        d += 'M' + (start + q) + ' ' + (r + q) + 'h' + (c - start + 1) + 'v1h-' + (c - start + 1) + 'z';
+      }
+    }
+    return '<svg viewBox="0 0 ' + side + ' ' + side + '" xmlns="http://www.w3.org/2000/svg" ' +
+           'role="img" aria-label="QR code linking to ' + SHARE_LABEL + '" shape-rendering="crispEdges">' +
+           '<rect width="' + side + '" height="' + side + '" fill="#fff"/>' +
+           '<path d="' + d + '" fill="#0b1b2e"/></svg>';
+  }
+
+  function init() {
+    var box = document.getElementById('shareQr');
+    var urlEl = document.getElementById('shareUrl');
+    var btn = document.getElementById('shareBtn');
+    var msg = document.getElementById('shareMsg');
+    if (!box || !btn) return;
+
+    if (urlEl) urlEl.textContent = SHARE_URL;   // full URL: the copy fallback selects this text
+    try { box.innerHTML = qrSvg(SHARE_URL); }
+    catch (e) { box.style.display = 'none'; }   // never let the QR break the page
+
+    var msgTimer;
+    function say(t) {
+      if (!msg) return;
+      msg.textContent = t;
+      clearTimeout(msgTimer);
+      msgTimer = setTimeout(function () { msg.textContent = ''; }, 3000);
+    }
+
+    btn.addEventListener('click', async function () {
+      // Native share sheet on mobile; clipboard everywhere else.
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'VIZ Forecast',
+            text: 'Dive and snorkel conditions for Sydney',
+            url: SHARE_URL
+          });
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;   // user dismissed the sheet
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(SHARE_URL);
+        say('Link copied');
+      } catch (e) {
+        // Clipboard blocked (insecure origin, old browser) — select it instead.
+        if (urlEl && window.getSelection && document.createRange) {
+          var range = document.createRange();
+          range.selectNodeContents(urlEl);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          say('Copy the link');
+        } else {
+          say('Copy: ' + SHARE_URL);
+        }
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
 
 <script>
 // =============================================================================
