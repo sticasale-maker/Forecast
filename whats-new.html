@@ -72,6 +72,14 @@
   .progress button i { position: absolute; inset: 0; background: var(--teal); transform-origin: left; transform: scaleX(0); }
   .progress button.done i { transform: scaleX(1); }
 
+  .close {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 14px; letter-spacing: 1px; text-decoration: none;
+    color: var(--white); background: rgba(0,194,168,0.14); border: 1px solid rgba(0,194,168,0.5);
+    border-radius: 999px; padding: 9px 14px; -webkit-tap-highlight-color: transparent;
+  }
+  .close:hover { background: rgba(0,194,168,0.26); }
+  .close:focus-visible { outline: 2px solid var(--teal-hi); outline-offset: 2px; }
   /* ── slides ── */
   .stage { position: relative; flex: 1; min-height: 0; }
   .slide {
@@ -171,6 +179,7 @@
   <div class="top">
     <div class="brand">VIZ <b>FORECAST</b></div>
     <div class="progress" id="progress" role="tablist" aria-label="Slides"></div>
+    <a class="close" id="close" href="./" aria-label="Close the slideshow and go back to the forecast">✕ <span>Close</span></a>
   </div>
 
   <div class="stage" id="stage" aria-live="polite">
@@ -484,6 +493,15 @@
   });
   // A hidden tab shouldn't race through the deck in the background.
   document.addEventListener('visibilitychange', () => { if (document.hidden) setPlaying(false); });
+
+  // Close: go back to the app. If we came from it, step back in history so the
+  // app keeps its tab and scroll; otherwise (a shared link) open the forecast.
+  document.getElementById('close').addEventListener('click', e => {
+    let fromApp = false;
+    try { fromApp = document.referrer && new URL(document.referrer).origin === location.origin; } catch (err) {}
+    if (fromApp && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('close').click(); });
 
   go(0);
   raf = requestAnimationFrame(tick);
