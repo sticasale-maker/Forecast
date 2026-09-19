@@ -512,6 +512,12 @@
     border-radius:12px; padding:14px 16px; margin:4px 0 6px; font-size:14px; line-height:1.55;
   }
   .install-card .ic-title { font-weight:600; color:#fff; margin-bottom:6px; font-size:15px; }
+  .rc-row { display:flex; gap:10px; align-items:center; margin-top:8px; }
+  .rc-row select {
+    flex:1; font:inherit; color:#fff; background:rgba(13,32,64,0.9); border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px;
+  }
+  .rc-row .nh-btn { margin-top:0; }
   #siteSheetBadge {
     display:inline-flex; align-items:center; gap:8px; margin:10px 0 14px;
     font-family:'DM Mono',monospace; font-size:13px; letter-spacing:1px;
@@ -1513,6 +1519,14 @@
       <span style="font-size:28px;line-height:1;">☕</span> Offer me a coffee <span style="font-size:22px;line-height:1;" aria-hidden="true">🥱</span>
     </a>
   </div>
+    <div class="install-card" id="reportCard">
+      <div class="ic-title">✍️ Report conditions</div>
+      <p id="reportCardText">Were you in the water today? Tell us how it really was. Your reports are how the forecast gets tuned.</p>
+      <div class="rc-row">
+        <select id="reportSite" aria-label="Which site"></select>
+        <button type="button" class="nh-btn" onclick="reportFromMore()">Report</button>
+      </div>
+    </div>
     <div class="install-card" id="installCard" style="display:none;">
       <div class="ic-title">📲 Install VIZ Forecast</div>
       <p id="installHow">Add it to your home screen: it opens full screen, and still shows the last forecast when you have no signal.</p>
@@ -3108,6 +3122,7 @@ function switchTab(name) {
   if (REMEMBERED_TABS.includes(name)) { try { localStorage.setItem('viz_tab', name); } catch (e) {} }
   // Tabs live in the bottom bar, so bring the new view's top into sight.
   if (name !== 'about') window.scrollTo({ top: 0 });
+  if (name === 'more') _fillReportSites();
   if (name === 'admin') admLoadCurrent();
   if (name === 'dayview') dvRender();
   if (name === 'about') {
@@ -5477,6 +5492,27 @@ function onRateWhen() {
   slider.disabled = done != null;
   document.getElementById('rateSend').style.display = done != null ? 'none' : '';
   document.getElementById('rateMsg').textContent = done != null ? `Thanks, your call for this time was ${done}% (${label(done * 0.6)}).` : '';
+}
+// "Report conditions" card under More: pick a site, open its sheet on the latest
+// past hour and jump straight to the report section.
+function _fillReportSites() {
+  const sel = document.getElementById('reportSite');
+  if (!sel || sel.options.length) return;
+  sel.innerHTML = SITES.slice().sort((a,b) => a.name.localeCompare(b.name))
+    .map(s => `<option value="${s.key}">${s.name}</option>`).join('');
+  if (_favKey) sel.value = _favKey;
+}
+function reportFromMore() {
+  const site = SITES.find(s => s.key === document.getElementById('reportSite').value);
+  const hours = _hourlyMatrix.length ? _rateHours() : [];
+  if (!site || !hours.length) {
+    document.getElementById('reportCardText').textContent =
+      'Nothing to report on yet today. Reports open from an hour before sunrise.';
+    return;
+  }
+  const h = hours[0].h, { score, demerits } = calcScore(site, h);
+  openSiteSheet(site, score, demerits, h);
+  setTimeout(scrollToReport, 350);   // after the sheet's slide-up
 }
 function scrollToReport() {
   document.getElementById('siteSheetRate').scrollIntoView({ behavior: 'smooth', block: 'start' });
