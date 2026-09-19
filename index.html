@@ -56,7 +56,7 @@
     pointer-events:none;
     z-index:0;
   }
-  .wrap { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:0 20px 60px; }
+  .wrap { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:0 20px 0; }
 
   header {
     padding:32px 0 24px;
@@ -225,23 +225,29 @@
   .yellow .rating-badge { background:rgba(245,200,66,0.12); color:var(--yellow); border:1px solid rgba(245,200,66,0.25); }
   .red    .rating-badge { background:rgba(232,61,61,0.12);  color:var(--red);    border:1px solid rgba(232,61,61,0.25); }
 
-  /* ── View tabs ── */
+  /* ── View tabs — fixed bottom bar (thumb reach on phones) ── */
   .view-tabs {
-    display:flex; gap:6px; margin-bottom:0px; flex-wrap:nowrap;
+    position:fixed; left:0; right:0; bottom:0; z-index:900;
+    display:flex; gap:6px; justify-content:center; flex-wrap:nowrap;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    background:rgba(6,16,32,0.95); border-top:1px solid var(--border);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
   }
+  /* Clearance for the fixed bar. On body, not .wrap: the view panels sit outside .wrap. */
+  body { padding-bottom:calc(76px + env(safe-area-inset-bottom, 0px)); }
   .tab-btn {
-    font-family:'DM Mono',monospace; font-size:clamp(10px,2.8vw,14px);
+    font-family:'DM Mono',monospace; font-size:clamp(11px,3vw,14px);
     text-transform:uppercase; letter-spacing:clamp(0.5px,0.4vw,1.5px);
-    padding:8px clamp(8px,2.5vw,22px); border-radius:6px; border:1px solid var(--border);
+    padding:11px clamp(6px,2vw,18px); border-radius:8px; border:1px solid var(--border);
     background:transparent; color:var(--text-dim); cursor:pointer;
-    transition:all 0.15s; white-space:nowrap; flex:1; text-align:center;
+    transition:all 0.15s; white-space:nowrap; flex:1; max-width:170px; text-align:center;
   }
   .tab-btn:hover { border-color:var(--teal); color:var(--teal); }
   .tab-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:600; }
 
   .view-panel { display:none; }
   .view-panel.active { display:block; margin-top:0px; }
-  #panel-snapshot.active { margin-top:-48px; }
+  #panel-snapshot.active { margin-top:0; }
 
   /* ── Day View ── */
   .dv-chip {
@@ -395,6 +401,80 @@
     transition:background 0.15s;
   }
   #siteSheetClose:hover { background:rgba(0,194,168,0.3); }
+  .ss-head-btns { display:flex; align-items:center; gap:8px; }
+  #siteSheetFav {
+    background:transparent; border:1px solid rgba(245,200,66,0.45); color:var(--yellow);
+    font-size:24px; width:44px; height:44px; border-radius:50%; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  #siteSheetFav[aria-pressed="true"] { background:rgba(245,200,66,0.18); }
+
+  /* ── Score explainer sheet (same look as the site sheet) ── */
+  #scoreInfoOverlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none; transition:opacity 0.25s; z-index:1000;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  #scoreInfoOverlay.open { opacity:1; pointer-events:auto; }
+  #scoreInfo {
+    width:100%; max-width:640px; max-height:82vh; overflow-y:auto;
+    background:#0a1830; border:1px solid var(--border); border-bottom:none;
+    border-radius:16px 16px 0 0; padding:14px 18px calc(26px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(100%); transition:transform 0.28s cubic-bezier(0.2,0.7,0.2,1);
+  }
+  #scoreInfoOverlay.open #scoreInfo { transform:translateY(0); }
+  #scoreInfoHead {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+    font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; color:#fff;
+  }
+  #scoreInfoClose {
+    background:rgba(0,194,168,0.15); border:1px solid rgba(0,194,168,0.4);
+    color:var(--teal); font-size:26px; cursor:pointer;
+    width:44px; height:44px; border-radius:50%; line-height:1;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .si-band { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--border); font-size:14px; line-height:1.5; color:var(--text); }
+  .si-band b { color:#fff; }
+  .si-dot { width:14px; height:14px; border-radius:4px; flex-shrink:0; margin-top:4px; }
+  .si-p { font-size:14px; line-height:1.55; color:var(--text); margin-top:12px; }
+  .si-p b { color:#fff; }
+  .si-dim { color:var(--text-dim); font-size:13px; }
+
+  /* ── One-line answer + first-visit card (Snapshot top) ── */
+  .answer-line {
+    background:var(--card); border:1px solid var(--border); border-left:3px solid var(--teal);
+    border-radius:10px; padding:12px 14px; margin:14px 0 4px;
+    font-size:15px; line-height:1.55; color:var(--text);
+  }
+  .answer-line .al-lead { color:#fff; font-weight:600; }
+  .answer-line .al-avoid { display:block; margin-top:4px; font-size:13.5px; color:var(--text-dim); }
+  .al-site {
+    font:inherit; font-weight:600; color:var(--teal); background:none; border:none; padding:0;
+    cursor:pointer; text-decoration:underline; text-decoration-color:rgba(0,194,168,0.4); text-underline-offset:3px;
+  }
+  .al-site.fav::before { content:'★ '; color:var(--yellow); }
+  .new-here {
+    background:rgba(0,194,168,0.08); border:1px solid rgba(0,194,168,0.4);
+    border-radius:12px; padding:14px 16px; margin:14px 0 4px; font-size:14px; line-height:1.55;
+  }
+  .new-here .nh-title { font-weight:600; color:#fff; margin-bottom:6px; font-size:15px; }
+  .new-here p { margin-bottom:6px; }
+  .nh-btn {
+    margin-top:4px; padding:8px 18px; border-radius:8px; border:none; cursor:pointer;
+    background:var(--teal); color:#000; font-family:'DM Mono',monospace; font-weight:700;
+    font-size:12px; letter-spacing:1px; text-transform:uppercase;
+  }
+  .info-btn {
+    margin-right:auto; background:none; border:none; cursor:pointer; padding:6px 0;
+    font-family:'DM Sans',sans-serif; font-size:13px; color:var(--teal);
+  }
+  .more-link {
+    display:block; background:none; border:1px solid rgba(0,194,168,0.35); border-radius:8px;
+    color:var(--teal); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
+    padding:9px 18px; cursor:pointer; margin-top:10px;
+  }
+  .snap-name .fav-star { color:var(--yellow); }
+  #panel-more { max-width:640px; margin:0 auto; padding:18px 12px 0; }
   #siteSheetBadge {
     display:inline-flex; align-items:center; gap:8px; margin:10px 0 14px;
     font-family:'DM Mono',monospace; font-size:13px; letter-spacing:1px;
@@ -877,7 +957,7 @@
 
   /* Fluid wrap padding — tighter on small screens */
   @media (max-width:480px) {
-    .wrap { padding:0 12px 60px; }
+    .wrap { padding:0 12px 0; }
   }
 
   /* Header: stack logo + text tighter, shrink logo image */
@@ -923,7 +1003,8 @@
     #snapshotTitle  { margin-bottom:7px; padding:6px 0 4px; }
     .snap-tap-hint  { font-size:13px; padding:5px 12px; margin:-2px auto 8px; }
     .tap-hint-arrow { font-size:19px; }
-    .snap-sort      { margin:0 0 5px; gap:6px; }
+    .snap-sort      { margin:0 0 5px; gap:6px; padding:0 12px; }
+    .answer-line, .new-here { margin-left:12px; margin-right:12px; }
     .snap-sort-btn  { padding:4px 10px; font-size:10px; }
     .day-btn        { padding:7px 11px; font-size:11px; }
     .day-btns       { gap:6px; }
@@ -1099,8 +1180,9 @@
   <!-- View tabs -->
   <div class="view-tabs">
     <button class="tab-btn active" data-tab="snapshot" onclick="switchTab('snapshot')">Snapshot</button>
-    <button class="tab-btn" data-tab="dayview" onclick="switchTab('dayview')">Day View</button>
+    <button class="tab-btn" data-tab="dayview" onclick="switchTab('dayview')">Day</button>
     <button class="tab-btn" data-tab="timeline" onclick="switchTab('timeline')">5 Days</button>
+    <button class="tab-btn" data-tab="more" onclick="switchTab('more')">More</button>
     <button class="tab-btn" data-tab="admin" id="tab-btn-admin" onclick="switchTab('admin')">Reports</button>
   </div>
 
@@ -1116,7 +1198,7 @@
   <!-- ABOUT panel -->
   <div class="view-panel" id="panel-about">
     <div style="max-width:600px; padding:16px 0 4px;">
-      <button onclick="switchTab('snapshot')" style="
+      <button onclick="switchTab('more')" style="
         display:inline-flex;align-items:center;gap:6px;
         font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
         color:var(--teal);background:transparent;
@@ -1132,7 +1214,7 @@
         <p style="color:var(--text);margin-bottom:16px;font-weight:500;">Why we built VIZ FORECAST</p>
         <p style="color:var(--text);margin-bottom:12px;">Let's be honest: nothing beats a great day underwater—but only if the conditions are right. We got tired of the guesswork, so we built this tool to help our community determine if a site is "diveable" before packing the gear. Our data is powered by a proprietary wave transformation model, patiently tuned over years of real-world use by thousands of local divers, geekie details <a href="https://www.viz.net.au/divesite-forecast-explained" style="color:var(--teal);text-decoration:none;">here</a>.</p>
         <p style="color:var(--text);margin-bottom:12px;">This project is entirely non-profit and run by volunteers who love diving as much as you do.</p>
-        <p style="color:var(--text);margin-bottom:20px;">A quick reminder: Always use your own judgment before entering the water. If the actual conditions differ from the forecast, please let us know via the form at the bottom of the page—that feedback is exactly how we continue to improve for everyone.</p>
+        <p style="color:var(--text);margin-bottom:20px;">A quick reminder: Always use your own judgment before entering the water. If the actual conditions differ from the forecast, please let us know via the Feedback form under More—that feedback is exactly how we continue to improve for everyone.</p>
         <div style="text-align:left;margin-bottom:20px;"><img src="marco2.png" alt="Marco Bordieri" style="width:140px;height:140px;border-radius:50%;object-fit:cover;border:3px solid var(--teal);"></div>
         <p style="color:var(--text-dim);margin-bottom:4px;">© Marco Bordieri — VIZ Group, June 2026</p>
         <p style="color:var(--text-dim);margin-bottom:18px;">Creative Commons License: BY NC ND</p>
@@ -1272,9 +1354,17 @@
 
   <!-- SNAPSHOT: pick date/time → sorted bar chart -->
   <div class="view-panel active" id="panel-snapshot">
+    <div class="new-here" id="newHere" style="display:none;">
+      <div class="nh-title">👋 New here?</div>
+      <p>Each bar is a dive site, scored for how calm the water is at the time shown. <b style="color:var(--green)">Green</b> is easy, <b style="color:var(--yellow)">yellow</b> needs care, <b style="color:var(--red)">red</b> means avoid.</p>
+      <p>Tap a site for the details and its best time. Use the day buttons and the slider below to look ahead.</p>
+      <button type="button" class="nh-btn" onclick="dismissNewHere()">Got it</button>
+    </div>
+    <div class="answer-line" id="answerLine" style="display:none;"></div>
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
-    <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap for the best dive window <span class="tap-hint-arrow">↓</span></div>
+    <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap a site for details <span class="tap-hint-arrow">↓</span></div>
     <div class="snap-sort" id="snapSort" style="display:none;">
+      <button type="button" class="info-btn" onclick="openScoreInfo()" aria-label="What the scores mean">ⓘ What the colours mean</button>
       <span class="snap-sort-label">Sort</span>
       <button type="button" class="snap-sort-btn" id="snapSortScore" onclick="setSnapSort('score')">Best score</button>
       <button type="button" class="snap-sort-btn" id="snapSortName" onclick="setSnapSort('name')">A–Z</button>
@@ -1362,25 +1452,10 @@
   </div>
   <div style="border-top:1px solid var(--border);margin-top:18px;"></div>
 
-  <!-- (Validation panel moved to About tab) -->
-
-  <!-- COFFEE -->
-  <div style="margin-top:40px;padding:18px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:480px;">
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin-bottom:14px;">
-      This app is free, non-profit and built in spare time. If it saved you a bad dive, a coffee goes a long way and makes running costs more sustainable without adding ads or subscriptions 😊
-    </p>
-    <a href="https://www.buymeacoffee.com/vizforecast" target="_blank" rel="noopener" style="
-      display:inline-flex;align-items:center;gap:9px;
-      background:#FFDD00;color:#222;
-      font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;
-      border-radius:10px;padding:10px 20px;
-      text-decoration:none;
-      box-shadow:0 2px 12px rgba(255,221,0,0.25);
-      transition:opacity 0.15s;letter-spacing:0.2px;"
-      onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:28px;line-height:1;">☕</span> Offer me a coffee
-    </a>
-  </div>
+  <!-- MORE tab: about, how-to, feedback, share, coffee (was a footer under every tab) -->
+  <div class="view-panel" id="panel-more">
+    <div class="section-title" style="margin-top:0;">More</div>
+    <button type="button" class="more-link" onclick="openScoreInfo()">ⓘ How to read the scores</button>
 
   <!-- ABOUT button + visitor counter -->
   <div style="margin-top:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
@@ -1497,6 +1572,25 @@
       </div>
     </div>
   </div>
+
+  <!-- COFFEE -->
+  <div style="margin-top:40px;padding:18px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:480px;">
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin-bottom:14px;">
+      This app is free, non-profit and built in spare time. If it saved you a bad dive, a coffee goes a long way and makes running costs more sustainable without adding ads or subscriptions 😊
+    </p>
+    <a href="https://www.buymeacoffee.com/vizforecast" target="_blank" rel="noopener" style="
+      display:inline-flex;align-items:center;gap:9px;
+      background:#FFDD00;color:#222;
+      font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;
+      border-radius:10px;padding:10px 20px;
+      text-decoration:none;
+      box-shadow:0 2px 12px rgba(255,221,0,0.25);
+      transition:opacity 0.15s;letter-spacing:0.2px;"
+      onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:28px;line-height:1;">☕</span> Offer me a coffee
+    </a>
+  </div>
+  </div><!-- /panel-more -->
 
 </div>
 
@@ -2911,6 +3005,125 @@ function scheduleNextRefresh(cb) {
   console.log(`Next refresh at ${String(next%24).padStart(2,'0')}:00 (${Math.round(ms/60000)} min)`);
 }
 
+// ── Remembered choices: tab, favourite site ────────────────────────────────────
+const REMEMBERED_TABS = ['snapshot','dayview','timeline','more'];
+function _lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function _lsSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+let _favKey = _lsGet('viz_fav_site');
+
+function toggleFavourite() {
+  if (!_sheetSiteKey) return;
+  _favKey = (_favKey === _sheetSiteKey) ? null : _sheetSiteKey;
+  _lsSet('viz_fav_site', _favKey);
+  _syncFavButton();
+  const slider = document.getElementById('snapshotSlider');
+  if (_selectedDayKey) {
+    const hoursForDay = _buildDayIndex()[_selectedDayKey] || [];
+    _renderFromDaySlider(hoursForDay, parseInt(slider.value, 10) || 0);
+    renderAnswerLine(_selectedDayKey);
+  }
+}
+function _syncFavButton() {
+  const b = document.getElementById('siteSheetFav');
+  if (!b) return;
+  const on = !!_sheetSiteKey && _favKey === _sheetSiteKey;
+  b.textContent = on ? '★' : '☆';
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.setAttribute('aria-label', on ? 'Remove from favourite' : 'Make this my favourite site');
+}
+
+// ── Score explainer + first-visit card ─────────────────────────────────────────
+function openScoreInfo()  { document.getElementById('scoreInfoOverlay').classList.add('open'); }
+function closeScoreInfo() { document.getElementById('scoreInfoOverlay').classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeScoreInfo(); });
+function dismissNewHere() {
+  _lsSet('viz_newhere_seen', '1');
+  document.getElementById('newHere').style.display = 'none';
+}
+
+// ── One-line answer for the selected day ───────────────────────────────────────
+// Scans the day's daylight hours (remaining hours if today) and names the best
+// sites with their longest Easy window, plus the sites to avoid all day.
+function renderAnswerLine(dayKey) {
+  const el = document.getElementById('answerLine');
+  if (!el || !_hourlyMatrix.length) return;
+  const idxs = _buildDayIndex()[dayKey] || [];
+  const minutesOf = r => (+r.dateTime.substring(11,13))*60 + (+r.dateTime.substring(14,16));
+  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  const n = new Date(), nowMin = n.getHours() * 60 + n.getMinutes();
+  const hrs = idxs.filter(i => {
+    const r = _hourlyMatrix[i], m = minutesOf(r);
+    const rise = r.sunrise ?? 360, set = r.sunset ?? 1140;
+    return m >= rise - 30 && m <= set - 30 && (dayKey !== today || m >= nowMin - 59);
+  });
+  if (hrs.length < 2) { el.style.display = 'none'; return; }
+
+  const fmt = m => { const h = Math.floor(m / 60) % 24; return (h % 12 || 12) + (h < 12 ? 'am' : 'pm'); };
+  const tomorrow = _dayKeys[_dayKeys.indexOf(today) + 1];
+  const dayLabel = dayKey === today ? 'today' : dayKey === tomorrow ? 'tomorrow'
+    : 'on ' + new Date(dayKey + 'T12:00:00').toLocaleDateString('en-AU', {weekday:'long'});
+
+  const stats = SITES.map(site => {
+    const sc = hrs.map(i => calcScore(site, _hourlyMatrix[i]).score);
+    let best = null, runStart = -1;
+    for (let k = 0; k <= sc.length; k++) {
+      if (k < sc.length && sc[k] >= 40) { if (runStart < 0) runStart = k; continue; }
+      if (runStart >= 0) {
+        const len = k - runStart, mean = sc.slice(runStart, k).reduce((a,b) => a + b, 0) / len;
+        if (!best || len > best.len || (len === best.len && mean > best.mean)) best = { start: runStart, len, mean };
+        runStart = -1;
+      }
+    }
+    const peak = Math.max(...sc), peakK = sc.indexOf(peak);
+    return { site, best, peak, peakK };
+  });
+  const win = s => s.best.len === hrs.length
+    ? (dayKey === today ? 'rest of the day' : 'all day')
+    : `${fmt(minutesOf(_hourlyMatrix[hrs[s.best.start]]))}–${fmt(minutesOf(_hourlyMatrix[hrs[s.best.start + s.best.len - 1]]) + 60)}`;
+  const btn = (s, k) => `<button type="button" class="al-site${s.site.key === _favKey ? ' fav' : ''}" data-key="${s.site.key}" data-idx="${hrs[k]}">${s.site.name}</button>`;
+
+  const easy = stats.filter(s => s.best && s.best.len >= 2)
+    .sort((a,b) => (b.best.mean - a.best.mean) || (b.best.len - a.best.len));
+  const avoid = stats.filter(s => s.peak < 20);
+  let html;
+  if (!easy.length) {
+    const b = stats.slice().sort((a,b) => b.peak - a.peak)[0];
+    html = `<span class="al-lead">No easy dives ${dayLabel}.</span> Best bet: ${btn(b, b.peakK)} around ${fmt(minutesOf(_hourlyMatrix[hrs[b.peakK]]))} (${label(b.peak)}).`;
+  } else {
+    const top = easy.slice(0, 2);
+    const allDay = easy.filter(s => s.best.len === hrs.length).length;
+    html = allDay >= 10
+      ? `<span class="al-lead">Easy at most sites ${dayLabel}.</span> Calmest: ${top.map(s => btn(s, s.best.start)).join(' and ')}.`
+      : `<span class="al-lead">Best ${dayLabel}:</span> ${top.map(s => `${btn(s, s.best.start)} (${win(s)})`).join(' and ')}.`;
+    const fav = _favKey && stats.find(s => s.site.key === _favKey);
+    if (fav && !top.includes(fav)) {
+      html += ` Your ★ ${btn(fav, fav.best ? fav.best.start : fav.peakK)}: ` +
+        (fav.best && fav.best.len >= 2 ? `easy ${win(fav)}.` : fav.peak >= 20 ? 'caution at best.' : 'avoid.');
+    }
+  }
+  if (avoid.length) {
+    const names = avoid.map(s => s.site.name);
+    const list = names.length > 4 ? `${names.slice(0,3).join(', ')} and ${names.length - 3} more` : names.join(', ');
+    html += `<span class="al-avoid">Avoid all day: ${list}.</span>`;
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+// Tapping a site in the answer line jumps the slider to that time and opens the site.
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.al-site');
+  if (!b) return;
+  const matrixIdx = +b.dataset.idx;
+  const hoursForDay = _buildDayIndex()[_selectedDayKey] || [];
+  const pos = hoursForDay.indexOf(matrixIdx);
+  if (pos >= 0) {
+    document.getElementById('snapshotSlider').value = pos;
+    _renderFromDaySlider(hoursForDay, pos);
+  }
+  const site = SITES.find(s => s.key === b.dataset.key), h = _hourlyMatrix[matrixIdx];
+  if (site && h) { const { score, demerits } = calcScore(site, h); openSiteSheet(site, score, demerits, h); }
+});
+
 // ── Tab switching ──────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => {
@@ -2919,6 +3132,10 @@ function switchTab(name) {
   document.querySelectorAll('.view-panel').forEach(p => {
     p.classList.toggle('active', p.id === `panel-${name}`);
   });
+  // Remember the main tabs across visits (not About/admin, which are detours).
+  if (REMEMBERED_TABS.includes(name)) { try { localStorage.setItem('viz_tab', name); } catch (e) {} }
+  // Tabs live in the bottom bar, so bring the new view's top into sight.
+  if (name !== 'about') window.scrollTo({ top: 0 });
   if (name === 'admin') admLoadCurrent();
   if (name === 'dayview') dvRender();
   if (name === 'about') {
@@ -3175,7 +3392,10 @@ function renderSnapshot(sliderVal) {
   }
 
   // Compute all site scores and sort descending
-  const results = SITES.map(site => { const {score, demerits} = calcScore(site, h); return {site, name: site.name, score, demerits}; }).sort((a,b) => _snapSort === 'name' ? a.name.localeCompare(b.name) : b.score - a.score);
+  // Favourite site (★ in the site sheet) is pinned to the top in either sort order.
+  const results = SITES.map(site => { const {score, demerits} = calcScore(site, h); return {site, name: site.name, score, demerits}; })
+    .sort((a,b) => ((b.site.key === _favKey) - (a.site.key === _favKey)) ||
+                   (_snapSort === 'name' ? a.name.localeCompare(b.name) : b.score - a.score));
   const sortRow = document.getElementById('snapSort');
   if (sortRow) {
     sortRow.style.display = 'flex';
@@ -3199,7 +3419,7 @@ function renderSnapshot(sliderVal) {
         <div class="snap-bar-fill" style="width:${pct}%;background:${scoreColor(score)}"></div>
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
-        <span class="snap-name">${name}</span>
+        <span class="snap-name">${site.key === _favKey ? '<span class="fav-star">★</span> ' : ''}${name}</span>
         <span class="snap-score">${toPct(score)}% ${label(score)}</span>
       </div>`;
     row.addEventListener('click', () => openSiteSheet(site, score, demerits, h));
@@ -3332,6 +3552,7 @@ function selectDay(key, dayIdx, preferHour) {
   }
   slider.value = bestSliderVal;
   _renderFromDaySlider(hoursForDay, parseInt(slider.value));
+  renderAnswerLine(key);
 }
 
 /** Translate day-slider position → global matrix index, then render. */
@@ -3616,7 +3837,7 @@ function renderForecastViews(raw) {
 
 
 // ── Day View ───────────────────────────────────────────────────────────────────
-let _dvSiteKey  = null;   // currently selected site key
+let _dvSiteKey  = _lsGet('viz_dv_site');   // currently selected site key (remembered)
 let _dvDayKey   = null;   // currently selected day (YYYY-MM-DD)
 
 function dvInit() {
@@ -3628,7 +3849,7 @@ function dvInit() {
     const b = document.createElement('button');
     b.className = 'dv-chip' + (s.key === _dvSiteKey ? ' active' : '');
     b.textContent = s.name;
-    b.onclick = () => { _dvSiteKey = s.key; dvRender(); };
+    b.onclick = () => { _dvSiteKey = s.key; _lsSet('viz_dv_site', s.key); dvRender(); };
     chipWrap.appendChild(b);
   });
 }
@@ -3637,7 +3858,7 @@ function dvRender() {
   if (!_hourlyMatrix.length) return;
 
   // Default site
-  if (!_dvSiteKey) _dvSiteKey = SITES[0].key;
+  if (!SITES.some(s => s.key === _dvSiteKey)) _dvSiteKey = _favKey || SITES[0].key;
 
   const site = SITES.find(s => s.key === _dvSiteKey);
   if (!site) return;
@@ -3953,7 +4174,27 @@ async function init() {
   }
 
   _retryFn = () => loadAndRender(true);
+
+  // First visit: short "how to read this" card on Snapshot.
+  if (!_lsGet('viz_newhere_seen')) document.getElementById('newHere').style.display = 'block';
+
+  let lastLoadAt = Date.now();
   await loadAndRender();
+
+  // Reopen on the tab the user was last on (Snapshot / Day / 5 Days / More).
+  const savedTab = _lsGet('viz_tab');
+  if (savedTab && savedTab !== 'snapshot' && REMEMBERED_TABS.includes(savedTab) && location.hash !== '#viz-admin') {
+    switchTab(savedTab);
+  }
+
+  // Coming back to the app after 30+ min (phone unlocked, tab reselected): reload,
+  // so a page left open overnight doesn't keep showing yesterday's forecast.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || Date.now() - lastLoadAt < 30 * 60000) return;
+    lastLoadAt = Date.now();
+    loadAndRender();
+  });
+
   scheduleNextRefresh(() => loadAndRender(true));
 }
 
@@ -5060,6 +5301,7 @@ function openSiteSheet(site, score, demerits, h) {
   _sheetDayKey  = new Date(h.dateTime).toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
 
   document.getElementById('siteSheetName').textContent = site.name;
+  _syncFavButton();
 
   const badge = document.getElementById('siteSheetBadge');
   badge.className = band;
@@ -5122,7 +5364,7 @@ function closeSiteSheet(e) {
 // Jump from the detail sheet straight to this site's Day View graph, on the same day.
 // Equivalent to opening Day View, picking the site, and selecting the current day.
 function openDayViewFromSheet() {
-  if (_sheetSiteKey) _dvSiteKey = _sheetSiteKey;
+  if (_sheetSiteKey) { _dvSiteKey = _sheetSiteKey; _lsSet('viz_dv_site', _dvSiteKey); }
   if (_sheetDayKey)  _dvDayKey  = _sheetDayKey;
   document.getElementById('siteSheetOverlay').classList.remove('open');
   switchTab('dayview');
@@ -5152,12 +5394,32 @@ loadConfig().then(() => init());
   </div>
 </div>
 
+<!-- "What the colours mean" explainer (ⓘ on Snapshot, and under More) -->
+<div id="scoreInfoOverlay" onclick="if(event.target===this)closeScoreInfo()">
+  <div id="scoreInfo" role="dialog" aria-modal="true" aria-labelledby="scoreInfoTitle">
+    <div class="sheet-grip"></div>
+    <div id="scoreInfoHead">
+      <span id="scoreInfoTitle">How to read the scores</span>
+      <button id="scoreInfoClose" type="button" onclick="closeScoreInfo()" aria-label="Close">✕</button>
+    </div>
+    <div class="si-band"><span class="si-dot" style="background:var(--green)"></span><div><b>Easy · 67–100%</b><br>Mostly settled, with little water movement at the entry.</div></div>
+    <div class="si-band"><span class="si-dot" style="background:var(--yellow)"></span><div><b>Caution · 33–65%</b><br>Some surge or chop to be aware of. Pick your entry and exit with care.</div></div>
+    <div class="si-band"><span class="si-dot" style="background:var(--red)"></span><div><b>Avoid · under 33%</b><br>Rough and exposed. Not a good time to dive this site.</div></div>
+    <p class="si-p"><b>What goes into the score.</b> Every site starts at 100%. Swell, wind waves, wind chop and swell wrapping around headlands take points off, depending on which way the site faces. The tide can make those effects stronger or weaker, depending on the site.</p>
+    <p class="si-p">Tap any site to see what is lowering its score and when it is best that day.</p>
+    <p class="si-p si-dim">This is a forecast. Always check the conditions yourself before you get in the water.</p>
+  </div>
+</div>
+
 <div id="siteSheetOverlay" onclick="closeSiteSheet(event)">
   <div id="siteSheet" onclick="event.stopPropagation()">
     <div class="sheet-grip"></div>
     <div id="siteSheetHead">
       <span id="siteSheetName">—</span>
-      <button id="siteSheetClose" onclick="closeSiteSheet()" aria-label="Close">✕</button>
+      <span class="ss-head-btns">
+        <button id="siteSheetFav" type="button" onclick="toggleFavourite()" aria-pressed="false" aria-label="Make this my favourite site">☆</button>
+        <button id="siteSheetClose" onclick="closeSiteSheet()" aria-label="Close">✕</button>
+      </span>
     </div>
     <div id="siteSheetBadge"></div>
     <p id="siteSheetDesc"></p>
@@ -5276,7 +5538,7 @@ loadConfig().then(() => init());
       "#annText ul,#annText ol{margin:7px 0;padding-left:20px;}#annText li{margin-bottom:3px;}" +
       "#annText p{margin:0 0 7px;}" +
       "#annHint{text-align:center;color:#5a7183;font-size:11px;padding:11px 0 14px;}" +
-      "#annWhatsNew{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);z-index:99990;display:none;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid #00857a;background:#fff;color:#00857a;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(6,16,32,.28);}" +
+      "#annWhatsNew{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom, 0px) + 76px);z-index:99990;display:none;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid #00857a;background:#fff;color:#00857a;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(6,16,32,.28);}" +
       "#annWhatsNew.show{display:inline-flex;}" +
       "#annWhatsNew .ann-dot{display:none;width:8px;height:8px;border-radius:50%;background:#e83d3d;}" +
       "#annWhatsNew.unseen .ann-dot{display:inline-block;}";
