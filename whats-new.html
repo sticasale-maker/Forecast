@@ -108,9 +108,11 @@
   }
   .bar span.n { left: 10px; } .bar span.v { right: 10px; }
   .axis { display: flex; justify-content: space-around; font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; }
-  .tabs { display: flex; gap: 6px; }
-  .tabs span { flex: 1; text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; padding: 10px 2px; border-radius: 8px; border: 1px solid var(--line); color: var(--dim); }
-  .tabs span.on { background: var(--teal); border-color: var(--teal); color: #031018; font-weight: 500; }
+  /* Drawn like the app's bottom tab bar: one strip, active tab = teal label + top indicator */
+  .tabs { display: flex; gap: 0; background: #040b18; border-top: 1px solid rgba(0,194,168,0.25); margin-inline: -18px; margin-bottom: -18px; border-radius: 0 0 26px 26px; }
+  .tabs span { position: relative; flex: 1; text-align: center; font-family: var(--body); font-size: 13px; font-weight: 500; padding: 14px 2px 16px; color: var(--dim); }
+  .tabs span.on { color: var(--teal); font-weight: 700; }
+  .tabs span.on::before { content: ''; position: absolute; top: -1px; left: 26%; right: 26%; height: 3px; border-radius: 0 0 3px 3px; background: var(--teal); }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chips span { font-family: var(--mono); font-size: 12px; padding: 7px 11px; border-radius: 8px; border: 1px solid var(--line); color: var(--dim); }
   .chips span.on { background: var(--teal); color: #031018; border-color: var(--teal); }
@@ -154,6 +156,7 @@
     .copy { gap: 12px; }
     .art { width: min(100%, 340px); }
     .screen { padding: 14px; gap: 8px; border-radius: 20px; }
+    .tabs { margin-inline: -14px; margin-bottom: -14px; border-radius: 0 0 20px 20px; }
     .hide-sm { display: none !important; }
     .brand { font-size: 20px; }
   }
@@ -224,7 +227,7 @@
           <div class="chips"><span>TODAY</span><span class="on">SUN</span><span>MON</span><span>TUE</span><span class="hide-sm">WED</span></div>
           <div class="rail"><div class="thumb" style="left:calc(37% - 20px)"></div></div>
           <div class="ticks"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div>
-          <div class="tabs"><span class="on">SNAPSHOT</span><span>DAY</span><span>5 DAYS</span><span>MORE</span></div>
+          <div class="tabs"><span class="on">Snapshot</span><span>Day</span><span>5 Days</span><span>More</span></div>
         </div>
       </div>
     </section>
@@ -242,7 +245,7 @@
           <div class="row"><span style="color:var(--white)">Day</span><span>one site, all day</span></div>
           <div class="row"><span style="color:var(--white)">5 Days</span><span>every site, hour by hour</span></div>
           <div class="row"><span style="color:var(--white)">More</span><span>report · install · about</span></div>
-          <div class="tabs" style="margin-top:6px"><span class="on">SNAPSHOT</span><span>DAY</span><span>5 DAYS</span><span>MORE</span></div>
+          <div class="tabs" style="margin-top:6px"><span class="on">Snapshot</span><span>Day</span><span>5 Days</span><span>More</span></div>
         </div>
       </div>
     </section>
@@ -364,25 +367,6 @@
       </div>
     </section>
 
-    <!-- 9 · wind-wave period -->
-    <section class="slide" data-title="Sharper chop scoring">
-      <div class="copy">
-        <div class="eyebrow">Under the hood</div>
-        <h2>Chop scored on its <em>real wave period</em></h2>
-        <p class="lead">Wind waves used to be scored as if every chop had a 5-second period. Now the app uses the actual forecast period. Short, steep chop and longer wind swell are <b>no longer treated the same</b>.</p>
-      </div>
-      <div class="art">
-        <div class="screen">
-          <svg viewBox="0 0 360 170" width="100%" role="img" aria-label="Two wave lines: a short 3 second chop with tight waves, and a longer 7 second wind swell with wide waves">
-            <text x="0" y="16" font-size="12" fill="#c8ddf5">3 s chop</text>
-            <path d="M0 50 q15 -18 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0" fill="none" stroke="#a78bfa" stroke-width="3"/>
-            <text x="0" y="104" font-size="12" fill="#c8ddf5">7 s wind swell</text>
-            <path d="M0 140 q35 -26 70 0 t70 0 t70 0 t70 0 t70 0 t70 0" fill="none" stroke="#3a9bd5" stroke-width="3"/>
-          </svg>
-        </div>
-      </div>
-    </section>
-
     <!-- 10 · honest data -->
     <section class="slide" data-title="Honest when offline">
       <div class="copy">
@@ -410,9 +394,9 @@
       </div>
       <div class="art">
         <div class="screen">
-          <div class="tabs"><span>SNAPSHOT</span><span>DAY</span><span>5 DAYS</span><span class="on">MORE</span></div>
           <div class="banner" style="background:rgba(255,221,0,.08);border-color:rgba(255,221,0,.35)"><b style="color:#ffdd00">☕ Offer me a coffee 🥱</b>Free and non-profit. A coffee keeps it running without ads.</div>
           <div class="banner" style="background:rgba(0,194,168,.08);border-color:rgba(0,194,168,.4)"><b style="color:var(--teal)">✍️ Report conditions</b>Pick your site, tell us how it really was.</div>
+          <div class="tabs"><span>Snapshot</span><span>Day</span><span>5 Days</span><span class="on">More</span></div>
         </div>
       </div>
     </section>
@@ -421,7 +405,7 @@
 
   <div class="controls">
     <div class="nav"><button type="button" id="play" aria-label="Pause the slideshow">❚❚ Pause</button><button type="button" id="fs" hidden aria-label="Full screen">⛶ Full screen</button></div>
-    <span class="count" id="count">1 / 12</span>
+    <span class="count" id="count">1 / 11</span>
     <div class="nav">
       <button type="button" id="prev" aria-label="Previous slide">←</button>
       <button type="button" id="next" aria-label="Next slide">→</button>

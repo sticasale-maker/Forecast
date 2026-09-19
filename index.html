@@ -230,24 +230,40 @@
   .red    .rating-badge { background:rgba(232,61,61,0.12);  color:var(--red);    border:1px solid rgba(232,61,61,0.25); }
 
   /* ── View tabs — fixed bottom bar (thumb reach on phones) ── */
+  /* Styled as a phone tab bar, not as buttons: one continuous strip, icon over
+     label, no box per tab. The active tab gets the teal icon + label, a soft
+     pill behind the icon and a short indicator line on the bar's top edge. */
   .view-tabs {
     position:fixed; left:0; right:0; bottom:0; z-index:900;
-    display:flex; gap:6px; justify-content:center; flex-wrap:nowrap;
-    padding:8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
-    background:rgba(6,16,32,0.95); border-top:1px solid var(--border);
+    display:flex; gap:0; justify-content:center; flex-wrap:nowrap;
+    padding:0 4px env(safe-area-inset-bottom, 0px);
+    background:rgba(4,11,24,0.97); border-top:1px solid rgba(0,194,168,0.25);
+    box-shadow:0 -6px 18px rgba(0,0,0,0.35);
     -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
   }
   /* Clearance for the fixed bar. On body, not .wrap: the view panels sit outside .wrap. */
   body { padding-bottom:calc(76px + env(safe-area-inset-bottom, 0px)); }
   .tab-btn {
-    font-family:'DM Mono',monospace; font-size:clamp(11px,3vw,14px);
-    text-transform:uppercase; letter-spacing:clamp(0.5px,0.4vw,1.5px);
-    padding:11px clamp(6px,2vw,18px); border-radius:8px; border:1px solid var(--border);
-    background:transparent; color:var(--text-dim); cursor:pointer;
-    transition:all 0.15s; white-space:nowrap; flex:1; max-width:170px; text-align:center;
+    position:relative; flex:1; max-width:170px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:7px 2px 8px; border:none; border-radius:0; background:transparent;
+    font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; letter-spacing:0.2px;
+    color:#7f9dbb; cursor:pointer; white-space:nowrap; transition:color 0.15s;
+    -webkit-tap-highlight-color:transparent;
   }
-  .tab-btn:hover { border-color:var(--teal); color:var(--teal); }
-  .tab-btn.active { background:var(--teal); border-color:var(--teal); color:#000; font-weight:600; }
+  .tab-btn .ti {
+    display:grid; place-items:center; width:54px; height:30px; border-radius:15px;
+    transition:background 0.15s;
+  }
+  .tab-btn svg { width:23px; height:23px; }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn:focus-visible { outline:2px solid var(--teal); outline-offset:-3px; }
+  .tab-btn.active { color:var(--teal); font-weight:700; }
+  .tab-btn.active .ti { background:rgba(0,194,168,0.18); }
+  .tab-btn.active::before {
+    content:''; position:absolute; top:-1px; left:28%; right:28%; height:3px;
+    border-radius:0 0 3px 3px; background:var(--teal);
+  }
 
   .view-panel { display:none; }
   .view-panel.active { display:block; margin-top:0px; }
@@ -1276,11 +1292,11 @@
 
   <!-- View tabs -->
   <nav class="view-tabs" role="tablist" aria-label="Forecast views">
-    <button class="tab-btn active" data-tab="snapshot" role="tab" aria-selected="true" aria-controls="panel-snapshot" aria-label="Snapshot: all sites at one time" onclick="switchTab('snapshot')">Snapshot</button>
-    <button class="tab-btn" data-tab="dayview" role="tab" aria-selected="false" aria-controls="panel-dayview" aria-label="Day: one site across the day" onclick="switchTab('dayview')">Day</button>
-    <button class="tab-btn" data-tab="timeline" role="tab" aria-selected="false" aria-controls="panel-timeline" aria-label="5 Days: every site, hour by hour" onclick="switchTab('timeline')">5 Days</button>
-    <button class="tab-btn" data-tab="more" role="tab" aria-selected="false" aria-controls="panel-more" aria-label="More: about, feedback, share and install" onclick="switchTab('more')">More</button>
-    <button class="tab-btn" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" aria-controls="panel-admin" onclick="switchTab('admin')">Reports</button>
+    <button class="tab-btn active" data-tab="snapshot" role="tab" aria-selected="true" aria-controls="panel-snapshot" aria-label="Snapshot: all sites at one time" onclick="switchTab('snapshot')"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"/></svg></span>Snapshot</button>
+    <button class="tab-btn" data-tab="dayview" role="tab" aria-selected="false" aria-controls="panel-dayview" aria-label="Day: one site across the day" onclick="switchTab('dayview')"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 5-7 4 4"/><path d="M3 21h18"/></svg></span>Day</button>
+    <button class="tab-btn" data-tab="timeline" role="tab" aria-selected="false" aria-controls="panel-timeline" aria-label="5 Days: every site, hour by hour" onclick="switchTab('timeline')"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 18h2"/></svg></span>5 Days</button>
+    <button class="tab-btn" data-tab="more" role="tab" aria-selected="false" aria-controls="panel-more" aria-label="More: about, feedback, share and install" onclick="switchTab('more')"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>More</button>
+    <button class="tab-btn" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" aria-controls="panel-admin" onclick="switchTab('admin')"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span>Reports</button>
   </nav>
 
   <!-- Hidden elements needed by JS (conditions + status + sites grid) -->
