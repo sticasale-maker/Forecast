@@ -2130,7 +2130,8 @@ function dirLookup(arr, deg) {
 // Sheet mapping (1-based rows, 0-based in parsed CSV):
 //   Row 24 → Wind sens TUNE    (cols C–O = indices 2–14)
 //   Row 25 → Swell sens TUNE   (cols C–O = indices 2–14)
-//   Row 26 → Period power TUNE (cols C–O = indices 2–14)  spm = 144/periodPower
+//   Row 27 → Swell period multiplier (cols C–O = indices 2–14) — read directly
+//     as spm (sheet cell is authoritative; row 26 'Period power' is raw units)
 //   Rows 32–63 → direction table, sites as triplets wind/sea/rif starting col C
 //   Site column offsets (0-based): CTB=2,BIW=5,BIE=8,Steps=11,Monument=14,
 //     Chowder=17,CampCove=20,Fairlight=23,Gordons=26,Freshwater=29,
@@ -2305,13 +2306,25 @@ const SITES = [
    tide:(o,t)=>o*(0.166*t-0.034)},
 ];
 
+// Wind-wave period to assume when Open-Meteo does not report one.
+//
+// The old comment here said this 5 came from sheet cell A24. It does not, and A24 is not
+// a period: column A is a stack of label/value pairs and A23/A24 is "Wind wave power" and
+// its computed result. The period the sheet uses lives at A16/B16 ("Wind wave period"),
+// and it is an INPUT that this app writes — so the sheet has been scoring on the live
+// Open-Meteo period all along while the app assumed a flat 5. Verified against the
+// validation panel: sheet B16 read 3 while the app used 5, and A24 came back 1.6 =
+// 0.68m^2 x 3^1.1. There is no constant in the sheet to keep this in step with; 5 is
+// only a local fallback for when Open-Meteo returns no period at all.
+const WW_PERIOD_FALLBACK = 5;
+
 // Score formula — identical logic, now reads from CONFIG instead of hardcoded values.
 // Formula (corrected to match sheet):
 //   swellPower   = h² × period^1.1
 //   s_demerit    = swellPower × seaHit/100 × swellSens        ← swellSens from CONFIG
 //   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = 144/periodPower from CONFIG
 //   wind_demerit = windPower(kmh) × windHit/100 × windSens    ← windHit can be negative (bonus)
-//   windWave_d   = swellPower(wwH, 5) × seaHit(wwDir)/100 × swellSens  ← period hardcoded=5 (sheet A24), uses sea hit + swellSens
+//   windWave_d   = swellPower(wwH, wwP) × seaHit(wwDir)/100 × swellSens ← wwP = live Open-Meteo period, else 5
 //   tide_demerit = site.tide(tideBase, tideM)                 ← tideBase is per-site:
 //                  'ww_swell_rif' = windwave+swell+rif (CTB — excludes wind chop only)
 //                  'all'          = wind+windwave+swell+rif (all others with tide formula)
@@ -2324,7 +2337,7 @@ function calcScore(site, d) {
   const spm       = CONFIG.periodPower[si];  // sheet row already stores the multiplier (144/periodPower) — use directly, do NOT divide again
 
   const {windKmh, windDir, swell1H, swell1Dir, swell1P,
-         swell2H, swell2Dir, swell2P, windWaveH, windWaveDir, tideM} = d;
+         swell2H, swell2Dir, swell2P, windWaveH, windWaveDir, windWaveP, tideM} = d;
 
   const s1p = swellPower(swell1H, swell1P);
   const s2p = swellPower(swell2H, swell2P);
@@ -2337,8 +2350,14 @@ function calcScore(site, d) {
   const s2rif   =             dirLookup(lk.rif,  swell2Dir);
 
   const wind_d  = windPower(windKmh)                    * (windHit/100)   * windSens;
-  // Wind wave: treated as swell with hardcoded period=5 (per sheet cell A24), uses swellSens
-  const ww_d    = swellPower(windWaveH, 5)              * (wwSeaHit/100)  * swellSens;
+  // Wind wave: treated as swell, on Open-Meteo's live wind_wave_period where there is
+  // one and a 5 s fallback where there is not. WillyWeather carries no wind wave at
+  // all, so height, direction AND period all come from Open-Meteo Marine — the period was
+  // being fetched and displayed but thrown away at scoring time. It is worth having:
+  // swellPower goes as period^1.1, so against the flat 5 s a real 3 s sea was scored
+  // ~1.8x too harshly and a 7 s one ~0.7x too lightly.
+  const wwP     = windWaveP > 0 ? windWaveP : WW_PERIOD_FALLBACK;
+  const ww_d    = swellPower(windWaveH, wwP)            * (wwSeaHit/100)  * swellSens;
   const s1_d    = s1p * (s1sea/100) * swellSens;
   const s2_d    = s2p * (s2sea/100) * swellSens;
   const rif_d   = (s1rif * s1p * spm + s2rif * s2p * spm) / 1000;
@@ -2427,7 +2446,8 @@ function describeConditions(site, score, demerits, h) {
     { key:'refrac',   val:demerits.refrac,   dir:h.swell1Dir,   noun:'swell wrapping around the headland',
       detail:`waves wrapping around the headland from the ${bearingName(h.swell1Dir)}` },
     { key:'windWave', val:demerits.windWave, dir:h.windWaveDir, noun:'wind waves',
-      detail:`${h.windWaveH.toFixed(1)}m ${bearingName(h.windWaveDir)} wind waves` },
+      detail:`${h.windWaveH.toFixed(1)}m ${bearingName(h.windWaveDir)} wind waves`
+             + (h.windWaveP > 0 ? ` at ${Math.round(h.windWaveP)}s` : '') },
     { key:'wind',     val:demerits.wind,     dir:h.windDir,     noun:'wind chop',
       detail:`${Math.round(h.windKmh)}km/h ${bearingName(h.windDir)} wind` },
   ];
@@ -3500,7 +3520,7 @@ function renderSnapshot(sliderVal) {
   if (h.windWaveH > 0) {
     document.getElementById('sWindWaveH').textContent = h.windWaveH.toFixed(1);
     document.getElementById('sWindWaveD').textContent = `m · ${bearingName(h.windWaveDir)} (${Math.round(h.windWaveDir)}°)`;
-    // windWaveP shown if available (informational only — scoring uses hardcoded period=5)
+    // This period is what scoring actually uses (calcScore falls back to A24's 5 s).
     const wwp = h.windWaveP ?? 0;
     document.getElementById('sWindWaveP').textContent = wwp > 0 ? `${Math.round(wwp)}s period` : '';
     document.getElementById('sWindWaveP').style.display = wwp > 0 ? '' : 'none';
@@ -4330,7 +4350,11 @@ async function validateScores(data) {
       windKmh:     Math.round(data.windKmh),
       windWaveDir: Math.round(data.windWaveDir),
       windWaveH:   data.windWaveH,
-      windWaveP:   Math.round(data.windWaveP || 0),
+      // Send the period the app actually scored on, not the raw feed value. Sending 0
+      // when Open-Meteo has no period would have the sheet compute wind wave power as
+      // h^2 x 0^1.1 = 0 while the app used the 5 s fallback — a disagreement invented
+      // by the comparison itself rather than found by it.
+      windWaveP:   Math.round(data.windWaveP > 0 ? data.windWaveP : WW_PERIOD_FALLBACK),
       swellDir:    Math.round(data.swell1Dir),
       swellH:      data.swell1H,
       swellP:      Math.round(data.swell1P),
