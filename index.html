@@ -440,19 +440,7 @@
   .si-p b { color:#fff; }
   .si-dim { color:var(--text-dim); font-size:13px; }
 
-  /* ── One-line answer + first-visit card (Snapshot top) ── */
-  .answer-line {
-    background:var(--card); border:1px solid var(--border); border-left:3px solid var(--teal);
-    border-radius:10px; padding:12px 14px; margin:14px 0 4px;
-    font-size:15px; line-height:1.55; color:var(--text);
-  }
-  .answer-line .al-lead { color:#fff; font-weight:600; }
-  .answer-line .al-avoid { display:block; margin-top:4px; font-size:13.5px; color:var(--text-dim); }
-  .al-site {
-    font:inherit; font-weight:600; color:var(--teal); background:none; border:none; padding:0;
-    cursor:pointer; text-decoration:underline; text-decoration-color:rgba(0,194,168,0.4); text-underline-offset:3px;
-  }
-  .al-site.fav::before { content:'★ '; color:var(--yellow); }
+  /* ── First-visit card (Snapshot top) ── */
   .new-here {
     background:rgba(0,194,168,0.08); border:1px solid rgba(0,194,168,0.4);
     border-radius:12px; padding:14px 16px; margin:14px 0 4px; font-size:14px; line-height:1.55;
@@ -1004,7 +992,7 @@
     .snap-tap-hint  { font-size:13px; padding:5px 12px; margin:-2px auto 8px; }
     .tap-hint-arrow { font-size:19px; }
     .snap-sort      { margin:0 0 5px; gap:6px; padding:0 12px; }
-    .answer-line, .new-here { margin-left:12px; margin-right:12px; }
+    .new-here { margin-left:12px; margin-right:12px; }
     .snap-sort-btn  { padding:4px 10px; font-size:10px; }
     .day-btn        { padding:7px 11px; font-size:11px; }
     .day-btns       { gap:6px; }
@@ -1360,7 +1348,6 @@
       <p>Tap a site for the details and its best time. Use the day buttons and the slider below to look ahead.</p>
       <button type="button" class="nh-btn" onclick="dismissNewHere()">Got it</button>
     </div>
-    <div class="answer-line" id="answerLine" style="display:none;"></div>
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
     <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap a site for details <span class="tap-hint-arrow">↓</span></div>
     <div class="snap-sort" id="snapSort" style="display:none;">
@@ -3020,7 +3007,6 @@ function toggleFavourite() {
   if (_selectedDayKey) {
     const hoursForDay = _buildDayIndex()[_selectedDayKey] || [];
     _renderFromDaySlider(hoursForDay, parseInt(slider.value, 10) || 0);
-    renderAnswerLine(_selectedDayKey);
   }
 }
 function _syncFavButton() {
@@ -3040,89 +3026,6 @@ function dismissNewHere() {
   _lsSet('viz_newhere_seen', '1');
   document.getElementById('newHere').style.display = 'none';
 }
-
-// ── One-line answer for the selected day ───────────────────────────────────────
-// Scans the day's daylight hours (remaining hours if today) and names the best
-// sites with their longest Easy window, plus the sites to avoid all day.
-function renderAnswerLine(dayKey) {
-  const el = document.getElementById('answerLine');
-  if (!el || !_hourlyMatrix.length) return;
-  const idxs = _buildDayIndex()[dayKey] || [];
-  const minutesOf = r => (+r.dateTime.substring(11,13))*60 + (+r.dateTime.substring(14,16));
-  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
-  const n = new Date(), nowMin = n.getHours() * 60 + n.getMinutes();
-  const hrs = idxs.filter(i => {
-    const r = _hourlyMatrix[i], m = minutesOf(r);
-    const rise = r.sunrise ?? 360, set = r.sunset ?? 1140;
-    return m >= rise - 30 && m <= set - 30 && (dayKey !== today || m >= nowMin - 59);
-  });
-  if (hrs.length < 2) { el.style.display = 'none'; return; }
-
-  const fmt = m => { const h = Math.floor(m / 60) % 24; return (h % 12 || 12) + (h < 12 ? 'am' : 'pm'); };
-  const tomorrow = _dayKeys[_dayKeys.indexOf(today) + 1];
-  const dayLabel = dayKey === today ? 'today' : dayKey === tomorrow ? 'tomorrow'
-    : 'on ' + new Date(dayKey + 'T12:00:00').toLocaleDateString('en-AU', {weekday:'long'});
-
-  const stats = SITES.map(site => {
-    const sc = hrs.map(i => calcScore(site, _hourlyMatrix[i]).score);
-    let best = null, runStart = -1;
-    for (let k = 0; k <= sc.length; k++) {
-      if (k < sc.length && sc[k] >= 40) { if (runStart < 0) runStart = k; continue; }
-      if (runStart >= 0) {
-        const len = k - runStart, mean = sc.slice(runStart, k).reduce((a,b) => a + b, 0) / len;
-        if (!best || len > best.len || (len === best.len && mean > best.mean)) best = { start: runStart, len, mean };
-        runStart = -1;
-      }
-    }
-    const peak = Math.max(...sc), peakK = sc.indexOf(peak);
-    return { site, best, peak, peakK };
-  });
-  const win = s => s.best.len === hrs.length
-    ? (dayKey === today ? 'rest of the day' : 'all day')
-    : `${fmt(minutesOf(_hourlyMatrix[hrs[s.best.start]]))}–${fmt(minutesOf(_hourlyMatrix[hrs[s.best.start + s.best.len - 1]]) + 60)}`;
-  const btn = (s, k) => `<button type="button" class="al-site${s.site.key === _favKey ? ' fav' : ''}" data-key="${s.site.key}" data-idx="${hrs[k]}">${s.site.name}</button>`;
-
-  const easy = stats.filter(s => s.best && s.best.len >= 2)
-    .sort((a,b) => (b.best.mean - a.best.mean) || (b.best.len - a.best.len));
-  const avoid = stats.filter(s => s.peak < 20);
-  let html;
-  if (!easy.length) {
-    const b = stats.slice().sort((a,b) => b.peak - a.peak)[0];
-    html = `<span class="al-lead">No easy dives ${dayLabel}.</span> Best bet: ${btn(b, b.peakK)} around ${fmt(minutesOf(_hourlyMatrix[hrs[b.peakK]]))} (${label(b.peak)}).`;
-  } else {
-    const top = easy.slice(0, 2);
-    const allDay = easy.filter(s => s.best.len === hrs.length).length;
-    html = allDay >= 10
-      ? `<span class="al-lead">Easy at most sites ${dayLabel}.</span> Calmest: ${top.map(s => btn(s, s.best.start)).join(' and ')}.`
-      : `<span class="al-lead">Best ${dayLabel}:</span> ${top.map(s => `${btn(s, s.best.start)} (${win(s)})`).join(' and ')}.`;
-    const fav = _favKey && stats.find(s => s.site.key === _favKey);
-    if (fav && !top.includes(fav)) {
-      html += ` Your ★ ${btn(fav, fav.best ? fav.best.start : fav.peakK)}: ` +
-        (fav.best && fav.best.len >= 2 ? `easy ${win(fav)}.` : fav.peak >= 20 ? 'caution at best.' : 'avoid.');
-    }
-  }
-  if (avoid.length) {
-    const names = avoid.map(s => s.site.name);
-    const list = names.length > 4 ? `${names.slice(0,3).join(', ')} and ${names.length - 3} more` : names.join(', ');
-    html += `<span class="al-avoid">Avoid all day: ${list}.</span>`;
-  }
-  el.innerHTML = html;
-  el.style.display = 'block';
-}
-// Tapping a site in the answer line jumps the slider to that time and opens the site.
-document.addEventListener('click', e => {
-  const b = e.target.closest && e.target.closest('.al-site');
-  if (!b) return;
-  const matrixIdx = +b.dataset.idx;
-  const hoursForDay = _buildDayIndex()[_selectedDayKey] || [];
-  const pos = hoursForDay.indexOf(matrixIdx);
-  if (pos >= 0) {
-    document.getElementById('snapshotSlider').value = pos;
-    _renderFromDaySlider(hoursForDay, pos);
-  }
-  const site = SITES.find(s => s.key === b.dataset.key), h = _hourlyMatrix[matrixIdx];
-  if (site && h) { const { score, demerits } = calcScore(site, h); openSiteSheet(site, score, demerits, h); }
-});
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
 function switchTab(name) {
@@ -3552,7 +3455,6 @@ function selectDay(key, dayIdx, preferHour) {
   }
   slider.value = bestSliderVal;
   _renderFromDaySlider(hoursForDay, parseInt(slider.value));
-  renderAnswerLine(key);
 }
 
 /** Translate day-slider position → global matrix index, then render. */
