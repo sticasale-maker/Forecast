@@ -4136,7 +4136,20 @@ async function init() {
   _retryFn = () => loadAndRender(true);
 
   // First visit: short "how to read this" card on Snapshot.
-  if (!_lsGet('viz_newhere_seen')) document.getElementById('newHere').style.display = 'block';
+  if (!_lsGet('viz_newhere_seen')) {
+    const card = document.getElementById('newHere');
+    card.style.display = 'block';
+    // Scrolling counts as "got it": drop the card so it stops eating the list,
+    // and pull the scroll back by its height so the content doesn't jump.
+    const onScroll = () => {
+      if (window.scrollY < 40 || card.style.display === 'none') return;
+      const h = card.offsetHeight + 18;
+      dismissNewHere();
+      window.scrollBy(0, -h);
+      window.removeEventListener('scroll', onScroll);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
 
   let lastLoadAt = Date.now();
   await loadAndRender();
