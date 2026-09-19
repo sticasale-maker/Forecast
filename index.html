@@ -743,6 +743,8 @@
     padding:0 2px; margin-top:2px;
   }
   /* ── Current weather + feels-like strip ── */
+  /* The weather strip tracks the Snapshot time, so it only belongs on Snapshot. */
+  body:not([data-tab="snapshot"]) #wxStrip { display:none !important; }
   .wx-strip {
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     background:var(--card); border:1px solid var(--border); border-radius:14px;
@@ -1117,7 +1119,7 @@
   }
 </style>
 </head>
-<body>
+<body data-tab="snapshot">
 <div id="splash-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;overflow:hidden;cursor:pointer;">
   <!-- Full-bleed video — portrait on mobile, contained on desktop -->
   <video id="splash-video" autoplay muted playsinline
@@ -3117,6 +3119,7 @@ function switchTab(name) {
   document.querySelectorAll('.view-panel').forEach(p => {
     p.classList.toggle('active', p.id === `panel-${name}`);
   });
+  document.body.dataset.tab = name;   // CSS keys off this (weather strip is Snapshot-only)
   // Remember the main tabs across visits (not About/admin, which are detours).
   if (REMEMBERED_TABS.includes(name)) { try { localStorage.setItem('viz_tab', name); } catch (e) {} }
   // Tabs live in the bottom bar, so bring the new view's top into sight.
