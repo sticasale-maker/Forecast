@@ -719,6 +719,16 @@
       -1px  1px 0 rgba(0,0,0,0.6),  1px  1px 0 rgba(0,0,0,0.6),
        0 0 3px rgba(0,0,0,0.55);
   }
+  /* Score + band on the right end of the bar, same outline treatment as the name */
+  .snap-score {
+    position:absolute; right:9px; top:50%; transform:translateY(-50%);
+    z-index:3; pointer-events:none; white-space:nowrap;
+    font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:600; color:#fff;
+    text-shadow:
+      -1px -1px 0 rgba(0,0,0,0.6),  1px -1px 0 rgba(0,0,0,0.6),
+      -1px  1px 0 rgba(0,0,0,0.6),  1px  1px 0 rgba(0,0,0,0.6),
+       0 0 3px rgba(0,0,0,0.55);
+  }
   .snap-bar-score {
     font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:1px;
     color:rgba(0,0,0,0.7);
@@ -1007,8 +1017,8 @@
   var s = document.getElementById('splash-screen');
   var v = document.getElementById('splash-video');
 
-  // Show the splash at most once per calendar day (Sydney time), even across
-  // page refreshes and new tabs. The gate is purely the stored day stamp.
+  // Show the splash once per device (first visit only). The gate is the stored
+  // day stamp: any value means it has been seen.
   var today = '';
   try { today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }); }
   catch (e) { today = new Date().toLocaleDateString('en-CA'); }
@@ -1016,8 +1026,12 @@
   var lastShownDay = '';
   try { lastShownDay = localStorage.getItem('viz_splash_day') || ''; } catch (e) {}
 
-  if (lastShownDay === today) {
-    // Already shown today — skip the splash entirely.
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+  if (lastShownDay || reduceMotion) {
+    // Seen it once already (any day), or the user asked for less motion — skip it.
+    try { v.pause(); v.removeAttribute('autoplay'); } catch (e) {}
     s.style.display = 'none';
     return;
   }
@@ -1084,10 +1098,10 @@
 
   <!-- View tabs -->
   <div class="view-tabs">
-    <button class="tab-btn active" onclick="switchTab('snapshot')">Snapshot</button>
-    <button class="tab-btn" onclick="switchTab('dayview')">Day View</button>
-    <button class="tab-btn" onclick="switchTab('timeline')">5 Days</button>
-    <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin')">Reports</button>
+    <button class="tab-btn active" data-tab="snapshot" onclick="switchTab('snapshot')">Snapshot</button>
+    <button class="tab-btn" data-tab="dayview" onclick="switchTab('dayview')">Day View</button>
+    <button class="tab-btn" data-tab="timeline" onclick="switchTab('timeline')">5 Days</button>
+    <button class="tab-btn" data-tab="admin" id="tab-btn-admin" onclick="switchTab('admin')">Reports</button>
   </div>
 
   <!-- Hidden elements needed by JS (conditions + status + sites grid) -->
@@ -1180,7 +1194,7 @@
 
     <!-- Demerit stacked bars -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 12px 12px;margin-top:10px;">
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">Demerit breakdown</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">What's lowering the score</div>
       <div id="dv-bars" style="display:flex;gap:3px;align-items:flex-end;height:64px;"></div>
       <div id="dv-bar-labels" style="display:flex;gap:3px;margin-top:4px;"></div>
       <!-- legend -->
@@ -1198,7 +1212,7 @@
           <div style="width:9px;height:9px;border-radius:2px;background:#f5c842;flex-shrink:0;"></div>Tide
         </div>
         <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);">
-          <div style="width:9px;height:9px;border-radius:2px;background:#e83d3d;flex-shrink:0;"></div>Refraction
+          <div style="width:9px;height:9px;border-radius:2px;background:#e83d3d;flex-shrink:0;"></div>Wrap-around swell
         </div>
       </div>
     </div>
@@ -1215,9 +1229,9 @@
       </table>
     </div>
     <div class="legend" style="margin-top:18px;margin-bottom:0;">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Easy (40–60)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Caution (20–39)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Avoid (&lt;20)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Easy (67–100%)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Caution (33–65%)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Avoid (under 33%)</div>
     </div>
   </div>
 
@@ -2200,7 +2214,7 @@ function describeConditions(site, score, demerits, h) {
       detail:`${h.swell1H.toFixed(1)}m ${bearingName(h.swell1Dir)} swell at ${Math.round(h.swell1P)}s` },
     { key:'swell2',   val:demerits.swell2,   dir:h.swell2Dir,   noun:'secondary swell',
       detail:`${h.swell2H.toFixed(1)}m ${bearingName(h.swell2Dir)} secondary swell` },
-    { key:'refrac',   val:demerits.refrac,   dir:h.swell1Dir,   noun:'refraction',
+    { key:'refrac',   val:demerits.refrac,   dir:h.swell1Dir,   noun:'swell wrapping around the headland',
       detail:`waves wrapping around the headland from the ${bearingName(h.swell1Dir)}` },
     { key:'windWave', val:demerits.windWave, dir:h.windWaveDir, noun:'wind waves',
       detail:`${h.windWaveH.toFixed(1)}m ${bearingName(h.windWaveDir)} wind waves` },
@@ -2899,9 +2913,8 @@ function scheduleNextRefresh(cb) {
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const tabs = ['snapshot','dayview','timeline','about','admin'];
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    b.classList.toggle('active', tabs[i] === name);
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
   });
   document.querySelectorAll('.view-panel').forEach(p => {
     p.classList.toggle('active', p.id === `panel-${name}`);
@@ -2988,6 +3001,7 @@ function buildHourlyMatrix(raw) {
 }
 
 // ── Render 5-day timeline heatmap ──────────────────────────────────────────────
+let _tlTipTimer = null;
 function renderTimeline(hourlyMatrix) {
   if (!hourlyMatrix.length) return;
 
@@ -3067,7 +3081,15 @@ function renderTimeline(hourlyMatrix) {
         span.textContent = toPct(score);
         td.appendChild(span);
 
-        // Tooltip
+        // Tooltip — hover on desktop, tap on phones (tap shows it for 4s)
+        td.addEventListener('click', e => {
+          td.dispatchEvent(new MouseEvent('mouseenter'));
+          const tt = document.getElementById('tl-tooltip');
+          tt.style.left = Math.max(8, Math.min(e.clientX + 14, window.innerWidth - tt.offsetWidth - 8)) + 'px';
+          tt.style.top  = Math.max(8, e.clientY - tt.offsetHeight - 12) + 'px';
+          clearTimeout(_tlTipTimer);
+          _tlTipTimer = setTimeout(() => { tt.style.display = 'none'; }, 4000);
+        });
         td.addEventListener('mouseenter', e => {
           const tt = document.getElementById('tl-tooltip');
           const dt = new Date(h.dateTime);
@@ -3178,6 +3200,7 @@ function renderSnapshot(sliderVal) {
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
         <span class="snap-name">${name}</span>
+        <span class="snap-score">${toPct(score)}% ${label(score)}</span>
       </div>`;
     row.addEventListener('click', () => openSiteSheet(site, score, demerits, h));
     container.appendChild(row);
@@ -3266,7 +3289,7 @@ function renderDayButtons(dayIdx) {
 }
 
 /** Called when user clicks a day button. */
-function selectDay(key, dayIdx) {
+function selectDay(key, dayIdx, preferHour) {
   if (!dayIdx) dayIdx = _buildDayIndex();
   _selectedDayKey = key;
 
@@ -3285,7 +3308,13 @@ function selectDay(key, dayIdx) {
   // Pick the nearest hour to now if it's today, else pick closest to 9 AM
   const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
   let bestSliderVal = 0;
-  if (key === today) {
+  if (preferHour != null) {
+    let minDiff = Infinity;
+    hoursForDay.forEach((matrixIdx, sliderPos) => {
+      const diff = Math.abs(new Date(_hourlyMatrix[matrixIdx].dateTime).getHours() - preferHour);
+      if (diff < minDiff) { minDiff = diff; bestSliderVal = sliderPos; }
+    });
+  } else if (key === today) {
     const now = Date.now();
     let minDiff = Infinity;
     hoursForDay.forEach((matrixIdx, sliderPos) => {
@@ -3551,9 +3580,21 @@ function renderForecastViewsFromMatrix(matrix, rawTideEntries) {
   const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
   _selectedDayKey = _dayKeys.includes(today) ? today : _dayKeys[0];
 
+  // Open on a daylight hour: after sunset jump to tomorrow (9 AM default),
+  // before sunrise jump to the first hour after sunrise.
+  let preferHour = null;
+  if (_selectedDayKey === today && dayIdx[today]) {
+    const h0 = _hourlyMatrix[dayIdx[today][0]];
+    const rise = h0.sunrise ?? 360, set = h0.sunset ?? 1140;
+    const n = new Date(), nowMin = n.getHours() * 60 + n.getMinutes();
+    const next = _dayKeys[_dayKeys.indexOf(today) + 1];
+    if (nowMin >= set && next) _selectedDayKey = next;
+    else if (nowMin < rise) preferHour = Math.ceil(rise / 60);
+  }
+
   renderDayButtons(dayIdx);
   renderTimeline(_hourlyMatrix);
-  selectDay(_selectedDayKey, dayIdx);
+  selectDay(_selectedDayKey, dayIdx, preferHour);
   dvInit();
 }
 
@@ -3876,7 +3917,7 @@ async function init() {
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
         'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      validateScores(data); // run validation against sheet
+      if (_isAdminView()) validateScores(data); // run validation against sheet
       return;
     }
 
@@ -3891,7 +3932,7 @@ async function init() {
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      validateScores(data); // run validation against sheet
+      if (_isAdminView()) validateScores(data); // run validation against sheet
     } catch(err) {
       console.error(err);
       showErrorBanner(err.message);
@@ -3899,12 +3940,14 @@ async function init() {
         updateConditions(cache.data); renderSites(cache.data);
         if (cache.matrix?.length) renderForecastViewsFromMatrix(cache.matrix, loadTideCache());
         setStatus('⚠ Showing cached data — live fetch failed', true);
-        document.getElementById('lastUpdated').textContent =
-          'Cached · ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        const cachedAt = new Date(cache.fetchedAt).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        document.getElementById('lastUpdated').textContent = 'Cached · ' + cachedAt;
+        showErrorBanner(`Showing the last saved forecast, from ${cachedAt}. It may be out of date.`);
       } else {
         updateConditions(DEMO); renderSites(DEMO);
         setStatus('⚠ No data available — showing demo', true);
         document.getElementById('lastUpdated').textContent = 'Demo data (fallback)';
+        showErrorBanner('No forecast is available. Any scores shown are sample values, not a real forecast. Do not use them to plan a dive.');
       }
     }
   }
@@ -3958,6 +4001,9 @@ function diffCell(a, b) {
   const sign = d > 0 ? '+' : '';
   return `<td class="${big ? 'val-diff-warn' : 'val-diff-ok'}">${sign}${d}</td>`;
 }
+
+// The Sheet-vs-App validation panel is a tuning tool: only run/show it on #viz-admin.
+function _isAdminView() { return location.hash === '#viz-admin'; }
 
 async function validateScores(data) {
   const panel  = document.getElementById('val-panel');
@@ -5043,8 +5089,8 @@ function openSiteSheet(site, score, demerits, h) {
   // Demerit breakdown — shown as percentage points so it lines up with the % score
   const rows = [
     { label:'Swell',      val:demerits.swell1,   color:'#00c2a8' },
-    { label:'Secondary',  val:demerits.swell2,   color:'#00857a' },
-    { label:'Refraction', val:demerits.refrac,   color:'#f5a623' },
+    { label:'Second swell',      val:demerits.swell2, color:'#00857a' },
+    { label:'Wrap-around swell', val:demerits.refrac, color:'#f5a623' },
     { label:'Wind wave',  val:demerits.windWave, color:'#3a9bd5' },
     { label:'Wind chop',  val:demerits.wind,     color:'#a0c4ff' },
     { label:'Tide',       val:demerits.tide,     color:'#4a90d9' },
