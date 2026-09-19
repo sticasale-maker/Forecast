@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIZ What's New">
+<meta name="theme-color" content="#061020">
+<link rel="apple-touch-icon" href="image_1.png">
+<link rel="icon" type="image/png" href="image_1.png">
+<meta property="og:title" content="VIZ Forecast: what's new">
+<meta property="og:description" content="Scores on every bar, site maps, favourites, report conditions and more. A one-minute tour.">
+<meta property="og:image" content="https://app.viz.net.au/Forecast/image_2.png">
+<meta property="og:url" content="https://app.viz.net.au/Forecast/whats-new.html">
+<title>VIZ Forecast Spring Update</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { -webkit-text-size-adjust: 100%; }
+  [hidden] { display: none !important; }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  /* Single-theme on purpose: the deck wears the app's own night-water look. */
+  :root {
+    --deep: #061020;
+    --deep-2: #0a1830;
+    --card: #0d2040;
+    --line: rgba(0,194,168,0.22);
+    --teal: #00c2a8;
+    --teal-hi: #00f0d4;
+    --text: #c8ddf5;
+    --dim: #7f9dbb;
+    --green: #2ecc71;
+    --yellow: #f5c842;
+    --red: #e83d3d;
+    --white: #eef6ff;
+    --display: 'Bebas Neue', 'Oswald', Impact, sans-serif;
+    --body: 'DM Sans', 'Segoe UI', Arial, sans-serif;
+    --mono: 'DM Mono', ui-monospace, 'Courier New', monospace;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--deep);
+    color: var(--text);
+    font-family: var(--body);
+    overflow: hidden;
+    padding-inline: 16px;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(0,70,130,0.55), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 10% 100%, rgba(0,194,168,0.10), transparent 70%);
+  }
+  .deck { position: relative; height: 100%; max-width: 1180px; margin-inline: auto; display: flex; flex-direction: column; }
+
+  /* ── top strip: brand + progress ── */
+  .top { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; padding-block: 18px 10px; }
+  .brand { font-family: var(--display); font-size: 26px; letter-spacing: 3px; color: var(--white); white-space: nowrap; }
+  .brand b { color: var(--teal); font-weight: 400; }
+  .progress { flex: 1; display: flex; gap: 5px; }
+  .progress button {
+    flex: 1; height: 5px; border: 0; padding: 0; border-radius: 3px; cursor: pointer;
+    background: rgba(200,221,245,0.16); position: relative; overflow: hidden;
+  }
+  .progress button:focus-visible { outline: 2px solid var(--teal-hi); outline-offset: 3px; }
+  .progress button i { position: absolute; inset: 0; background: var(--teal); transform-origin: left; transform: scaleX(0); }
+  .progress button.done i { transform: scaleX(1); }
+
+  /* ── slides ── */
+  .stage { position: relative; flex: 1; min-height: 0; }
+  .slide {
+    position: absolute; inset: 0; display: grid; grid-template-columns: 1.05fr 0.95fr;
+    align-items: center; gap: 48px; padding-block: 12px 28px;
+    opacity: 0; visibility: hidden; transform: translateY(14px);
+    transition: opacity .6s ease, transform .6s ease, visibility 0s linear .6s;
+  }
+  .slide.on { opacity: 1; visibility: visible; transform: none; transition: opacity .6s ease, transform .6s ease; }
+  .copy { display: flex; flex-direction: column; gap: 18px; max-width: 34rem; }
+  .eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--teal); }
+  h1, h2 { font-family: var(--display); font-weight: 400; color: var(--white); line-height: 0.95; letter-spacing: 1.5px; text-wrap: balance; }
+  h1 { font-size: clamp(56px, 9vw, 120px); }
+  h2 { font-size: clamp(40px, 6vw, 76px); }
+  h1 em, h2 em { font-style: normal; color: var(--teal); }
+  .lead { font-size: clamp(17px, 1.9vw, 22px); line-height: 1.5; max-width: 32rem; }
+  .lead b { color: var(--white); font-weight: 700; }
+  .fine { font-family: var(--mono); font-size: 13px; color: var(--dim); letter-spacing: 0.5px; }
+  .fine a, .lead a { color: var(--teal); }
+
+  /* ── the phone-sized illustration panel ── */
+  .art { justify-self: center; width: min(100%, 400px); }
+  .screen {
+    background: var(--deep-2); border: 1px solid var(--line); border-radius: 26px;
+    padding: 18px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 6px rgba(0,194,168,0.05);
+  }
+  .s-title { font-family: var(--display); font-size: 22px; letter-spacing: 2px; color: var(--white); text-align: center; }
+  .bar { position: relative; height: 26px; border-radius: 5px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .bar span.f { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
+  .bar span.n, .bar span.v {
+    position: absolute; top: 50%; transform: translateY(-50%); font-weight: 700; font-size: 14px; color: #fff;
+    text-shadow: 0 0 3px rgba(0,0,0,.7), 1px 1px 0 rgba(0,0,0,.5), -1px -1px 0 rgba(0,0,0,.5);
+  }
+  .bar span.n { left: 10px; } .bar span.v { right: 10px; }
+  .axis { display: flex; justify-content: space-around; font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; }
+  .tabs { display: flex; gap: 6px; }
+  .tabs span { flex: 1; text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; padding: 10px 2px; border-radius: 8px; border: 1px solid var(--line); color: var(--dim); }
+  .tabs span.on { background: var(--teal); border-color: var(--teal); color: #031018; font-weight: 500; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chips span { font-family: var(--mono); font-size: 12px; padding: 7px 11px; border-radius: 8px; border: 1px solid var(--line); color: var(--dim); }
+  .chips span.on { background: var(--teal); color: #031018; border-color: var(--teal); }
+  .rail { position: relative; height: 44px; }
+  .rail::before { content: ''; position: absolute; left: 0; right: 0; top: 18px; height: 8px; border-radius: 4px; background: rgba(0,194,168,0.28); }
+  .thumb { position: absolute; top: 2px; width: 40px; height: 40px; border-radius: 50%; background: var(--teal); border: 3px solid var(--deep-2); box-shadow: 0 0 0 1px var(--teal); }
+  .ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+  .sheet-head b { font-family: var(--display); font-size: 28px; letter-spacing: 2px; color: var(--white); font-weight: 400; }
+  .round { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; }
+  .pill { align-self: flex-start; font-family: var(--mono); font-size: 13px; padding: 5px 12px; border-radius: 20px; }
+  .note { font-size: 14px; line-height: 1.5; color: var(--text); }
+  .row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 13px; padding-block: 5px; border-top: 1px solid rgba(200,221,245,0.08); }
+  .row .k { display: flex; align-items: center; gap: 8px; }
+  .row .k::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .banner { background: rgba(232,61,61,0.14); border: 1px solid rgba(232,61,61,0.5); border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+  .banner b { color: #ff8a8a; display: block; margin-bottom: 3px; }
+  .btn { align-self: flex-start; background: var(--teal); color: #031018; font-family: var(--mono); font-weight: 500; font-size: 13px; letter-spacing: 1px; padding: 9px 16px; border-radius: 8px; }
+  svg text { font-family: var(--mono); }
+
+  /* ── controls ── */
+  .controls { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .controls button {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 1px; color: var(--text); cursor: pointer;
+    background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px;
+  }
+  .controls button:hover { border-color: var(--teal); color: var(--teal); }
+  .controls button:focus-visible { outline: 2px solid var(--teal-hi); outline-offset: 2px; }
+  .count { font-family: var(--mono); font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .nav { display: flex; gap: 8px; }
+
+  /* Phone: stack text over the illustration, trim the illustration. */
+  @media (max-width: 760px) {
+    /* safe center: a slide taller than the phone starts at the top instead of
+       spilling up under the progress bar; the slide scrolls if it must. */
+    .slide { grid-template-columns: 1fr; align-content: safe center; gap: 18px; overflow-y: auto; padding-block: 8px 12px; }
+    h1 { font-size: clamp(44px, 12vw, 64px); }
+    h2 { font-size: clamp(34px, 9.5vw, 48px); }
+    .lead { font-size: 16px; }
+    .bar { height: 22px; }
+    .copy { gap: 12px; }
+    .art { width: min(100%, 340px); }
+    .screen { padding: 14px; gap: 8px; border-radius: 20px; }
+    .hide-sm { display: none !important; }
+    .brand { font-size: 20px; }
+  }
+  @media (max-height: 620px) and (max-width: 760px) { .art { display: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .slide.on { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="top">
+    <div class="brand">VIZ <b>FORECAST</b></div>
+    <div class="progress" id="progress" role="tablist" aria-label="Slides"></div>
+  </div>
+
+  <div class="stage" id="stage" aria-live="polite">
+
+    <!-- 1 · cover -->
+    <section class="slide" data-title="What's new">
+      <div class="copy">
+        <div class="eyebrow">Spring update · September 2026</div>
+        <h1>Your dive forecast, <em>easier to read</em></h1>
+        <p class="lead">Thirteen Sydney dive sites, scored for swell, wind and tide. Here's everything that changed this week, in about a minute.</p>
+        <p class="fine">app.viz.net.au/Forecast</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="s-title">SUN, 20 SEPT 09:00</div>
+          <div class="bar"><span class="f" style="width:100%;background:var(--green)"></span><span class="n">Chowder Bay</span><span class="v">100% Easy</span></div>
+          <div class="bar"><span class="f" style="width:97%;background:var(--green)"></span><span class="n">Camp Cove</span><span class="v">97% Easy</span></div>
+          <div class="bar"><span class="f" style="width:90%;background:var(--green)"></span><span class="n">Gordon's Bay</span><span class="v">90% Easy</span></div>
+          <div class="bar"><span class="f" style="width:55%;background:var(--yellow)"></span><span class="n">BI West</span><span class="v">55% Caution</span></div>
+          <div class="bar"><span class="f" style="width:24%;background:var(--red)"></span><span class="n">Oak Park</span><span class="v">24% Avoid</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · scores on the bars -->
+    <section class="slide" data-title="Scores on every bar">
+      <div class="copy">
+        <div class="eyebrow">Snapshot</div>
+        <h2>Every site shows its <em>score and verdict</em></h2>
+        <p class="lead">No more guessing from bar length. Each site reads out its number and a word: <b>Easy</b>, <b>Caution</b> or <b>Avoid</b>. One scale everywhere in the app.</p>
+        <p class="fine">Easy 67–100% · Caution 33–65% · Avoid under 33%</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="bar"><span class="f" style="width:97%;background:var(--green)"></span><span class="n">CTB Bower Lane</span><span class="v">97% Easy</span></div>
+          <div class="bar"><span class="f" style="width:85%;background:var(--green)"></span><span class="n">Shark Point</span><span class="v">85% Easy</span></div>
+          <div class="bar"><span class="f" style="width:58%;background:var(--yellow)"></span><span class="n">Little Bay</span><span class="v">58% Caution</span></div>
+          <div class="bar"><span class="f" style="width:41%;background:var(--yellow)"></span><span class="n">Leap &amp; Steps</span><span class="v">41% Caution</span></div>
+          <div class="bar"><span class="f" style="width:22%;background:var(--red)"></span><span class="n">Monument</span><span class="v">22% Avoid</span></div>
+          <div class="axis"><span style="color:var(--red)">AVOID</span><span style="color:var(--yellow)">CAUTION</span><span style="color:var(--green)">EASY</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · daylight + time cursor -->
+    <section class="slide" data-title="Time slider in reach">
+      <div class="copy">
+        <div class="eyebrow">Planning ahead</div>
+        <h2>Opens on a time you'd <em>actually dive</em></h2>
+        <p class="lead">Check the app after sunset and it jumps to <b>tomorrow morning</b>. The day buttons and hour slider now sit just above the menu, always in reach of your thumb.</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="chips"><span>TODAY</span><span class="on">SUN</span><span>MON</span><span>TUE</span><span class="hide-sm">WED</span></div>
+          <div class="rail"><div class="thumb" style="left:calc(37% - 20px)"></div></div>
+          <div class="ticks"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div>
+          <div class="tabs"><span class="on">SNAPSHOT</span><span>DAY</span><span>5 DAYS</span><span>MORE</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · favourite -->
+    <section class="slide" data-title="Your favourite site">
+      <div class="copy">
+        <div class="eyebrow">Your local spot</div>
+        <h2>Star your <em>favourite site</em></h2>
+        <p class="lead">Tap ☆ on any site and it's <b>pinned to the top</b> of the list, and the Day view opens on it. The app also remembers the tab you used last.</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="sheet-head"><b>GORDON'S BAY</b><span class="round" style="border:1px solid rgba(245,200,66,.5);color:var(--yellow);background:rgba(245,200,66,.16)">★</span></div>
+          <div class="pill" style="background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:var(--green)">90% · Easy</div>
+          <div class="bar"><span class="f" style="width:90%;background:var(--green)"></span><span class="n">★ Gordon's Bay</span><span class="v">90% Easy</span></div>
+          <div class="bar"><span class="f" style="width:100%;background:var(--green)"></span><span class="n">Chowder Bay</span><span class="v">100% Easy</span></div>
+          <div class="bar"><span class="f" style="width:98%;background:var(--green)"></span><span class="n">Little Bay</span><span class="v">98% Easy</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · maps -->
+    <section class="slide" data-title="Swell and wind maps">
+      <div class="copy">
+        <div class="eyebrow">New · site maps</div>
+        <h2>See where the <em>swell and wind</em> land</h2>
+        <p class="lead">Every site now has a top-down map: swell bending around the headland, the wind and the chop it builds. It tells you <b>how much of the swell gets in</b> at your entry.</p>
+        <p class="fine">On Snapshot for all 13 sites, and in each site's details</p>
+      </div>
+      <div class="art">
+        <div class="screen" style="padding:10px">
+          <svg viewBox="0 0 360 230" width="100%" role="img" aria-label="Map sketch: swell arrows from the south wrap around a headland into a sheltered cove, where 69% of the swell reaches the entry">
+            <rect x="0" y="0" width="360" height="230" rx="14" fill="#0f4f6e"/>
+            <path d="M0 0 H360 V78 C318 70 300 100 268 96 C236 92 232 128 200 132 C176 135 170 112 150 118 C128 125 120 160 92 158 C60 156 40 120 0 128 Z" fill="#e3d2b0"/>
+            <path d="M0 128 C40 120 60 156 92 158 C120 160 128 125 150 118 C170 112 176 135 200 132 C232 128 236 92 268 96 C300 100 318 70 360 78" fill="none" stroke="#2a7b93" stroke-width="5" opacity=".7"/>
+            <g stroke="#eef6ff" stroke-width="2" fill="#eef6ff" opacity=".85">
+              <path d="M300 214 v-22 M296 198 l4 -8 4 8"/><path d="M330 214 v-22 M326 198 l4 -8 4 8"/>
+              <path d="M240 214 v-22 M236 198 l4 -8 4 8"/><path d="M270 214 v-22 M266 198 l4 -8 4 8"/>
+              <path d="M180 212 v-18 M176 198 l4 -8 4 8" opacity=".7"/><path d="M150 206 v-14 M146 196 l4 -7 4 7" opacity=".5"/>
+            </g>
+            <g fill="none" stroke="#eef6ff" stroke-width="1.5" opacity=".5">
+              <path d="M120 186 a26 26 0 0 1 52 0"/><path d="M130 186 a16 16 0 0 1 32 0"/>
+            </g>
+            <circle cx="36" cy="44" r="24" fill="rgba(6,16,32,.55)"/><path d="M36 60 V30 M29 38 l7 -10 7 10" stroke="#5aa0e0" stroke-width="4" fill="none"/>
+            <circle cx="94" cy="44" r="24" fill="rgba(6,16,32,.55)"/><path d="M84 32 L102 56 M94 56 h8 v-8" stroke="#e6a04a" stroke-width="4" fill="none"/>
+            <circle cx="146" cy="148" r="6" fill="#f5c842" stroke="#061020" stroke-width="2"/>
+            <text x="146" y="176" text-anchor="middle" font-size="18" font-weight="500" fill="#eef6ff">69%</text>
+            <text x="146" y="192" text-anchor="middle" font-size="10" fill="#eef6ff">of the swell gets in</text>
+            <text x="36" y="84" text-anchor="middle" font-size="10" fill="#5aa0e0">SWELL</text>
+            <text x="94" y="84" text-anchor="middle" font-size="10" fill="#e6a04a">WIND</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · report conditions -->
+    <section class="slide" data-title="Report conditions">
+      <div class="copy">
+        <div class="eyebrow">Your turn · please help</div>
+        <h2>Tell us how it <em>really was</em></h2>
+        <p class="lead">Back from a dive? Open the site, tap <b>✍️ Report conditions</b>, drag to how the water really felt and hit Send. Each report is matched to that hour's swell, wind and tide. <b>It's how the forecast gets tuned.</b></p>
+        <p class="fine">Also under More → Report conditions</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="s-title" style="text-align:left">✍️ REPORT CONDITIONS</div>
+          <div class="note">Were you in the water here? Tell us how it really was.</div>
+          <div class="chips"><span style="flex:1">When&nbsp;&nbsp;<b style="color:var(--white)">Today 10am</b></span></div>
+          <div style="position:relative;height:52px;margin-top:14px">
+            <div style="position:absolute;left:0;right:0;top:22px;height:8px;border-radius:4px;background:linear-gradient(to right,var(--red) 0 33%,var(--yellow) 33% 66.7%,var(--green) 66.7%);opacity:.8"></div>
+            <div style="position:absolute;left:calc(15px + (100% - 30px) * .97);top:14px;width:2px;height:24px;background:#fff"></div>
+            <div style="position:absolute;left:calc((100% - 30px) * .97 - 30px);top:-4px;font-family:var(--mono);font-size:11px;color:var(--dim)">forecast</div>
+            <div class="thumb" style="width:32px;height:32px;top:10px;left:calc((100% - 32px) * .45)"></div>
+          </div>
+          <div class="axis" style="justify-content:space-between;color:var(--dim)"><span>AVOID</span><span>CAUTION</span><span>EASY</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="note">My call: <b style="color:var(--white)">45% Caution</b></span><span class="btn">SEND</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 · install -->
+    <section class="slide" data-title="Install the app">
+      <div class="copy">
+        <div class="eyebrow">Add to home screen</div>
+        <h2>Install it like <em>a real app</em></h2>
+        <p class="lead">It opens full screen, and <b>still shows the last forecast when you've got no signal</b> at the car park.</p>
+        <p class="fine">iPhone: Safari → Share → Add to Home Screen<br>Android: More → Install</p>
+      </div>
+      <div class="art">
+        <div class="screen" style="align-items:center;padding:28px 18px">
+          <div style="display:grid;grid-template-columns:repeat(4,64px);gap:18px;justify-content:center">
+            <div style="width:64px;height:64px;border-radius:15px;background:rgba(200,221,245,.08)"></div>
+            <div style="width:64px;height:64px;border-radius:15px;background:rgba(200,221,245,.08)"></div>
+            <div style="width:64px;height:64px;border-radius:15px;background:linear-gradient(160deg,#2c527f,#0f2e52);display:grid;place-items:center;font-family:var(--display);font-size:30px;color:#ffe600;letter-spacing:1px;box-shadow:0 0 0 2px var(--teal)">VIZ</div>
+            <div style="width:64px;height:64px;border-radius:15px;background:rgba(200,221,245,.08)"></div>
+          </div>
+          <div class="fine" style="margin-top:12px">VIZ Forecast on your home screen</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 · readability -->
+    <section class="slide" data-title="Easier to read">
+      <div class="copy">
+        <div class="eyebrow">Clearer everywhere</div>
+        <h2>Bigger text, <em>plainer words</em></h2>
+        <p class="lead">Small print is gone. Jargon is gone too: tap a site to see <b>what's lowering its score</b>. Tap <b>ⓘ What the colours mean</b> for a quick guide. The 5-day grid now works with a tap on phones.</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="eyebrow" style="font-size:12px">What's lowering the score</div>
+          <div class="row"><span class="k" style="--c:#00c2a8">Swell</span><span>−14%</span></div>
+          <div class="row"><span class="k" style="--c:#a78bfa">Wind chop</span><span>−6%</span></div>
+          <div class="row"><span class="k" style="--c:#f5a623">Wrap-around swell</span><span>−1%</span></div>
+          <div class="row"><span class="k" style="--c:#3a9bd5">Wind wave</span><span>0%</span></div>
+          <div class="row"><span class="k" style="--c:#4a90d9">Tide</span><span>0%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 · wind-wave period -->
+    <section class="slide" data-title="Sharper chop scoring">
+      <div class="copy">
+        <div class="eyebrow">Under the hood</div>
+        <h2>Chop scored on its <em>real wave period</em></h2>
+        <p class="lead">Wind waves used to be scored as if every chop had a 5-second period. Now the app uses the actual forecast period. Short, steep chop and longer wind swell are <b>no longer treated the same</b>.</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <svg viewBox="0 0 360 170" width="100%" role="img" aria-label="Two wave lines: a short 3 second chop with tight waves, and a longer 7 second wind swell with wide waves">
+            <text x="0" y="16" font-size="12" fill="#c8ddf5">3 s chop</text>
+            <path d="M0 50 q15 -18 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0" fill="none" stroke="#a78bfa" stroke-width="3"/>
+            <text x="0" y="104" font-size="12" fill="#c8ddf5">7 s wind swell</text>
+            <path d="M0 140 q35 -26 70 0 t70 0 t70 0 t70 0 t70 0 t70 0" fill="none" stroke="#3a9bd5" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 · honest data -->
+    <section class="slide" data-title="Honest when offline">
+      <div class="copy">
+        <div class="eyebrow">Safety first</div>
+        <h2>It tells you when data <em>isn't live</em></h2>
+        <p class="lead">If the forecast can't be refreshed, a clear banner shows <b>when the saved forecast is from</b>. The app never passes off old numbers as today's.</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="banner"><b>⚠ Could not load forecast data</b>Showing the last saved forecast, from Sat 19 Sept 08:01 pm. It may be out of date.</div>
+          <div class="bar" style="opacity:.6"><span class="f" style="width:92%;background:var(--green)"></span><span class="n">Freshwater</span><span class="v">92% Easy</span></div>
+          <div class="bar" style="opacity:.6"><span class="f" style="width:87%;background:var(--green)"></span><span class="n">Shark Point</span><span class="v">87% Easy</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 · close -->
+    <section class="slide" data-title="Try it now">
+      <div class="copy">
+        <div class="eyebrow">By divers, for divers</div>
+        <h1>Try it <em>today</em></h1>
+        <p class="lead"><b>app.viz.net.au/Forecast</b></p>
+        <p class="lead">Dived this weekend? <b>Report the conditions</b>. It takes ten seconds and makes the forecast better for everyone.</p>
+        <p class="fine">Free, non-profit, no ads · keeping it running: More → Offer me a coffee 🥱</p>
+      </div>
+      <div class="art">
+        <div class="screen">
+          <div class="tabs"><span>SNAPSHOT</span><span>DAY</span><span>5 DAYS</span><span class="on">MORE</span></div>
+          <div class="banner" style="background:rgba(255,221,0,.08);border-color:rgba(255,221,0,.35)"><b style="color:#ffdd00">☕ Offer me a coffee 🥱</b>Free and non-profit. A coffee keeps it running without ads.</div>
+          <div class="banner" style="background:rgba(0,194,168,.08);border-color:rgba(0,194,168,.4)"><b style="color:var(--teal)">✍️ Report conditions</b>Pick your site, tell us how it really was.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="controls">
+    <div class="nav"><button type="button" id="play" aria-label="Pause the slideshow">❚❚ Pause</button><button type="button" id="fs" hidden aria-label="Full screen">⛶ Full screen</button></div>
+    <span class="count" id="count">1 / 11</span>
+    <div class="nav">
+      <button type="button" id="prev" aria-label="Previous slide">←</button>
+      <button type="button" id="next" aria-label="Next slide">→</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const DWELL = 8000;                       // ms per slide
+  const slides = [...document.querySelectorAll('.slide')];
+  const progress = document.getElementById('progress');
+  const count = document.getElementById('count');
+  const playBtn = document.getElementById('play');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i = 0, playing = true, start = performance.now(), elapsed = 0, raf = null;
+
+  const bars = slides.map((s, k) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('role', 'tab');
+    b.setAttribute('aria-label', `Slide ${k + 1}: ${s.dataset.title}`);
+    b.innerHTML = '<i></i>';
+    b.addEventListener('click', () => go(k, true));
+    progress.appendChild(b);
+    return b;
+  });
+
+  function paint(frac) {
+    bars.forEach((b, k) => {
+      b.classList.toggle('done', k < i);
+      b.firstChild.style.transform = k === i ? `scaleX(${frac})` : '';
+      b.setAttribute('aria-selected', k === i ? 'true' : 'false');
+    });
+  }
+  function go(k, manual) {
+    i = (k + slides.length) % slides.length;
+    slides.forEach((s, n) => { s.classList.toggle('on', n === i); s.setAttribute('aria-hidden', n === i ? 'false' : 'true'); });
+    count.textContent = `${i + 1} / ${slides.length}`;
+    elapsed = 0; start = performance.now();
+    paint(0);
+    if (manual && playing) { /* keep playing from the chosen slide */ }
+  }
+  function tick(now) {
+    if (playing) {
+      const t = elapsed + (now - start);
+      if (t >= DWELL) { go(i + 1); }
+      else paint(t / DWELL);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  function setPlaying(p) {
+    if (p === playing) return;
+    if (p) { start = performance.now(); } else { elapsed += performance.now() - start; }
+    playing = p;
+    playBtn.textContent = p ? '❚❚ Pause' : '▶ Play';
+    playBtn.setAttribute('aria-label', p ? 'Pause the slideshow' : 'Play the slideshow');
+  }
+
+  playBtn.addEventListener('click', () => setPlaying(!playing));
+  document.getElementById('prev').addEventListener('click', () => go(i - 1, true));
+  document.getElementById('next').addEventListener('click', () => go(i + 1, true));
+  // Tap the slide itself to pause/resume (handy when presenting from a phone).
+  document.getElementById('stage').addEventListener('click', () => setPlaying(!playing));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') go(i + 1, true);
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(i - 1, true);
+    else if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+  });
+  // Swipe on touch screens.
+  let x0 = null;
+  document.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1), true);
+  });
+  // A hidden tab shouldn't race through the deck in the background.
+  document.addEventListener('visibilitychange', () => { if (document.hidden) setPlaying(false); });
+
+  go(0);
+  raf = requestAnimationFrame(tick);
+})();
+</script>
+
+<script>
+(function () {
+  const btn = document.getElementById('fs');
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req) return;                       // iPhone Safari: no page full screen, button stays hidden
+  btn.hidden = false;
+  const isFs = () => document.fullscreenElement || document.webkitFullscreenElement;
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { const p = req.call(el); if (p && p.catch) p.catch(() => {}); }
+  });
+  const sync = () => { btn.textContent = isFs() ? '✕ Exit full screen' : '⛶ Full screen'; };
+  document.addEventListener('fullscreenchange', sync);
+  document.addEventListener('webkitfullscreenchange', sync);
+})();
+</script>
+</body>
+</html>
