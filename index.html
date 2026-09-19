@@ -408,7 +408,18 @@
   .ss-head-btns { display:flex; align-items:center; gap:8px; }
   /* "My call" rating in the site sheet */
   #siteSheetRate { margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
-  .sr-q { font-size:14px; line-height:1.5; color:var(--text); margin-bottom:22px; }
+  .sr-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1.5px; color:#fff; margin-bottom:4px; }
+  .sr-q { font-size:14px; line-height:1.5; color:var(--text); margin-bottom:10px; }
+  .sr-when { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-dim); margin-bottom:26px; }
+  .sr-when select {
+    flex:1; font:inherit; color:#fff; background:rgba(13,32,64,0.9); border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px;
+  }
+  #siteSheetReportBtn {
+    display:inline-block; margin:8px 0 0 0; background:none; cursor:pointer;
+    border:1px solid rgba(245,200,66,0.45); border-radius:8px; color:var(--yellow);
+    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; padding:8px 14px;
+  }
   .sr-q b { color:#fff; }
   .sr-rail { position:relative; height:34px; }
   .sr-track {
@@ -1392,7 +1403,7 @@
       <button type="button" class="nh-btn" onclick="dismissNewHere()">Got it</button>
     </div>
     <div class="section-title" id="snapshotTitle" style="display:none;"><span id="snapshotTimeDisplay">—</span></div>
-    <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap a site for details <span class="tap-hint-arrow">↓</span></div>
+    <div class="snap-tap-hint" id="snapshotTapHint" style="display:none;"><span class="tap-hint-arrow">↓</span> Tap a site for details or to report <span class="tap-hint-arrow">↓</span></div>
     <div class="snap-sort" id="snapSort" style="display:none;">
       <button type="button" class="info-btn" onclick="openScoreInfo()" aria-label="What the scores mean">ⓘ What the colours mean</button>
       <span class="snap-sort-label">Sort</span>
@@ -1499,7 +1510,7 @@
       box-shadow:0 2px 12px rgba(255,221,0,0.25);
       transition:opacity 0.15s;letter-spacing:0.2px;"
       onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:28px;line-height:1;">☕</span> Offer me a coffee
+      <span style="font-size:28px;line-height:1;">☕</span> Offer me a coffee <span style="font-size:22px;line-height:1;" aria-hidden="true">🥱</span>
     </a>
   </div>
     <div class="install-card" id="installCard" style="display:none;">
@@ -5413,16 +5424,49 @@ function vizTrack(event, props) {
   } catch (e) {}
 }
 
-// ── "My call": was the forecast right? (site sheet) ────────────────────────────
-// Offered only for hours someone could actually have been in the water: from 3
-// days ago up to one hour ahead. One call per site-hour per device.
+// ── "Report conditions" (My call): was the forecast right? (site sheet) ───────
+// Always offered in the sheet. The "When" menu lists the daylight hours someone
+// could have been in the water: the last 3 days up to now (+1h), newest first.
+// It starts on the sheet's own hour if that is in range, else the latest hour.
+// One call per site-hour per device.
 let _rateCtx = null;
 function _rateKey(c) { return 'viz_rated:' + c.site.key + ':' + c.h.dateTime; }
+function _rateHours() {
+  const now = Date.now();
+  const minutesOf = r => (+r.dateTime.substring(11,13))*60 + (+r.dateTime.substring(14,16));
+  return _hourlyMatrix.map((h, i) => ({ h, i })).filter(({ h }) => {
+    const away = (new Date(h.dateTime).getTime() - now) / 3600000;
+    const m = minutesOf(h), rise = h.sunrise ?? 360, set = h.sunset ?? 1140;
+    return away <= 1 && away >= -72 && m >= rise - 60 && m <= set;
+  }).reverse();
+}
+function _rateWhenLabel(h) {
+  const d = new Date(h.dateTime);
+  const key = d.toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  const today = new Date().toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  const yest = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', {timeZone:'Australia/Sydney'});
+  const day = key === today ? 'Today' : key === yest ? 'Yesterday' : d.toLocaleDateString('en-AU', {weekday:'long'});
+  const hr = d.getHours();
+  return `${day} ${hr % 12 || 12}${hr < 12 ? 'am' : 'pm'}`;
+}
 function setupRating(site, score, h) {
   const box = document.getElementById('siteSheetRate');
-  const hrsAway = (new Date(h.dateTime).getTime() - Date.now()) / 3600000;
-  if (hrsAway > 1 || hrsAway < -72) { box.style.display = 'none'; _rateCtx = null; return; }
-  _rateCtx = { site, score, h };
+  const hours = _rateHours();
+  document.getElementById('siteSheetReportBtn').style.display = hours.length ? '' : 'none';
+  if (!hours.length) { box.style.display = 'none'; _rateCtx = null; return; }
+  const sel = document.getElementById('rateWhen');
+  sel.innerHTML = hours.map(({ h: r, i }) => `<option value="${i}">${_rateWhenLabel(r)}</option>`).join('');
+  const own = hours.find(({ h: r }) => r.dateTime === h.dateTime);
+  sel.value = String((own || hours[0]).i);
+  _rateCtx = { site };
+  onRateWhen();
+  box.style.display = 'block';
+}
+function onRateWhen() {
+  if (!_rateCtx) return;
+  const h = _hourlyMatrix[+document.getElementById('rateWhen').value];
+  const score = calcScore(_rateCtx.site, h).score;
+  _rateCtx.h = h; _rateCtx.score = score;
   const pct = toPct(score);
   const slider = document.getElementById('rateSlider');
   const done = _lsGet(_rateKey(_rateCtx));
@@ -5432,8 +5476,10 @@ function setupRating(site, score, h) {
   _rateSliderLabel();
   slider.disabled = done != null;
   document.getElementById('rateSend').style.display = done != null ? 'none' : '';
-  document.getElementById('rateMsg').textContent = done != null ? `Thanks, your call was ${done}% (${label(done * 0.6)}).` : '';
-  box.style.display = 'block';
+  document.getElementById('rateMsg').textContent = done != null ? `Thanks, your call for this time was ${done}% (${label(done * 0.6)}).` : '';
+}
+function scrollToReport() {
+  document.getElementById('siteSheetRate').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function _rateSliderLabel() {
   const v = +document.getElementById('rateSlider').value;
@@ -5514,6 +5560,7 @@ loadConfig().then(() => init());
     <a id="siteSheetGraphLink" role="button" tabindex="0"
        onclick="openDayViewFromSheet()"
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
+    <button type="button" id="siteSheetReportBtn" onclick="scrollToReport()">✍️ Report conditions ↓</button>
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
     <div id="siteSheetPollution">
@@ -5527,7 +5574,9 @@ loadConfig().then(() => init());
     </div>
     <div id="siteSheetDemerits"></div>
     <div id="siteSheetRate" style="display:none;">
-      <div class="sr-q">Were you in the water here around this time? <b>How was it really?</b></div>
+      <div class="sr-title">✍️ Report conditions</div>
+      <div class="sr-q">Were you in the water here? Tell us how it really was.</div>
+      <label class="sr-when">When <select id="rateWhen" onchange="onRateWhen()"></select></label>
       <div class="sr-rail">
         <div class="sr-track" aria-hidden="true"></div>
         <div class="sr-tick" id="rateForecastTick" aria-hidden="true"><span>forecast</span></div>
