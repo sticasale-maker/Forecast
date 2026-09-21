@@ -2178,13 +2178,19 @@ const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPPOtn-j
 const CONFIG_CACHE_KEY = 'viz_config_cache';
 const CONFIG_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
-// ── Default CONFIG (identical to original hardcoded values — verified against sheet) ──
+// ── Default CONFIG — fallback used ONLY when the sheet CSV is unreachable ──
+// Refreshed from the published sheet 2026-09-21. These had drifted badly: the
+// sheet's spm constant moved from 144 to 49, leaving every baked periodPower
+// ~3.5x too high, which silently inflated the refraction demerit on any sheet
+// outage. Re-sync these whenever the sheet's tuning rows change.
 const CONFIG_DEFAULTS = {
-  windSens:   [0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.6 ],
-  swellSens:  [1.4,  1.4,  1.6,  1.6,  1.6,  0.8,  0.8,  1.0,  2.2,  1.2,  1.8,  0.3,  2.5,  3.0 ],
-  // MULTIPLIER units — same as the sheet's 'Swell period multiplier' row (144/periodPower already applied).
-  // Used directly as spm in calcScore. (144/25=5.76, 144/20=7.2, 144/10=14.4)
-  periodPower:[5.76, 7.2,  7.2,  14.4, 7.2,  5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 7.2,  2.45],
+  windSens:   [0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.6 , 0.6],
+  swellSens:  [1.65, 1.4 , 1.6 , 1.1 , 0.8 , 0.8 , 0.8 , 1   , 2.2 , 1.2 , 1.8 , 0.3 , 3   , 3],
+  // MULTIPLIER units — the sheet's 'Swell period multiplier' row (row 27) verbatim,
+  // used directly as spm in calcScore. The sheet currently derives it as
+  // 49/periodPower (49/30=1.633, 49/20=2.45, 49/10=4.9) but NEVER re-derive it here
+  // — read the cell, the sheet is authoritative and the constant has changed before.
+  periodPower:[1.633333333, 2.45       , 2.45       , 4.9        , 1.75       , 1.96       , 1.96       , 1.96       , 1.96       , 1.96       , 1.96       , 1.96       , 2.45       , 2.45],
   lookup: {
     CTB:       {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
                 sea: [20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
