@@ -2351,6 +2351,34 @@ const SITES = [
    tide:(o,t)=>o*(0.166*t-0.034)},
 ];
 
+// Display order down the coast, north to south, so the Snapshot map grid, the
+// Day site chips and the 5 Days rows all read the way the coastline does.
+// Comments are the entry-point latitudes. SITES order itself is left alone —
+// the Snapshot bars (user-sorted by score or name) and the sheet column map
+// key off it.
+const SITE_NS_ORDER = [
+  'Freshwater',   // -33.779  Freshwater Beach
+  'CTB',          // -33.798  Cabbage Tree Bay / Bower Lane, Manly
+  'Fairlight',    // -33.799  Fairlight
+  'Chowder',      // -33.840  Chowder Bay
+  'CampCove',     // -33.841  Camp Cove
+  'NorthBondi',   // -33.889  North Bondi
+  'SharkPoint',   // -33.915  Shark Point, Clovelly
+  'Gordons',      // -33.918  Gordon's Bay
+  'LittleBay',    // -33.977  Little Bay
+  'BIW',          // -33.989  Bare Island West, La Perouse
+  'BIE',          // -33.990  Bare Island East
+  'Monument',     // -34.006  The Monument, Kurnell
+  'Steps',        // -34.009  The Leap & Steps, Kurnell
+  'Oak',          // -34.064  Oak Park, Cronulla
+];
+// SITES sorted north to south. Any site missing from the list above (a new one
+// added to SITES and not yet placed) falls to the end rather than vanishing.
+function sitesNorthToSouth() {
+  const rank = k => { const i = SITE_NS_ORDER.indexOf(k); return i < 0 ? 999 : i; };
+  return SITES.slice().sort((a, b) => rank(a.key) - rank(b.key));
+}
+
 // Wind-wave period to assume when Open-Meteo does not report one.
 //
 // The old comment here said this 5 came from sheet cell A24. It does not, and A24 is not
@@ -3377,8 +3405,8 @@ function renderTimeline(hourlyMatrix) {
   });
   thead.appendChild(tr2);
 
-  // ── Body: one row per site ──
-  SITES.forEach(site => {
+  // ── Body: one row per site, north to south down the coast ──
+  sitesNorthToSouth().forEach(site => {
     const tr = document.createElement('tr');
 
     // Site label
@@ -3956,7 +3984,7 @@ function dvInit() {
   const chipWrap = document.getElementById('dv-site-chips');
   if (!chipWrap) return;
   chipWrap.innerHTML = '';
-  SITES.forEach(s => {
+  sitesNorthToSouth().forEach(s => {
     const b = document.createElement('button');
     b.className = 'dv-chip' + (s.key === _dvSiteKey ? ' active' : '');
     b.textContent = s.name;
@@ -5590,7 +5618,7 @@ function renderSiteMapGrid(h, results) {
 
   if (!_gridMaps) {
     _gridMaps = {};
-    SITES.forEach(site => {
+    sitesNorthToSouth().forEach(site => {
       const C = (typeof SITE_COAST !== 'undefined') && SITE_COAST[site.key];
       if (!C || !C.rings || !C.rings.length) return;   // no outline → no tile
       const card = document.createElement('div');
@@ -5614,7 +5642,7 @@ function renderSiteMapGrid(h, results) {
   const byKey = {};
   (results || []).forEach(r => { byKey[r.site.key] = r; });
   let any = false;
-  SITES.forEach(site => {
+  sitesNorthToSouth().forEach(site => {
     const g = _gridMaps[site.key];
     if (!g) return;
     const r = byKey[site.key] || (function () {
