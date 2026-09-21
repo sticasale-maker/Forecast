@@ -2153,7 +2153,10 @@ function dirLookup(arr, deg) {
 //   Rows 32–63 → direction table, sites as triplets wind/sea/rif starting col C
 //   Site column offsets (0-based): CTB=2,BIW=5,BIE=8,Steps=11,Monument=14,
 //     Chowder=17,CampCove=20,Fairlight=23,Gordons=26,Freshwater=29,
-//     SharkPoint=32,LittleBay=35,Oak=38
+//     SharkPoint=32,LittleBay=35,Oak=38,NorthBondi=44
+//   NOTE: North Bondi breaks the old 'sens col = index+2' rule — its sens live
+//     at col AS (44), the same column its dispersion triplet starts in. See
+//     SITE_SENS_COL.
 // =============================================================================
 
 // ── Global fetch-with-timeout: real AbortController, REJECTS on timeout ────────
@@ -2177,11 +2180,11 @@ const CONFIG_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 // ── Default CONFIG (identical to original hardcoded values — verified against sheet) ──
 const CONFIG_DEFAULTS = {
-  windSens:   [0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3],
-  swellSens:  [1.4,  1.4,  1.6,  1.6,  1.6,  0.8,  0.8,  1.0,  2.2,  1.2,  1.8,  0.3,  2.5],
+  windSens:   [0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.3,  0.6 ],
+  swellSens:  [1.4,  1.4,  1.6,  1.6,  1.6,  0.8,  0.8,  1.0,  2.2,  1.2,  1.8,  0.3,  2.5,  3.0 ],
   // MULTIPLIER units — same as the sheet's 'Swell period multiplier' row (144/periodPower already applied).
   // Used directly as spm in calcScore. (144/25=5.76, 144/20=7.2, 144/10=14.4)
-  periodPower:[5.76, 7.2,  7.2,  14.4, 7.2,  5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 7.2 ],
+  periodPower:[5.76, 7.2,  7.2,  14.4, 7.2,  5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 5.76, 7.2,  2.45],
   lookup: {
     CTB:       {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
                 sea: [20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -2224,6 +2227,9 @@ const CONFIG_DEFAULTS = {
     Oak:       {wind:[10,40,50,60,80,100,40,0,0,0,0,0,50,60,60,50,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 sea: [0,0,20,60,80,90,100,100,100,85,70,50,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 rif: [10,30,60,30,20,10,0,0,0,10,30,60,80,70,60,45,30,25,15,10,0,0,0,0,0,0,0,0,0,0,0,0]},
+    NorthBondi:{wind:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,60,80,100,100,70,70,60,60,60,40,20,15,10,5,5,0],
+                sea: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,40,80,90,100,50,0,0,0,0,0,0,0,0,0,0,0,0],
+                rif: [0,0,0,0,0,0,0,5,8,10,14,18,25,35,50,35,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
   }
 };
 
@@ -2236,26 +2242,32 @@ function parseSheetCSV(text) {
   return text.split('\n').map(line => line.split(','));
 }
 
-// Column offsets (0-based) for each site's wind/sea/rif triplet
-const SITE_KEYS_ORDERED = ['CTB','BIW','BIE','Steps','Monument','Chowder','CampCove','Fairlight','Gordons','Freshwater','SharkPoint','LittleBay','Oak'];
-const SITE_DIR_COL      = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38];
+// Column offsets (0-based) for each site's wind/sea/rif triplet, and for its
+// single sensitivity column. The first 13 sites are contiguous in both blocks;
+// North Bondi was appended to the right of the swim site rather than inserted,
+// because the sheet's three blocks have incompatible column origins and no
+// single insert can serve all of them. Hence explicit maps, not arithmetic —
+// SITE_SENS_COL is no longer simply index+2.
+const SITE_KEYS_ORDERED = ['CTB','BIW','BIE','Steps','Monument','Chowder','CampCove','Fairlight','Gordons','Freshwater','SharkPoint','LittleBay','Oak','NorthBondi'];
+const SITE_DIR_COL      = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 44];
+const SITE_SENS_COL     = [2, 3, 4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 44];
 
 function applySheetConfig(rows) {
   const n = function(v) { return parseFloat(v) || 0; };
 
   // Row 24 (0-based: 23) — Wind sens TUNE, cols C–O (indices 2–14)
   if (rows[23] && rows[23][1] && rows[23][1].includes('Wind sens')) {
-    CONFIG.windSens = SITE_KEYS_ORDERED.map((_,i) => n(rows[23][i+2]));
+    CONFIG.windSens = SITE_SENS_COL.map(c => n(rows[23][c]));
   }
   // Row 25 (0-based: 24) — Swell sens TUNE
   if (rows[24] && rows[24][1] && rows[24][1].includes('Swell sens')) {
-    CONFIG.swellSens = SITE_KEYS_ORDERED.map((_,i) => n(rows[24][i+2]));
+    CONFIG.swellSens = SITE_SENS_COL.map(c => n(rows[24][c]));
   }
   // Row 27 (0-based: 26) — Swell period multiplier (spm), read directly from the
   // sheet cell (C27 etc.) in multiplier units — calcScore uses it as spm without
   // re-deriving. Do NOT read row 26 'Period power' (raw units, wrong scale).
   if (rows[26] && rows[26][1] && rows[26][1].toLowerCase().includes('multiplier')) {
-    CONFIG.periodPower = SITE_KEYS_ORDERED.map((_,i) => n(rows[26][i+2]));
+    CONFIG.periodPower = SITE_SENS_COL.map(c => n(rows[26][c]));
   }
 
   // Rows 32–63 (0-based: 31–62) — direction table
@@ -2321,6 +2333,11 @@ const SITES = [
   {key:'LittleBay',  name:'Little Bay',       tideBase:'all',
    tide:(o,t)=>o*(1.66*t-0.34)},
   {key:'Oak',        name:'Oak Park',         tideBase:'all',
+   tide:(o,t)=>o*(0.166*t-0.034)},
+  // Same tide curve as Oak Park. Verified against the sheet: at the sheet's own
+  // inputs (36km/h @164, 2m 7s @167, tide 1.4m) this reproduces AS5 = 12.30,
+  // where the standard 0.2941/0.0588 pair would charge 21.88.
+  {key:'NorthBondi', name:'North Bondi',      tideBase:'all',
    tide:(o,t)=>o*(0.166*t-0.034)},
 ];
 
@@ -4316,6 +4333,7 @@ const SHEET_NAME_MAP = {
   'Little Bay':    'LittleBay',
   'Oak Park':      'Oak',
   'Oak':           'Oak',
+  'North Bondi':   'NorthBondi',
 };
 
 function toggleValBody() {
@@ -4574,6 +4592,7 @@ const SITE_ALIASES = [
   { id:'shark_point',  name:'Shark Point',  aliases:'Shark Point, SP' },
   { id:'little_bay',   name:'Little Bay',   aliases:'Little Bay, LB' },
   { id:'oak_park',     name:'Oak Park',     aliases:'Oak Park' },
+  { id:'north_bondi',  name:'North Bondi',  aliases:'North Bondi, Nth Bondi, North Bondi Beach' },
   { id:'shiprock',     name:'Shiprock',     aliases:'Shiprock' },
   { id:'murray-beach', name:'Murray Beach', aliases:"Murray's Beach, Murrays Beach, Murray Beach, Murray's Beach Jervis Bay, Murrays Beach Jervis Bay, Jervis Bay" },
 ];
@@ -5287,7 +5306,8 @@ const BW_SITE_BY_KEY = {
   Steps:'Silver Beach', Monument:'Silver Beach', Chowder:'Clifton Gardens',
   CampCove:'Camp Cove', Fairlight:'Fairlight Beach', Gordons:'Gordons Bay (East)',
   Freshwater:'Freshwater Beach', SharkPoint:'Clovelly Beach',
-  LittleBay:'Little Bay Beach', Oak:'Oak Park Beach'
+  LittleBay:'Little Bay Beach', Oak:'Oak Park Beach',
+  NorthBondi:'Bondi Beach'
 };
 const _bwNorm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 function bwCacheGet(name) {
