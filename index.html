@@ -61,7 +61,7 @@
   .wrap { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:0 20px 0; }
 
   header {
-    padding:32px 0 24px;
+    padding:14px 0 22px;   /* sits close to the top of the screen */
     display:flex; align-items:flex-end; gap:24px;
     border-bottom:1px solid var(--border);
     margin-bottom:28px;
@@ -1079,7 +1079,7 @@
 
   /* Header: stack logo + text tighter, shrink logo image */
   @media (max-width:480px) {
-    header { padding:10px 0 10px; gap:10px; margin-bottom:12px; }
+    header { padding:2px 0 10px; gap:10px; margin-bottom:12px; }
     .logo-img { width:46px !important; height:46px !important; }
     .logo { font-size:clamp(30px,9vw,48px) !important; }
     .header-sub { font-size:11px; letter-spacing:1px; }
@@ -1518,9 +1518,6 @@
     <!-- All-sites map grid — the same hour as the bars, one map per site -->
     <div id="siteMapGridSection" style="display:none; margin-top:26px;">
       <div class="section-title">Where the swell &amp; wind land</div>
-      <div class="smg-legend">Small white arrows = swell energy, fanning into rings where it bends around a headland.
-        <span class="smg-blue">Blue</span> and <span class="smg-amber">amber</span> arrows show where the swell and wind are heading.
-        The coloured surface is wind chop. North is up &middot; tap a map for the full site.</div>
       <div id="siteMapGrid" class="smg-grid"></div>
     </div>
 
@@ -3557,7 +3554,7 @@ function renderSnapshot(sliderVal) {
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
         <span class="snap-name">${site.key === _favKey ? '<span class="fav-star">★</span> ' : ''}${name}</span>
-        <span class="snap-score">${toPct(score)}% ${label(score)}</span>
+        <span class="snap-score">${label(score)}</span>
       </div>`;
     row.addEventListener('click', () => openSiteSheet(site, score, demerits, h));
     container.appendChild(row);
@@ -3602,8 +3599,12 @@ function renderSnapshot(sliderVal) {
     wwCard.style.display = 'none';
   }
 
-  // All-sites map grid — same hour, same scores as the bars above.
-  renderSiteMapGrid(h, results);
+  // All-sites map grid — same hour, same scores as the bars above, but NOT in
+  // the same task. The 14 canvases are the expensive half of this render and
+  // they are not what someone opening the app is waiting for: let the scores
+  // paint, then draw maps on the next idle. Scrubbing coalesces — only the
+  // hour you land on is ever drawn.
+  scheduleSiteMapGrid(h, results);
 }
 
 // ── Day-button + hour-slider navigation ────────────────────────────────────────
@@ -5603,6 +5604,20 @@ function paintSiteMap(site, demerits, h) {
 // One small map per site, repainted on every slider move so you can scrub the
 // day and watch the shelter move around the coast. Built once, then only fed.
 let _gridMaps = null;
+let _gridTask = null, _gridTaskIsIdle = false;
+function scheduleSiteMapGrid(h, results) {
+  if (_gridTask != null) {
+    if (_gridTaskIsIdle) { if (window.cancelIdleCallback) cancelIdleCallback(_gridTask); }
+    else clearTimeout(_gridTask);
+    _gridTask = null;
+  }
+  const run = () => { _gridTask = null; renderSiteMapGrid(h, results); };
+  // The timeout is the guarantee: on a busy main thread idle may never come,
+  // and the maps must not be hostage to that. Safari has no rIC — a task-queue
+  // hop still gets the scores painted first, which is the point.
+  if (window.requestIdleCallback) { _gridTaskIsIdle = true;  _gridTask = requestIdleCallback(run, { timeout: 300 }); }
+  else                            { _gridTaskIsIdle = false; _gridTask = setTimeout(run, 0); }
+}
 function renderSiteMapGrid(h, results) {
   const grid = document.getElementById('siteMapGrid');
   const sect = document.getElementById('siteMapGridSection');
@@ -5653,7 +5668,7 @@ function renderSiteMapGrid(h, results) {
     g.card.style.display = '';
     g._h = h;
     g.map.set(site.key, site.name, p);
-    g.score.textContent = toPct(r.score) + '%';
+    g.score.textContent = label(r.score);   // verdict, not a second number
     g.score.style.color = scoreColor(r.score);
     any = true;
   });
@@ -6751,6 +6766,12 @@ var VizSiteMap = (function () {
     // Offscreen maps must not burn a frame budget — 13 canvases at 60 fps is
     // real work, and most of them are below the fold most of the time.
     if (typeof IntersectionObserver !== 'undefined') {
+      // _vis defaults to true so a build without IntersectionObserver still
+      // paints. Where there IS one, start false and let its first callback
+      // (which always fires on observe) say what is really on screen. Left
+      // true, every tile painted once before the observer could object — which
+      // is exactly the work the _pending deferral exists to avoid.
+      M._vis = false;
       new IntersectionObserver(function (es) {
         M._vis = es[0].isIntersecting;
         if (M._vis && M._on && _pending) { applyFields(); M.fit(); }
