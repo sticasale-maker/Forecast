@@ -3554,7 +3554,6 @@ function renderSnapshot(sliderVal) {
         <div class="snap-bar-tick" style="left:33.33%"></div>
         <div class="snap-bar-tick" style="left:66.67%"></div>
         <span class="snap-name">${site.key === _favKey ? '<span class="fav-star">★</span> ' : ''}${name}</span>
-        <span class="snap-score">${label(score)}</span>
       </div>`;
     row.addEventListener('click', () => openSiteSheet(site, score, demerits, h));
     container.appendChild(row);
