@@ -6541,12 +6541,13 @@ var VizSiteMap = (function () {
         if (above) halo(M.name, x, y - dot - nf * 0.55, '700 ' + nf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
         else { halo(M.name, x, vy, '700 ' + nf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff'); vy += nf * 1.25; }
       }
-      if (_sitePct != null) {
-        // Clear of the dot, not just below the name — at phone sizes the marker
-        // was landing on the digits.
-        halo(_sitePct + '%', x, vy, '700 ' + vf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
-        if (!compact) halo('of the swell gets in', x, vy + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif', 'rgba(228,240,246,0.92)');
-      }
+      // The entry used to print sitePct here — the share of the offshore swell's
+      // energy that reaches it. Removed: on a screen already dense with colour and
+      // numbers it read as a second score, and it runs the opposite way (high = more
+      // swell getting in = worse, where a high score is better). The compact tiles
+      // made it worse still, dropping the 'of the swell gets in' caption and leaving
+      // a bare % beside the score. payload.sitePct is still computed, so restoring
+      // this is one block if it is ever wanted back.
       ctx.restore();
     }
 
