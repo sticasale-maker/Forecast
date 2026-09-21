@@ -5832,7 +5832,7 @@ function sendRating() {
   const userPct = +document.getElementById('rateSlider').value;
   const forecastPct = toPct(score);
   vizTrack('forecast_rating', {
-    app: 'forecast', site: site.key, forecast_dt: h.dateTime,
+    app: 'forecast', site: site.key, site_name: site.name, forecast_dt: h.dateTime,
     forecast_pct: forecastPct, user_pct: userPct, delta: userPct - forecastPct,
     forecast_band: label(score), user_band: label(userPct * 0.6),
     hours_after: Math.round((Date.now() - new Date(h.dateTime).getTime()) / 360000) / 10,
