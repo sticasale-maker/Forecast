@@ -554,13 +554,27 @@
   }
   #siteSheetWhen { font-size:11px; color:var(--text-dim); letter-spacing:0.5px; margin-bottom:16px; }
   #siteSheetTideNote {
-    display:flex; gap:9px; align-items:flex-start;
     background:rgba(74,144,217,0.1); border:1px solid rgba(74,144,217,0.35);
     border-radius:10px; padding:11px 13px; margin:0 0 16px;
     font-family:'DM Sans',sans-serif; font-size:13px; line-height:1.5; color:var(--text);
   }
-  #siteSheetTideNote .stn-icon { font-size:16px; line-height:1.3; flex-shrink:0; }
   #siteSheetTideNote b { color:#7bb6e8; font-weight:600; }
+  /* Tide guidance: two clearly-labelled lenses — Entry (access/safety) and
+     Clarity (visibility) — that used to read as a contradiction in the sheet. */
+  #siteSheetTideNote .tg-line { display:flex; gap:10px; align-items:flex-start; }
+  #siteSheetTideNote .tg-line + .tg-line { margin-top:9px; }
+  #siteSheetTideNote .tg-key {
+    flex-shrink:0; width:74px; font-family:'DM Mono',monospace; font-size:10.5px;
+    letter-spacing:0.6px; text-transform:uppercase; color:var(--text-dim); padding-top:1px;
+  }
+  #siteSheetTideNote .tg-txt { flex:1; }
+  #siteSheetTideNote .tg-state { font-weight:600; }
+  #siteSheetTideNote .tg-good .tg-state { color:var(--green); }
+  #siteSheetTideNote .tg-bad  .tg-state { color:var(--yellow); }
+  #siteSheetTideNote .tg-note {
+    margin-top:10px; padding-top:9px; border-top:1px solid rgba(74,144,217,0.25);
+    font-size:12px; color:var(--text-dim); line-height:1.5;
+  }
   #siteSheetGraphLink {
     display:inline-flex; align-items:center; gap:7px;
     font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.5px;
@@ -2642,19 +2656,10 @@ function describeConditions(site, score, demerits, h) {
     s += `. The ${bearingName(h.windDir)} wind is offshore here, helping clean it up`;
   }
 
-  // Tide modifier — judged against this site's OWN tide rule, not the raw demerit
-  // sign. The tide term scales the other demerits, so it stays positive even when the
-  // tide is at the site's favourite state; tideStanding reads where the current tide
-  // sits on the site's own curve so a good low tide reads as a good low tide.
-  const tide = tideStanding(site, demerits, h.tideM);
-  if (tide) {
-    const pref = tide.prefersLow ? 'a low tide' : 'a high tide';
-    if (tide.frac >= 0.55) {
-      s += `. The ${h.tideM.toFixed(2)}m tide is working against this site, which is best on ${pref}`;
-    } else if (tide.frac <= 0.45 && band !== 'Avoid') {
-      s += `. The ${h.tideM.toFixed(2)}m tide suits this site, which is best on ${pref}`;
-    }
-  }
+  // Tide is deliberately NOT summarised here any more. It gets its own labelled
+  // block below the map (renderTideGuidance) which separates the two lenses —
+  // entry/access vs water clarity — that used to read as a contradiction when
+  // both were stated as a bare "best tide". Keep this description tide-free.
 
   return s.trim() + '.';
 }
@@ -2811,6 +2816,83 @@ function tideVizNote(site, h) {
   }
   // Rising but no upcoming high found in the data window.
   return `This site usually fishes clearest on the <b>incoming tide</b>, before the peak — the outgoing tide carries murkier water from Botany Bay past here and reduces visibility.`;
+}
+
+// ── Unified tide guidance: two clearly-labelled lenses ───────────────────────
+// The model and McFadyen answer DIFFERENT questions, and used to read as a
+// contradiction in the sheet:
+//   • ENTRY (access/safety)  — from the scoring model's own tide curve
+//     (tideStanding), or, where the model treats tide as negligible, a McFadyen
+//     depth preference (shallow bays need water over the entry to get in).
+//   • CLARITY (visibility)   — the Botany-Bay outflow story (tideVizNote), or a
+//     McFadyen flow preference (incoming/outgoing) where he states one plainly.
+// For the Botany sites the model's tide term ALREADY encodes the outflow/viz
+// penalty, so we never relabel it as "entry" there — clarity only, told richly
+// by tideVizNote. When both lenses speak we show both, then a one-line note on
+// whether they agree or pull apart. DISPLAY ONLY — nothing here feeds the score.
+function renderTideGuidance(site, demerits, h) {
+  const ph = liveTidePhase(h);
+  const m  = SITE_MCF[site.key];
+  const isBotany = BOTANY_TIDE_SITES.has(site.key);
+  const lines = [];
+  let entryState = null, clarityState = null;
+
+  // ── Entry / access lens ──
+  const stand = isBotany ? null : tideStanding(site, demerits, h.tideM);
+  if (stand) {
+    const dir = stand.prefersLow ? 'low' : 'high';
+    entryState = stand.frac <= 0.45 ? 'good' : stand.frac >= 0.55 ? 'bad' : 'ok';
+    const tail = entryState === 'good' ? ' <span class="tg-state">— the tide suits it now.</span>'
+               : entryState === 'bad'  ? ' <span class="tg-state">— the tide is against it now.</span>'
+               : '';
+    lines.push({ cls: entryState, key: '🚪 Entry',
+      txt: `Calmest water &amp; easiest entry around <b>${dir} water</b>${tail}` });
+  } else if (!isBotany && m && (m.tide === 'high' || m.tide === 'low')) {
+    // Model says tide barely swings the score, but McFadyen flags a depth need.
+    entryState = (ph && ph.highish != null) ? (ph.highish === (m.tide === 'high') ? 'good' : 'bad') : 'ok';
+    const tail = entryState === 'good' ? ' <span class="tg-state">— it&rsquo;s there now.</span>'
+               : entryState === 'bad'  ? ' <span class="tg-state">— wrong end of the tide now.</span>'
+               : '';
+    lines.push({ cls: entryState, key: '🚪 Entry',
+      txt: `Shallow entry — get in around <b>${m.tide} tide</b>${tail}` });
+  }
+
+  // ── Water-clarity lens ──
+  if (isBotany) {
+    const vz = tideVizNote(site, h);
+    if (vz) {
+      clarityState = (ph && ph.rising != null) ? (ph.rising ? 'good' : 'bad') : 'ok';
+      lines.push({ cls: clarityState, key: '👁 Clarity', txt: vz });
+    }
+  } else if (m && (m.tide === 'incoming' || m.tide === 'outgoing')) {
+    clarityState = (ph && ph.rising != null) ? (ph.rising === (m.tide === 'incoming') ? 'good' : 'bad') : 'ok';
+    const tail = clarityState === 'good' ? ' <span class="tg-state">— running that way now.</span>'
+               : clarityState === 'bad'  ? ' <span class="tg-state">— not right now.</span>'
+               : '';
+    lines.push({ cls: clarityState, key: '👁 Clarity',
+      txt: `Clearest water on the <b>${m.tide} tide</b>${tail}` });
+  }
+
+  if (!lines.length) return '';
+
+  let html = lines.map(l =>
+    `<div class="tg-line tg-${l.cls}"><span class="tg-key">${l.key}</span><span class="tg-txt">${l.txt}</span></div>`
+  ).join('');
+
+  // Trade-off note only when BOTH lenses spoke — this is the case that used to
+  // look like a contradiction.
+  if (entryState && clarityState) {
+    let note;
+    if (entryState === 'good' && clarityState === 'good') {
+      note = '✓ Both line up right now — easy entry and clear water at the same time.';
+    } else if (entryState === 'bad' && clarityState === 'bad') {
+      note = 'Neither is ideal this hour — check the daily graph for a better window.';
+    } else {
+      note = 'These pull different ways: the easiest entry and the clearest water aren&rsquo;t the same tide, so pick your priority.';
+    }
+    html += `<div class="tg-note">${note}</div>`;
+  }
+  return html;
 }
 
 function cls(s)   { return s>=40?'green':s>=20?'yellow':'red'; }
@@ -5562,14 +5644,10 @@ function renderMcfRef(site, h) {
   if (!el) return;
   const m = SITE_MCF[site.key];
   if (!m) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  // The live best-tide chip has moved into the labelled tide-guidance block
+  // (renderTideGuidance) so entry vs clarity no longer read as a contradiction.
+  // Here we keep only McFadyen's own note + a deep link to his page.
   const parts = [];
-  const match = mcfTideMatch(m.tide, h);
-  if (match) {
-    const cls = match.ok ? 'ok' : 'no';
-    const mark = match.ok ? '✓' : '✗';
-    parts.push('<div class="mcf-tide ' + cls + '"><span class="mcf-mark" aria-hidden="true">' + mark +
-               '</span><span>' + match.text + '</span></div>');
-  }
   if (m.note) parts.push('<div class="mcf-note">' + m.note + '</div>');
   parts.push('<a class="mcf-link" href="' + MCF_BASE + m.id + '" target="_blank" rel="noopener noreferrer">'
              + 'Michael McFadyen’s dive notes ↗</a>');
@@ -5597,12 +5675,14 @@ function openSiteSheet(site, score, demerits, h) {
   if (trend) descParts.push(trend);
   document.getElementById('siteSheetDesc').textContent = descParts.join(' ');
 
-  // Botany Bay outflow visibility note (tide-sensitive sites only)
+  // Tide guidance: two labelled lenses (entry/access vs water clarity), merged
+  // with a trade-off note when they diverge. renderTideGuidance handles both the
+  // Botany outflow story and the McFadyen flow/depth preferences.
   const tideNoteEl = document.getElementById('siteSheetTideNote');
-  const tideNote = tideVizNote(site, h);
-  if (tideNote) {
-    tideNoteEl.innerHTML = `<span class="stn-icon" aria-hidden="true">🌊</span><span>${tideNote}</span>`;
-    tideNoteEl.style.display = 'flex';
+  const tideGuide = renderTideGuidance(site, demerits, h);
+  if (tideGuide) {
+    tideNoteEl.innerHTML = tideGuide;
+    tideNoteEl.style.display = 'block';
   } else {
     tideNoteEl.style.display = 'none';
   }
