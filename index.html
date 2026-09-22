@@ -435,11 +435,6 @@
     flex:1; font:inherit; color:#fff; background:rgba(13,32,64,0.9); border:1px solid var(--border);
     border-radius:8px; padding:8px 10px;
   }
-  #siteSheetReportBtn {
-    display:inline-block; margin:8px 0 0 0; background:none; cursor:pointer;
-    border:1px solid rgba(245,200,66,0.45); border-radius:8px; color:var(--yellow);
-    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; padding:8px 14px;
-  }
   .sr-q b { color:#fff; }
   .sr-rail { position:relative; height:34px; }
   .sr-track {
@@ -6008,7 +6003,6 @@ function _rateWhenLabel(h) {
 function setupRating(site, score, h) {
   const box = document.getElementById('siteSheetRate');
   const hours = _rateHours();
-  document.getElementById('siteSheetReportBtn').style.display = hours.length ? '' : 'none';
   if (!hours.length) { box.style.display = 'none'; _rateCtx = null; return; }
   const sel = document.getElementById('rateWhen');
   sel.innerHTML = hours.map(({ h: r, i }) => `<option value="${i}">${_rateWhenLabel(r)}</option>`).join('');
@@ -6153,7 +6147,6 @@ loadConfig().then(() => init());
     <a id="siteSheetGraphLink" role="button" tabindex="0"
        onclick="openDayViewFromSheet()"
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
-    <button type="button" id="siteSheetReportBtn" onclick="scrollToReport()">✍️ Report entry conditions ↓</button>
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetMcf" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
