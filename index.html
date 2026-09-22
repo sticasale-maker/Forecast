@@ -612,6 +612,26 @@
     transition:color 0.15s, border-color 0.15s;
   }
   #siteSheetMcf .mcf-link:hover { color:var(--teal); border-color:var(--teal); }
+  /* Live webcam: a link out to the nearest free public beach cam. */
+  #siteSheetWebcam { margin:0 0 16px; }
+  #siteSheetWebcam .wc-card {
+    background:rgba(74,144,217,0.1); border:1px solid rgba(74,144,217,0.35);
+    border-radius:12px; padding:11px 13px;
+  }
+  #siteSheetWebcam .wc-head {
+    display:flex; align-items:center; gap:7px; margin-bottom:9px;
+    font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:0.8px;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  #siteSheetWebcam .wc-head .wc-ico { font-size:13px; line-height:1; }
+  #siteSheetWebcam .wc-link {
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'DM Mono',monospace; font-size:11.5px; letter-spacing:0.4px;
+    color:var(--text-dim); text-decoration:none;
+    border:1px solid var(--border); border-radius:20px; padding:6px 12px;
+    transition:color 0.15s, border-color 0.15s;
+  }
+  #siteSheetWebcam .wc-link:hover { color:var(--teal); border-color:var(--teal); }
   #siteSheetGraphLink:active { background:rgba(0,194,168,0.3); }
   #siteSheetDemerits {
     display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
@@ -2418,6 +2438,29 @@ const SITE_MCF = {
   NorthBondi: { id:313, tide:'any',      note:'Ben Buckler Point; pick the entry to the sea state — calm seas open the southern platform.' },
 };
 const MCF_BASE = 'https://www.michaelmcfadyenscuba.info/viewpage.php?page_id=';
+
+// ── Per-site live webcams ────────────────────────────────────────────────────
+// Free, public beach cams nearest each dive site. We LINK out rather than embed:
+// every provider we checked frame-locks its stream (North Bondi SLSC's feed is
+// CSP-locked to frame-ancestors northbondisurfclub.com; Randwick Council's cams
+// carry an explicit no-restreaming notice), so an <iframe> would be blocked or
+// breach their terms. `label` names the beach/source shown on the chip.
+// Sites with no free cam covering the entry (the Botany-Bay/Kurnell entries at
+// Steps & Monument, and the harbour entries at Chowder Bay & Camp Cove) are
+// deliberately absent — no invented links.
+const RANDWICK_CAMS = 'https://www.randwick.nsw.gov.au/facilities-and-recreation/explore-randwick-city/beach-cams';
+const SITE_WEBCAMS = {
+  NorthBondi: { url:'https://northbondisurfclub.com/webcam/',                        label:'North Bondi · North Bondi SLSC' },
+  CTB:        { url:'https://www.surf-forecast.com/breaks/Fairy-Bower/webcams/latest', label:'Fairy Bower / Shelly · Manly' },
+  Fairlight:  { url:'https://www.surf-forecast.com/breaks/Manly/webcams/latest',      label:'Manly · nearest cam' },
+  Freshwater: { url:'https://www.surf-forecast.com/breaks/Freshwater/webcams/latest', label:'Freshwater Beach' },
+  Gordons:    { url:RANDWICK_CAMS + '#clovelly',                                      label:'Clovelly · Randwick Council' },
+  SharkPoint: { url:RANDWICK_CAMS + '#clovelly',                                      label:'Clovelly · Randwick Council' },
+  LittleBay:  { url:RANDWICK_CAMS + '#littlebay',                                     label:'Little Bay · Randwick Council' },
+  BIW:        { url:RANDWICK_CAMS + '#yarrabay',                                      label:'Yarra Bay / La Perouse · Randwick Council' },
+  BIE:        { url:RANDWICK_CAMS + '#yarrabay',                                      label:'Yarra Bay / La Perouse · Randwick Council' },
+  Oak:        { url:'https://www.swellnet.com/surfcams/cronulla-beaches',            label:'Cronulla Beaches · Swellnet' },
+};
 
 // Live tide phase at a given forecast hour, from the H/L turning points.
 // Returns { rising, highish } or null when the tide data isn't loaded yet.
@@ -5663,6 +5706,20 @@ function renderMcfRef(site, h) {
   el.style.display = 'block';
 }
 
+// Render the live-webcam card: a link out to the nearest free public beach cam.
+// Display only; no embed (providers frame-lock their streams — see SITE_WEBCAMS).
+function renderWebcam(site) {
+  const el = document.getElementById('siteSheetWebcam');
+  if (!el) return;
+  const w = SITE_WEBCAMS[site.key];
+  if (!w) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="wc-card">'
+    + '<div class="wc-head"><span class="wc-ico" aria-hidden="true">📷</span>Live webcam</div>'
+    + '<a class="wc-link" href="' + w.url + '" target="_blank" rel="noopener noreferrer">'
+    + w.label + ' ↗</a></div>';
+  el.style.display = 'block';
+}
+
 function openSiteSheet(site, score, demerits, h) {
   const band = score >= 40 ? 'green' : score >= 20 ? 'yellow' : 'red';
   const bandLabel = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
@@ -5698,6 +5755,9 @@ function openSiteSheet(site, score, demerits, h) {
   // McFadyen reference: a live best-tide chip (display only) + a deep link to
   // his page for this site. renderMcfRef reads SITE_MCF and the live tide.
   renderMcfRef(site, h);
+
+  // Live webcam: link to the nearest free public beach cam for this site.
+  renderWebcam(site);
 
   // Time context
   const dt = new Date(h.dateTime);
@@ -6149,6 +6209,7 @@ loadConfig().then(() => init());
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetMcf" style="display:none;"></div>
+    <div id="siteSheetWebcam" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
     <div id="siteSheetPollution">
       <span class="pol-dot" aria-hidden="true"></span>
