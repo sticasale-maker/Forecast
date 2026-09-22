@@ -568,6 +568,8 @@
     letter-spacing:0.6px; text-transform:uppercase; color:var(--text-dim); padding-top:1px;
   }
   #siteSheetTideNote .tg-txt { flex:1; }
+  /* Anything sourced from McFadyen's dive notes is shown in italics. */
+  #siteSheetTideNote .tg-mcf .tg-txt { font-style:italic; }
   #siteSheetTideNote .tg-state { font-weight:600; }
   #siteSheetTideNote .tg-good .tg-state { color:var(--green); }
   #siteSheetTideNote .tg-bad  .tg-state { color:var(--yellow); }
@@ -596,7 +598,7 @@
   #siteSheetMcf .mcf-tide .mcf-mark { font-size:15px; flex-shrink:0; }
   #siteSheetMcf .mcf-tide.ok .mcf-mark { color:var(--green); }
   #siteSheetMcf .mcf-tide.no .mcf-mark { color:var(--yellow); }
-  #siteSheetMcf .mcf-note { font-size:12px; color:var(--text-dim); line-height:1.5; margin-bottom:8px; }
+  #siteSheetMcf .mcf-note { font-size:12px; color:var(--text-dim); line-height:1.5; margin-bottom:8px; font-style:italic; }
   #siteSheetMcf .mcf-link {
     display:inline-flex; align-items:center; gap:6px;
     font-family:'DM Mono',monospace; font-size:11.5px; letter-spacing:0.4px;
@@ -2853,7 +2855,7 @@ function renderTideGuidance(site, demerits, h) {
     const tail = entryState === 'good' ? ' <span class="tg-state">— it&rsquo;s there now.</span>'
                : entryState === 'bad'  ? ' <span class="tg-state">— wrong end of the tide now.</span>'
                : '';
-    lines.push({ cls: entryState, key: '🚪 Entry',
+    lines.push({ cls: entryState, key: '🚪 Entry', mcf: true,
       txt: `Shallow entry — get in around <b>${m.tide} tide</b>${tail}` });
   }
 
@@ -2869,14 +2871,14 @@ function renderTideGuidance(site, demerits, h) {
     const tail = clarityState === 'good' ? ' <span class="tg-state">— running that way now.</span>'
                : clarityState === 'bad'  ? ' <span class="tg-state">— not right now.</span>'
                : '';
-    lines.push({ cls: clarityState, key: '👁 Clarity',
+    lines.push({ cls: clarityState, key: '👁 Clarity', mcf: true,
       txt: `Clearest water on the <b>${m.tide} tide</b>${tail}` });
   }
 
   if (!lines.length) return '';
 
   let html = lines.map(l =>
-    `<div class="tg-line tg-${l.cls}"><span class="tg-key">${l.key}</span><span class="tg-txt">${l.txt}</span></div>`
+    `<div class="tg-line tg-${l.cls}${l.mcf ? ' tg-mcf' : ''}"><span class="tg-key">${l.key}</span><span class="tg-txt">${l.txt}</span></div>`
   ).join('');
 
   // Trade-off note only when BOTH lenses spoke — this is the case that used to
