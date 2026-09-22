@@ -1642,7 +1642,7 @@
     </a>
   </div>
     <div class="install-card" id="reportCard">
-      <div class="ic-title">✍️ Report conditions</div>
+      <div class="ic-title">✍️ Report entry conditions</div>
       <p id="reportCardText">Were you in the water today? Tell us how it really was. Your reports are how the forecast gets tuned.</p>
       <div class="rc-row">
         <select id="reportSite" aria-label="Which site"></select>
@@ -6153,7 +6153,7 @@ loadConfig().then(() => init());
     <a id="siteSheetGraphLink" role="button" tabindex="0"
        onclick="openDayViewFromSheet()"
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
-    <button type="button" id="siteSheetReportBtn" onclick="scrollToReport()">✍️ Report conditions ↓</button>
+    <button type="button" id="siteSheetReportBtn" onclick="scrollToReport()">✍️ Report entry conditions ↓</button>
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetMcf" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
@@ -6168,7 +6168,7 @@ loadConfig().then(() => init());
     </div>
     <div id="siteSheetDemerits"></div>
     <div id="siteSheetRate" style="display:none;">
-      <div class="sr-title">✍️ Report conditions</div>
+      <div class="sr-title">✍️ Report entry conditions</div>
       <div class="sr-q">Were you in the water here? Tell us how it really was.</div>
       <label class="sr-when">When <select id="rateWhen" onchange="onRateWhen()"></select></label>
       <div class="sr-rail">
