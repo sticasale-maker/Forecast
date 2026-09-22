@@ -570,6 +570,27 @@
     transition:background 0.15s;
   }
   #siteSheetGraphLink:hover { background:rgba(0,194,168,0.22); }
+  /* McFadyen reference: live best-tide chip + deep link */
+  #siteSheetMcf { margin:0 0 16px; }
+  #siteSheetMcf .mcf-tide {
+    display:flex; gap:8px; align-items:center;
+    border-radius:10px; padding:9px 12px; margin-bottom:8px;
+    font-family:'DM Sans',sans-serif; font-size:13px; line-height:1.45;
+  }
+  #siteSheetMcf .mcf-tide.ok  { background:rgba(46,204,113,0.10); border:1px solid rgba(46,204,113,0.35); color:var(--text); }
+  #siteSheetMcf .mcf-tide.no  { background:rgba(245,200,66,0.10); border:1px solid rgba(245,200,66,0.35); color:var(--text); }
+  #siteSheetMcf .mcf-tide .mcf-mark { font-size:15px; flex-shrink:0; }
+  #siteSheetMcf .mcf-tide.ok .mcf-mark { color:var(--green); }
+  #siteSheetMcf .mcf-tide.no .mcf-mark { color:var(--yellow); }
+  #siteSheetMcf .mcf-note { font-size:12px; color:var(--text-dim); line-height:1.5; margin-bottom:8px; }
+  #siteSheetMcf .mcf-link {
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'DM Mono',monospace; font-size:11.5px; letter-spacing:0.4px;
+    color:var(--text-dim); text-decoration:none; white-space:nowrap;
+    border:1px solid var(--border); border-radius:20px; padding:6px 12px;
+    transition:color 0.15s, border-color 0.15s;
+  }
+  #siteSheetMcf .mcf-link:hover { color:var(--teal); border-color:var(--teal); }
   #siteSheetGraphLink:active { background:rgba(0,194,168,0.3); }
   #siteSheetDemerits {
     display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
@@ -2347,6 +2368,79 @@ const SITES = [
   {key:'NorthBondi', name:'North Bondi',      tideBase:'all',
    tide:(o,t)=>o*(0.166*t-0.034)},
 ];
+
+// ── Per-site reference: Michael McFadyen's dive-site pages ──────────────────────
+// Deep links plus a curated best-tide phase, transcribed by hand from his site
+// (michaelmcfadyenscuba.info). DISPLAY ONLY — this never touches the score; the
+// Sheet stays authoritative for scoring. `tide` is one of:
+//   'incoming' | 'outgoing' | 'high' | 'low' | 'any'
+// and is only asserted where McFadyen states it plainly. 'any' = he records no
+// tide preference (entry there is swell/sea-state driven), so we show the link
+// but claim nothing about tide. `note` is a short quote/paraphrase for the chip.
+// Steps/Monument/BIE/BIW are left 'any' HERE on purpose: they already get the
+// richer Botany-Bay incoming narrative from tideVizNote(), and a second
+// "incoming" line would just repeat it. Freshwater has no page on his site.
+const SITE_MCF = {
+  CTB:        { id:488, tide:'any',      note:'' },
+  BIW:        { id:261, tide:'any',      note:'Tides have little impact; an outgoing tide can put a current through the deep section.' },
+  BIE:        { id:256, tide:'any',      note:'' },
+  Steps:      { id:288, tide:'any',      note:'Entry is swell-gated — reconsider if the Monuments buoy is over ~0.8 m.' },
+  Monument:   { id:311, tide:'any',      note:'' },
+  Chowder:    { id:270, tide:'high',     note:'Shallow — best at high tide; as little as 2 m over much of the route at low water.' },
+  CampCove:   { id:267, tide:'high',     note:'Shallow bay; a metre or two deeper on a high tide. Well sheltered from southerly seas.' },
+  Fairlight:  { id:636, tide:'high',     note:'"Best at or near high tide." Shallow entry — flop in, do not jump.' },
+  Gordons:    { id:282, tide:'incoming', note:'"Better on the incoming tide." Good day or night dive.' },
+  SharkPoint: { id:325, tide:'any',      note:'Advanced only — exposed entry, not for inexperienced divers without a guide.' },
+  LittleBay:  { id:297, tide:'any',      note:'' },
+  Oak:        { id:314, tide:'incoming', note:'Viz 3–15 m (avg 7–8), marginally better on an incoming tide. Behind-pool entry at low tide.' },
+  NorthBondi: { id:313, tide:'any',      note:'Ben Buckler Point; pick the entry to the sea state — calm seas open the southern platform.' },
+};
+const MCF_BASE = 'https://www.michaelmcfadyenscuba.info/viewpage.php?page_id=';
+
+// Live tide phase at a given forecast hour, from the H/L turning points.
+// Returns { rising, highish } or null when the tide data isn't loaded yet.
+//   rising  = tide is on its way UP to the next high (incoming) vs running out
+//   highish = current height sits in the upper half of the day's tidal range
+function liveTidePhase(h) {
+  if (!_tideEntries || !_tideEntries.length || !h) return null;
+  const t = new Date(h.dateTime).getTime();
+  const sorted = [..._tideEntries].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+  let nextTP = null;
+  for (const e of sorted) { if (new Date(e.dateTime).getTime() >= t) { nextTP = e; break; } }
+  // No turning point ahead in the window → fall back to the last one behind us.
+  const ref = nextTP || sorted[sorted.length - 1];
+  const rising = ref && (ref.type || '').toLowerCase() === (nextTP ? 'high' : 'low') ? true
+               : ref && (ref.type || '').toLowerCase() === (nextTP ? 'low' : 'high') ? false
+               : null;
+  // Height band: midpoint of the day's own highs and lows, not a fixed number,
+  // so "high" means high FOR HERE today rather than against an absolute datum.
+  const hs = sorted.map(e => e.height).filter(v => typeof v === 'number');
+  const mid = hs.length ? (Math.min(...hs) + Math.max(...hs)) / 2 : 1.0;
+  const highish = (typeof h.tideM === 'number') ? h.tideM >= mid : null;
+  return { rising, highish };
+}
+
+// Does the live tide match this site's McFadyen best-tide phase?
+// Returns { ok, text } for the chip, or null when there's nothing to assert
+// (pref 'any', or the tide data isn't in yet).
+function mcfTideMatch(pref, h) {
+  if (!pref || pref === 'any') return null;
+  const ph = liveTidePhase(h);
+  if (!ph) return null;
+  if (pref === 'incoming' || pref === 'outgoing') {
+    if (ph.rising == null) return null;
+    const want = pref === 'incoming';
+    const ok = ph.rising === want;
+    return { ok, text: 'Best on the ' + pref + ' tide — ' + (ph.rising ? 'rising' : 'running out') + ' now' };
+  }
+  if (pref === 'high' || pref === 'low') {
+    if (ph.highish == null) return null;
+    const want = pref === 'high';
+    const ok = ph.highish === want;
+    return { ok, text: 'Best on a ' + pref + ' tide — currently ' + (ph.highish ? 'high' : 'low') };
+  }
+  return null;
+}
 
 // Display order down the coast, north to south, so the Snapshot map grid, the
 // Day site chips and the 5 Days rows all read the way the coastline does.
@@ -5451,6 +5545,30 @@ function renderWaterQualityTable() {
       .catch(() => set('unknown', '—'));
   });
 }
+// Render the McFadyen reference block in the site sheet: an optional live
+// best-tide chip (green when the current tide matches his stated best phase,
+// amber when it doesn't) plus his own note and a deep link to the page. All
+// display — nothing here feeds the score.
+function renderMcfRef(site, h) {
+  const el = document.getElementById('siteSheetMcf');
+  if (!el) return;
+  const m = SITE_MCF[site.key];
+  if (!m) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const parts = [];
+  const match = mcfTideMatch(m.tide, h);
+  if (match) {
+    const cls = match.ok ? 'ok' : 'no';
+    const mark = match.ok ? '✓' : '✗';
+    parts.push('<div class="mcf-tide ' + cls + '"><span class="mcf-mark" aria-hidden="true">' + mark +
+               '</span><span>' + match.text + '</span></div>');
+  }
+  if (m.note) parts.push('<div class="mcf-note">' + m.note + '</div>');
+  parts.push('<a class="mcf-link" href="' + MCF_BASE + m.id + '" target="_blank" rel="noopener noreferrer">'
+             + 'Michael McFadyen’s dive notes ↗</a>');
+  el.innerHTML = parts.join('');
+  el.style.display = 'block';
+}
+
 function openSiteSheet(site, score, demerits, h) {
   const band = score >= 40 ? 'green' : score >= 20 ? 'yellow' : 'red';
   const bandLabel = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
@@ -5480,6 +5598,10 @@ function openSiteSheet(site, score, demerits, h) {
   } else {
     tideNoteEl.style.display = 'none';
   }
+
+  // McFadyen reference: a live best-tide chip (display only) + a deep link to
+  // his page for this site. renderMcfRef reads SITE_MCF and the live tide.
+  renderMcfRef(site, h);
 
   // Time context
   const dt = new Date(h.dateTime);
@@ -5595,8 +5717,7 @@ function paintSiteMap(site, demerits, h) {
       'from its speed and its runway over open water, the fetch. Too far inside the harbour for ocean swell to reach, so none is drawn. North is up.'
     : 'Small white arrows = swell energy, fanning out in rings where it bends around the headland into the lee. ' +
       'The two big arrows show where the <span class="smh-swell">swell</span> and the <span class="smh-wind">wind</span> are heading. ' +
-      'Wind builds chop from its speed and its runway over open water &mdash; the fetch. ' +
-      'The figure at the entry is the share of the offshore swell&rsquo;s energy that reaches it, from this site&rsquo;s own tuning. North is up.';
+      'Wind builds chop from its speed and its runway over open water &mdash; the fetch. North is up.';
 }
 
 // ── All-sites map grid (main screen) ────────────────────────────────────────
@@ -5933,6 +6054,7 @@ loadConfig().then(() => init());
        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDayViewFromSheet();}">📈 See this site's daily graph →</a>
     <button type="button" id="siteSheetReportBtn" onclick="scrollToReport()">✍️ Report conditions ↓</button>
     <div id="siteSheetTideNote" style="display:none;"></div>
+    <div id="siteSheetMcf" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
     <div id="siteSheetPollution">
       <span class="pol-dot" aria-hidden="true"></span>
