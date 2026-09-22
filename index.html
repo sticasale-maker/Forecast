@@ -586,8 +586,18 @@
     transition:background 0.15s;
   }
   #siteSheetGraphLink:hover { background:rgba(0,194,168,0.22); }
-  /* McFadyen reference: live best-tide chip + deep link */
+  /* McFadyen reference: a grouped "Dive notes" card — his note (italic) + link */
   #siteSheetMcf { margin:0 0 16px; }
+  #siteSheetMcf .mcf-card {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:11px 13px;
+  }
+  #siteSheetMcf .mcf-head {
+    display:flex; align-items:center; gap:7px; margin-bottom:9px;
+    font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:0.8px;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  #siteSheetMcf .mcf-head .mcf-ico { font-size:13px; line-height:1; }
   #siteSheetMcf .mcf-tide {
     display:flex; gap:8px; align-items:center;
     border-radius:10px; padding:9px 12px; margin-bottom:8px;
@@ -5648,12 +5658,13 @@ function renderMcfRef(site, h) {
   if (!m) { el.style.display = 'none'; el.innerHTML = ''; return; }
   // The live best-tide chip has moved into the labelled tide-guidance block
   // (renderTideGuidance) so entry vs clarity no longer read as a contradiction.
-  // Here we keep only McFadyen's own note + a deep link to his page.
-  const parts = [];
+  // Here we group McFadyen's own note (italic) + the deep link into a titled
+  // "Dive notes" card, so his material reads as one clearly-sourced block.
+  const parts = ['<div class="mcf-head"><span class="mcf-ico" aria-hidden="true">🗒️</span>Dive notes</div>'];
   if (m.note) parts.push('<div class="mcf-note">' + m.note + '</div>');
   parts.push('<a class="mcf-link" href="' + MCF_BASE + m.id + '" target="_blank" rel="noopener noreferrer">'
              + 'Michael McFadyen’s dive notes ↗</a>');
-  el.innerHTML = parts.join('');
+  el.innerHTML = '<div class="mcf-card">' + parts.join('') + '</div>';
   el.style.display = 'block';
 }
 
