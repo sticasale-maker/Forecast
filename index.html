@@ -2618,8 +2618,23 @@ function calcScore(site, d) {
   const tide_d  = site.tide(tide_base, tideM);
   const totalD  = all_demerits + tide_d;
 
+  let score = Math.min(60, Math.max(0, Math.round(60 - totalD)));
+  // CTB bay-surge cap: the WW+Open-Meteo model is blind to swell refracting into
+  // Cabbage Tree Bay. The Swim app's nearshore SURGE (0-60, loaded async into
+  // _bowerSurge) scores that exact spot, so for CTB the site score is the LOWER of
+  // the two — surge can pull it down (a rough bay), never inflate it. No-op until
+  // the surge series is loaded, or for any hour it lacks. See renderSurge / [[ctb-surge-from-swim]].
+  let surgeCap = null;
+  if (site.key === 'CTB' && d && d.dateTime && typeof _bowerSurge === 'object' && _bowerSurge) {
+    const b = _bowerSurge[d.dateTime.substring(0, 13) + ':00:00'];
+    if (b && typeof b.surge === 'number' && b.surge < score) {
+      surgeCap = { raw: score, surge: b.surge, label: b.label };
+      score = b.surge;
+    }
+  }
   return {
-    score: Math.min(60, Math.max(0, Math.round(60 - totalD))),
+    score,
+    surgeCap,
     demerits: {
       tide:     Math.round(tide_d  * 10) / 10,
       wind:     Math.round(wind_d  * 10) / 10,
@@ -4505,6 +4520,10 @@ async function init() {
 
   async function loadAndRender(forceRefresh = false) {
     const cache = loadCache();
+    // Load the CTB bay-surge series in parallel so the surge cap (calcScore) is
+    // applied on the first paint — no re-render, no view jump. Never blocks: it
+    // resolves to null on any failure and CTB simply falls back to WW+OM.
+    const _surgeP = loadBowerSurge().catch(() => null);
 
     // Serve from cache if fresh
     if (!forceRefresh && cacheIsFresh(cache) && cache.data) {
@@ -4517,6 +4536,7 @@ async function init() {
       // Air temp / feels-like / weather condition
       const wxData = await fetchOpenMeteoWeather();
       if (matrix.length) matrix = mergeWeatherIntoMatrix(matrix, wxData);
+      await _surgeP;
       updateConditions(data);
       renderSites(data);
       if (matrix.length) renderForecastViewsFromMatrix(matrix, loadTideCache());
@@ -4532,6 +4552,7 @@ async function init() {
     try {
       const data = await fetchForecast();
       hideErrorBanner();
+      await _surgeP;
       updateConditions(data); renderSites(data);
       const matrix = loadCache()?.matrix || [];
       if (matrix.length) renderForecastViewsFromMatrix(matrix, _tideEntries.length ? _tideEntries : loadTideCache());
@@ -5761,7 +5782,7 @@ function _drawSurge(el, key, map) {
   el.innerHTML = '<div class="surge-card">'
     + '<div class="surge-head"><span class="surge-ico" aria-hidden="true">🌊</span>Surge &middot; Bower Lane</div>'
     + '<div class="surge-val" style="color:' + clr + '">' + s.label + ' &middot; ' + s.surge + '/60</div>'
-    + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer.</div>'
+    + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer; the lower of this and the swell/wind score sets CTB&rsquo;s rating.</div>'
     + '</div>';
   el.style.display = 'block';
 }
