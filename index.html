@@ -632,6 +632,20 @@
     transition:color 0.15s, border-color 0.15s;
   }
   #siteSheetWebcam .wc-link:hover { color:var(--teal); border-color:var(--teal); }
+  /* CTB Bower Lane surge (from the Swim app's nearshore model). */
+  #siteSheetSurge { margin:0 0 16px; }
+  #siteSheetSurge .surge-card {
+    background:rgba(74,144,217,0.1); border:1px solid rgba(74,144,217,0.35);
+    border-radius:12px; padding:11px 13px;
+  }
+  #siteSheetSurge .surge-head {
+    display:flex; align-items:center; gap:7px; margin-bottom:7px;
+    font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:0.8px;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  #siteSheetSurge .surge-head .surge-ico { font-size:13px; line-height:1; }
+  #siteSheetSurge .surge-val { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.5px; line-height:1; }
+  #siteSheetSurge .surge-sub { font-family:'DM Sans',sans-serif; font-size:11.5px; color:var(--text-dim); line-height:1.45; margin-top:6px; }
   #siteSheetGraphLink:active { background:rgba(0,194,168,0.3); }
   #siteSheetDemerits {
     display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
@@ -5719,6 +5733,51 @@ function renderWebcam(site) {
   el.style.display = 'block';
 }
 
+// ── CTB Bower Lane surge — the Swim app's nearshore surge model, reused here ──
+// This dive app's WW + Open-Meteo model is blind to swell refracting into Cabbage
+// Tree Bay; the Swim app scores that exact spot from the NSW Nearshore node. We
+// reuse its SURGE number (0-60, 60 = best) via the shared Worker /bower-surge route
+// — no new NS calls (it recycles the single node 103218 the Swim app already uses).
+// Display-only for now, CTB only; it may later cap CTB's score.
+const BOWER_SURGE_URL = 'https://bold-rain-6ded.sticasale.workers.dev/bower-surge';
+let _bowerSurge = null, _bowerSurgeAt = 0;
+async function loadBowerSurge() {
+  if (_bowerSurge && Date.now() - _bowerSurgeAt < 1800000) return _bowerSurge;
+  try {
+    const r = await vizFetch(BOWER_SURGE_URL, {}, 8000);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const map = {};
+    (j.hours || []).forEach(x => { if (x && x.t) map[x.t] = x; });
+    _bowerSurge = map; _bowerSurgeAt = Date.now();
+    return map;
+  } catch (e) { return null; }
+}
+const SURGE_CLR = { Steady: '#2ecc71', Drifty: '#f5c842', Surgy: '#f5a623', Washy: '#e83d3d' };
+function _drawSurge(el, key, map) {
+  const s = map && map[key];
+  if (!s) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const clr = SURGE_CLR[s.label] || 'var(--text)';
+  el.innerHTML = '<div class="surge-card">'
+    + '<div class="surge-head"><span class="surge-ico" aria-hidden="true">🌊</span>Surge &middot; Bower Lane</div>'
+    + '<div class="surge-val" style="color:' + clr + '">' + s.label + ' &middot; ' + s.surge + '/60</div>'
+    + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer.</div>'
+    + '</div>';
+  el.style.display = 'block';
+}
+// CTB only: the Bower Lane surge for this hour. Lazy-loads the series and guards
+// against the sheet moving to another hour/site mid-fetch (via the element's key).
+function renderSurge(site, h) {
+  const el = document.getElementById('siteSheetSurge');
+  if (!el) return;
+  if (site.key !== 'CTB') { el.style.display = 'none'; el.innerHTML = ''; el.dataset.key = ''; return; }
+  const key = h.dateTime.substring(0, 13) + ':00:00';
+  el.dataset.key = key;
+  if (_bowerSurge && Date.now() - _bowerSurgeAt < 1800000) { _drawSurge(el, key, _bowerSurge); return; }
+  el.style.display = 'none';
+  loadBowerSurge().then(map => { if (el.dataset.key === key) _drawSurge(el, key, map); });
+}
+
 function openSiteSheet(site, score, demerits, h) {
   const band = score >= 40 ? 'green' : score >= 20 ? 'yellow' : 'red';
   const bandLabel = score >= 40 ? 'Easy' : score >= 20 ? 'Caution' : 'Avoid';
@@ -5757,6 +5816,9 @@ function openSiteSheet(site, score, demerits, h) {
 
   // Live webcam: link to the nearest free public beach cam for this site.
   renderWebcam(site);
+
+  // CTB only: Bower Lane surge from the Swim app's nearshore model (display-only).
+  renderSurge(site, h);
 
   // Time context
   const dt = new Date(h.dateTime);
@@ -6209,6 +6271,7 @@ loadConfig().then(() => init());
     <div id="siteSheetTideNote" style="display:none;"></div>
     <div id="siteSheetMcf" style="display:none;"></div>
     <div id="siteSheetWebcam" style="display:none;"></div>
+    <div id="siteSheetSurge" style="display:none;"></div>
     <div id="siteSheetWhen"></div>
     <div id="siteSheetPollution">
       <span class="pol-dot" aria-hidden="true"></span>
