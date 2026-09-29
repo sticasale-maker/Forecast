@@ -7234,18 +7234,20 @@ var VizSiteMap = (function () {
   function markSeen(a){ try { localStorage.setItem(SEEN_KEY, seenVal(a)); } catch (e) {} }
 
   /* ---- popup + pill -------------------------------------------------------- */
+  // The picture, title and text scroll together as one card (30 Sep 2026, per owner, to match
+  // Swim Manly): the picture used to sit in a fixed slot up to 64dvh tall while only the text scrolled.
   function buildPopup(){
     if ($('annOverlay')) return;
     var css = document.createElement('style');
     css.textContent =
       "#annOverlay{position:fixed;inset:0;z-index:99995;display:none;align-items:center;justify-content:center;padding:12px;background:rgba(6,16,32,0.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}" +
       "#annOverlay.show{display:flex;}" +
-      "#annPopup{background:#fff;border-radius:14px;max-width:min(94vw,460px);width:100%;overflow:hidden;box-shadow:0 12px 34px rgba(6,16,32,0.4);max-height:92dvh;display:flex;flex-direction:column;}" +
-      "#annImg{width:100%;max-height:64dvh;object-fit:contain;background:#eef2f4;display:none;}" +
+      "#annPopup{background:#fff;border-radius:14px;max-width:min(94vw,460px);width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-shadow:0 12px 34px rgba(6,16,32,0.4);max-height:92dvh;display:block;}" +
+      "#annImg{width:100%;height:auto;background:#eef2f4;display:none;}" +
       "#annPopup.ann-imageonly{background:transparent;box-shadow:none;max-width:none;width:auto;max-height:none;overflow:visible;}" +
       "#annPopup.ann-imageonly #annImg{width:auto;height:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 56px);object-fit:contain;background:transparent;border-radius:12px;}" +
       "#annPopup.ann-imageonly #annHint{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.7);}" +
-      "#annBody{padding:16px 18px 6px;overflow-y:auto;}" +
+      "#annBody{padding:16px 18px 6px;}" +
       "#annTitle{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:26px;line-height:1.05;color:#0e2233;margin-bottom:9px;}" +
       "#annText{font-size:14px;line-height:1.55;color:#16303f;}" +
       "#annText a{color:#00857a;}" +
