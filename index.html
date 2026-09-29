@@ -7375,6 +7375,17 @@ var VizSiteMap = (function () {
       return { html: '<div class="ann-card">' + img + body + '</div>', picOnly: !!img && !body };
     });
     $('annScroll').innerHTML = cards.map(function (c) { return c.html; }).join('');
+    // A link to another page on this site (the Swim app's El Nino page, say) carries from=forecast,
+    // so that page's "Back to the app" returns here and not to the Swim app.
+    Array.prototype.forEach.call($('annScroll').querySelectorAll('a[href]'), function (el) {
+      try {
+        var u = new URL(el.getAttribute('href'), location.href);
+        if (u.hostname === location.hostname && u.pathname.indexOf('/Forecast/') !== 0) {
+          u.searchParams.set('from', 'forecast');
+          el.setAttribute('href', u.toString());
+        }
+      } catch (e) {}
+    });
     var pop = $('annPopup');
     if (pop) { pop.classList.toggle('ann-imageonly', cards.length === 1 && cards[0].picOnly); pop.scrollTop = 0; }
     $('annOverlay').classList.add('show');
