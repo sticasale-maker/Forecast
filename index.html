@@ -7172,10 +7172,12 @@ var VizSiteMap = (function () {
   var KEY  = 'sb_publishable_TkhnIKIYdRCNQ-DSVLqjLw_dTMcLIqW';
   var RPC  = SB + '/rest/v1/rpc/';
   var hdrs = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' };
-  var SEEN_KEY = 'viz_ann_seen';
+  var SEEN_KEY   = 'viz_ann_seen';     // mandatory posts: forced-popup guard
+  var SEEN_KEY_Q = 'viz_ann_seen_q';   // quiet posts: pill-dot guard, tracked apart
   var ADMIN_MODE = /[?&]announce=1(\b|&|$)/.test(location.search);
 
-  var _active = null;   // the live announcement (or null)
+  var _active = [];     // the live announcements (may be several at once)
+  var _shownKind = null; // which set the popup is showing: 'loud' (forced) | 'all' (opened from the pill)
   var _editId = null;   // admin: id being edited (null = new)
   var _imgUrl = '';     // admin: image url currently in the form
   var _rows   = [];     // admin: last loaded list (for edit)
@@ -7198,7 +7200,41 @@ var VizSiteMap = (function () {
   }
 
   /* ---- rich-text sanitizer: rebuild a clean tree from an allowlist --------- */
-  var ALLOW = { B:1, STRONG:1, I:1, EM:1, U:1, UL:1, OL:1, LI:1, A:1, BR:1, P:1, DIV:1, SPAN:1 };
+  var ALLOW = { B:1, STRONG:1, I:1, EM:1, U:1, UL:1, OL:1, LI:1, A:1, BR:1, P:1, DIV:1, SPAN:1,
+                H1:1, H2:1, H3:1, H4:1, H5:1, H6:1, BLOCKQUOTE:1, HR:1 };
+  // Pasted / editor markup is normalised to a small on-brand set: outsized headings
+  // collapse to our two steps so nothing towers over the popup.
+  var TAGMAP = { H1:'H2', H4:'H3', H5:'H3', H6:'H3' };
+  // Curated inline-style policy. Colours are inert so any valid hex/rgb is safe to
+  // keep (aids paste fidelity); every other property is snapped to a fixed set of
+  // safe values. Anything not listed here is dropped — no arbitrary CSS survives.
+  function isColor(v){
+    return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ||
+           /^rgba?\(\s*[\d.,\s%]+\)$/i.test(v);
+  }
+  function isSize(v){ var m = /^(\d+(?:\.\d+)?)px$/i.exec(v); return !!m && +m[1] >= 8 && +m[1] <= 72; }
+  var STYLE_OK = {
+    'color': isColor,
+    'background-color': isColor,
+    'text-align': /^(left|right|center|justify)$/i,
+    'font-weight': /^(bold|bolder|[5-9]00)$/i,
+    'font-style': /^italic$/i,
+    'text-decoration': /(underline|line-through)/i,
+    'font-size': isSize
+  };
+  function filterStyle(style){
+    var keep = [];
+    String(style || '').split(';').forEach(function (decl) {
+      var i = decl.indexOf(':'); if (i < 0) return;
+      var prop = decl.slice(0, i).trim().toLowerCase();
+      var val  = decl.slice(i + 1).trim();
+      if (!val) return;
+      var test = STYLE_OK[prop]; if (!test) return;
+      var ok = (typeof test === 'function') ? test(val) : test.test(val);
+      if (ok) keep.push(prop + ':' + val);
+    });
+    return keep.join(';');
+  }
   function clean(src){
     var tmp = document.createElement('div'); tmp.innerHTML = (src == null ? '' : String(src));
     var out = document.createElement('div');
@@ -7208,9 +7244,10 @@ var VizSiteMap = (function () {
         if (ch.nodeType !== 1) return;                       // drop comments / others
         var tag = ch.tagName;
         if (tag === 'SCRIPT' || tag === 'STYLE') return;     // drop entirely
-        if (ALLOW[tag]) {
-          var el = document.createElement(tag.toLowerCase());
-          if (tag === 'A') {
+        var mapped = TAGMAP[tag] || tag;
+        if (ALLOW[mapped]) {
+          var el = document.createElement(mapped.toLowerCase());
+          if (mapped === 'A') {
             var href = ch.getAttribute('href') || '';
             if (/^(https?:|mailto:)/i.test(href)) {
               el.setAttribute('href', href);
@@ -7218,7 +7255,9 @@ var VizSiteMap = (function () {
               el.setAttribute('rel', 'noopener noreferrer');
             }
           }
-          copy(ch, el);
+          var sty = filterStyle(ch.getAttribute && ch.getAttribute('style'));
+          if (sty) el.setAttribute('style', sty);
+          if (mapped !== 'HR') copy(ch, el);                 // HR is void
           dest.appendChild(el);
         } else {
           copy(ch, dest);                                    // unwrap: keep contents
@@ -7228,10 +7267,50 @@ var VizSiteMap = (function () {
     return out.innerHTML;
   }
 
-  /* ---- seen tracking ------------------------------------------------------- */
-  function seenVal(a){ return a.id + '|' + (a.updated_at || ''); }
-  function isSeen(a){ try { return localStorage.getItem(SEEN_KEY) === seenVal(a); } catch (e) { return false; } }
-  function markSeen(a){ try { localStorage.setItem(SEEN_KEY, seenVal(a)); } catch (e) {} }
+  /* ---- seen tracking (signature spans ALL live announcements) --------------
+     Scoped to the DAY as well as the content. Previously the stored value was
+     the content signature alone, so one dismissal silenced the popup until a
+     post was edited or added — someone who dismissed it in the morning never
+     saw it again, however long it stayed live. Storing "<sydney-date>@<sig>"
+     re-arms it once per calendar day: at most one popup a day for unchanged
+     content, and still an immediate one whenever the content itself changes
+     (a new id, or an edit bumping updated_at). */
+  function annDay(){
+    try { return new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }); }
+    catch (e) { return new Date().toISOString().slice(0, 10); }
+  }
+  function seenSig(list){
+    return (list || []).map(function (a) { return a.id + '|' + (a.updated_at || ''); }).sort().join(';');
+  }
+  // Seen state is tracked per KEY so mandatory and quiet posts stay independent.
+  function _isSeen(key, list){
+    try {
+      var v = localStorage.getItem(key) || '';
+      var i = v.indexOf('@');                       // ids and ISO stamps carry no '@'
+      if (i < 0) return false;                      // pre-dated value → treat as unseen
+      return v.slice(0, i) === annDay() && v.slice(i + 1) === seenSig(list);
+    } catch (e) { return false; }
+  }
+  function _markSeen(key, list){ try { localStorage.setItem(key, annDay() + '@' + seenSig(list)); } catch (e) {} }
+  function loudOnes(){  return _active.filter(function (a) { return !a.quiet; }); }
+  function quietOnes(){ return _active.filter(function (a) { return  a.quiet; }); }
+
+  /* Show-once posts don't re-arm daily — once dismissed on a device they're gone
+     for good. We track their exact signature (id|updated_at) so an EDIT that bumps
+     updated_at counts as a new post and shows again. */
+  var SEEN_ONCE_KEY = 'viz_ann_once';
+  function sigOf(a){ return a.id + '|' + (a.updated_at || ''); }
+  function _onceList(){ try { return (localStorage.getItem(SEEN_ONCE_KEY) || '').split(';').filter(Boolean); } catch (e) { return []; } }
+  function onceDismissed(a){ return !!a.show_once && _onceList().indexOf(sigOf(a)) !== -1; }
+  function markOnceDismissed(list){
+    try {
+      var s = _onceList();
+      (list || []).forEach(function (a) { if (a.show_once && s.indexOf(sigOf(a)) === -1) s.push(sigOf(a)); });
+      localStorage.setItem(SEEN_ONCE_KEY, s.join(';'));
+    } catch (e) {}
+  }
+  // Loud posts that still need showing: drops show-once posts already dismissed here.
+  function loudPending(){ return loudOnes().filter(function (a) { return !onceDismissed(a); }); }
 
   /* ---- popup + pill -------------------------------------------------------- */
   // The picture, title and text scroll together as one card (30 Sep 2026, per owner, to match
@@ -7243,16 +7322,23 @@ var VizSiteMap = (function () {
       "#annOverlay{position:fixed;inset:0;z-index:99995;display:none;align-items:center;justify-content:center;padding:12px;background:rgba(6,16,32,0.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}" +
       "#annOverlay.show{display:flex;}" +
       "#annPopup{background:#fff;border-radius:14px;max-width:min(94vw,460px);width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-shadow:0 12px 34px rgba(6,16,32,0.4);max-height:92dvh;display:block;}" +
-      "#annImg{width:100%;height:auto;background:#eef2f4;display:none;}" +
+      "#annScroll{}" +
+      ".ann-card + .ann-card{border-top:8px solid #eef2f4;}" +
+      ".ann-c-img{width:100%;height:auto;display:block;background:#eef2f4;}" +
       "#annPopup.ann-imageonly{background:transparent;box-shadow:none;max-width:none;width:auto;max-height:none;overflow:visible;}" +
-      "#annPopup.ann-imageonly #annImg{width:auto;height:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 56px);object-fit:contain;background:transparent;border-radius:12px;}" +
+      "#annPopup.ann-imageonly .ann-c-img{width:auto;height:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 56px);object-fit:contain;background:transparent;border-radius:12px;}" +
       "#annPopup.ann-imageonly #annHint{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.7);}" +
-      "#annBody{padding:16px 18px 6px;}" +
-      "#annTitle{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:26px;line-height:1.05;color:#0e2233;margin-bottom:9px;}" +
-      "#annText{font-size:14px;line-height:1.55;color:#16303f;}" +
-      "#annText a{color:#00857a;}" +
-      "#annText ul,#annText ol{margin:7px 0;padding-left:20px;}#annText li{margin-bottom:3px;}" +
-      "#annText p{margin:0 0 7px;}" +
+      "#annPopup .ann-c-body{padding:16px 18px 6px;}" +
+      "#annPopup .ann-c-title{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:26px;line-height:1.05;color:#0e2233;margin-bottom:9px;}" +
+      "#annPopup .ann-c-text{font-size:14px;line-height:1.55;color:#16303f;}" +
+      "#annPopup .ann-c-text a{color:#00857a;}" +
+      "#annPopup .ann-c-text ul,#annPopup .ann-c-text ol{margin:7px 0;padding-left:20px;}#annPopup .ann-c-text li{margin-bottom:3px;}" +
+      "#annPopup .ann-c-text p{margin:0 0 7px;}" +
+      "#annPopup .ann-c-text h2,#annPopup .ann-c-text h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.5px;line-height:1.1;margin:11px 0 6px;color:#0e2233;}" +
+      "#annPopup .ann-c-text h2:first-child,#annPopup .ann-c-text h3:first-child{margin-top:0;}" +
+      "#annPopup .ann-c-text h2{font-size:22px;}#annPopup .ann-c-text h3{font-size:18px;}" +
+      "#annPopup .ann-c-text blockquote{margin:9px 0;padding:6px 12px;border-left:3px solid #00857a;color:#5a7183;font-style:italic;}" +
+      "#annPopup .ann-c-text hr{border:none;border-top:1px solid rgba(0,133,122,.25);margin:12px 0;}" +
       "#annHint{text-align:center;color:#5a7183;font-size:11px;padding:11px 0 14px;}" +
       "#annWhatsNew{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom, 0px) + 76px);z-index:99990;display:none;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid #00857a;background:#fff;color:#00857a;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(6,16,32,.28);}" +
       "#annWhatsNew.show{display:inline-flex;}" +
@@ -7262,47 +7348,63 @@ var VizSiteMap = (function () {
     var ov = document.createElement('div'); ov.id = 'annOverlay';
     ov.innerHTML =
       '<div id="annPopup" role="dialog" aria-modal="true" aria-label="Announcement">' +
-        '<img id="annImg" alt="">' +
-        '<div id="annBody"><div id="annTitle"></div><div id="annText"></div></div>' +
+        '<div id="annScroll"></div>' +
         '<div id="annHint">tap anywhere to dismiss</div>' +
       '</div>';
     ov.addEventListener('click', dismissPopup);   // tap anywhere closes
     document.body.appendChild(ov);
   }
-  function showPopup(a){
+  // Every live post in one scrolling list, picture, title and text together, as the Swim app
+  // shows them (30 Sep 2026, per owner). Mandatory posts first; a lone picture-only post keeps
+  // its full-screen fit.
+  function showPopup(list){
+    if (!list) return;
+    if (!Array.isArray(list)) list = [list];
+    if (!list.length) return;
     buildPopup();
-    var img = $('annImg');
-    var hasImg = !!a.image_url;
-    if (hasImg) { img.src = a.image_url; img.style.display = 'block'; }
-    else { img.style.display = 'none'; img.removeAttribute('src'); }
-    var ttl = (a.title || '').trim();
-    $('annTitle').textContent = ttl;
-    $('annTitle').style.display = ttl ? '' : 'none';
-    $('annText').innerHTML = clean(a.body_html || '');
-    var hasText = !!ttl || !!(($('annText').textContent || '').trim());
-    if ($('annBody')) $('annBody').style.display = hasText ? '' : 'none';
-    if ($('annPopup')) $('annPopup').classList.toggle('ann-imageonly', hasImg && !hasText);
+    list = list.slice().sort(function (x, y) { return (!!x.quiet) - (!!y.quiet); });
+    var cards = list.map(function (a) {
+      var ttl = (a.title || '').trim();
+      var bodyHtml = clean(a.body_html || '');
+      var hasBody = !!bodyHtml.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+      var img = a.image_url ? '<img class="ann-c-img" src="' + escText(a.image_url) + '" alt="" decoding="async">' : '';
+      var body = (ttl || hasBody)
+        ? '<div class="ann-c-body">' + (ttl ? '<div class="ann-c-title">' + escText(ttl) + '</div>' : '') +
+          (hasBody ? '<div class="ann-c-text">' + bodyHtml + '</div>' : '') + '</div>'
+        : '';
+      return { html: '<div class="ann-card">' + img + body + '</div>', picOnly: !!img && !body };
+    });
+    $('annScroll').innerHTML = cards.map(function (c) { return c.html; }).join('');
+    var pop = $('annPopup');
+    if (pop) { pop.classList.toggle('ann-imageonly', cards.length === 1 && cards[0].picOnly); pop.scrollTop = 0; }
     $('annOverlay').classList.add('show');
   }
   function dismissPopup(){
     var ov = $('annOverlay'); if (ov) ov.classList.remove('show');
-    if (_active) { markSeen(_active); var p = $('annWhatsNew'); if (p) p.classList.remove('unseen'); }
+    // Mark seen only what was shown: a forced popup (mandatory posts) leaves quiet posts
+    // untouched; opening from the pill showed everything, so both count.
+    _markSeen(SEEN_KEY, loudOnes());
+    markOnceDismissed(loudOnes());   // show-once posts: never surface again on this device
+    if (_shownKind !== 'loud') _markSeen(SEEN_KEY_Q, quietOnes());
+    _shownKind = null;
+    refreshPill();
   }
   function ensurePill(){
     if ($('annWhatsNew')) return $('annWhatsNew');
     buildPopup();   // ensures the pill CSS is present
     var b = document.createElement('button'); b.id = 'annWhatsNew'; b.type = 'button';
-    b.setAttribute('aria-label', 'See the latest announcement');
+    b.setAttribute('aria-label', 'See the announcements');
     b.innerHTML = '<span class="ann-dot" aria-hidden="true"></span><span>What’s new</span>';
-    b.addEventListener('click', function () { if (_active) showPopup(_active); });
+    b.addEventListener('click', function () { if (_active.length) { _shownKind = 'all'; showPopup(_active); } });
     document.body.appendChild(b);
     return b;
   }
   function refreshPill(){
     var b = ensurePill();
-    if (!_active) { b.classList.remove('show', 'unseen'); return; }
+    if (!_active.length) { b.classList.remove('show', 'unseen'); return; }
     b.classList.add('show');
-    b.classList.toggle('unseen', !isSeen(_active));
+    var loud = loudPending(), quiet = quietOnes();
+    b.classList.toggle('unseen', !!((loud.length && !_isSeen(SEEN_KEY, loud)) || (quiet.length && !_isSeen(SEEN_KEY_Q, quiet))));
   }
   async function loadActive(){
     try {
@@ -7313,9 +7415,11 @@ var VizSiteMap = (function () {
       // Pre-migration rows are untagged, so a Swim-app announcement in the shared
       // table never leaks into the dive app. Once the Supabase app-scope patch is
       // applied, posts published here (p_app:'viz') carry app='viz' and appear.
-      var top = (Array.isArray(rows) && rows.length) ? rows[0] : null;
-      _active = (top && top.app === 'viz') ? top : null;
-      if (_active && !isSeen(_active) && !ADMIN_MODE) showPopup(_active);
+      _active = (Array.isArray(rows) ? rows : []).filter(function (a) { return a && a.app === 'viz'; });
+      // Only mandatory posts open the popup on their own, and that popup shows only them;
+      // quiet posts light the pill dot and appear when the pill is opened.
+      var loud = loudPending();
+      if (loud.length && !_isSeen(SEEN_KEY, loud) && !ADMIN_MODE) { _shownKind = 'loud'; showPopup(loud); }
       refreshPill();
     } catch (e) {}
   }
