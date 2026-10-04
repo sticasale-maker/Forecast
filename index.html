@@ -655,6 +655,11 @@
   #siteSheetSurge .surge-head .surge-ico { font-size:13px; line-height:1; }
   #siteSheetSurge .surge-val { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.5px; line-height:1; }
   #siteSheetSurge .surge-sub { font-family:'DM Sans',sans-serif; font-size:11.5px; color:var(--text-dim); line-height:1.45; margin-top:6px; }
+  #siteSheetSurge .surge-notice {
+    font-family:'DM Sans',sans-serif; font-size:12px; color:var(--text); line-height:1.45;
+    background:rgba(245,166,35,0.12); border-left:3px solid #f5a623; border-radius:6px;
+    padding:7px 9px; margin-bottom:8px;
+  }
   #siteSheetGraphLink:active { background:rgba(0,194,168,0.3); }
   #siteSheetDemerits {
     display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
@@ -5770,6 +5775,10 @@ function renderWebcam(site) {
 // — no new NS calls (it recycles the single node 103218 the Swim app already uses).
 // Display-only for now, CTB only; it may later cap CTB's score.
 const BOWER_SURGE_URL = 'https://bold-rain-6ded.sticasale.workers.dev/bower-surge';
+// Owner's note on the Bower Lane card ('' = none). Shown even when there is no surge
+// for the hour, so it survives a full NSW outage. Clear it once the Nearshore Wave
+// Tool is updating again.
+const BOWER_SURGE_NOTICE = 'The NSW Nearshore Wave Tool is down and hasn&rsquo;t updated since 30 Sep, so this Bower Lane forecast is out of date. <b>Current conditions are good</b> (5 Oct).';
 let _bowerSurge = null, _bowerSurgeAt = 0;
 async function loadBowerSurge() {
   if (_bowerSurge && Date.now() - _bowerSurgeAt < 1800000) return _bowerSurge;
@@ -5786,13 +5795,16 @@ async function loadBowerSurge() {
 const SURGE_CLR = { Steady: '#2ecc71', Drifty: '#f5c842', Surgy: '#f5a623', Washy: '#e83d3d' };
 function _drawSurge(el, key, map) {
   const s = map && map[key];
-  if (!s) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  const clr = SURGE_CLR[s.label] || 'var(--text)';
-  el.innerHTML = '<div class="surge-card">'
-    + '<div class="surge-head"><span class="surge-ico" aria-hidden="true">🌊</span>Surge &middot; Bower Lane</div>'
-    + '<div class="surge-val" style="color:' + clr + '">' + s.label + ' &middot; ' + s.surge + '/60</div>'
-    + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer; the lower of this and the swell/wind score sets CTB&rsquo;s rating.</div>'
-    + '</div>';
+  if (!s && !BOWER_SURGE_NOTICE) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  let html = '<div class="surge-card">'
+    + '<div class="surge-head"><span class="surge-ico" aria-hidden="true">🌊</span>Surge &middot; Bower Lane</div>';
+  if (BOWER_SURGE_NOTICE) html += '<div class="surge-notice">' + BOWER_SURGE_NOTICE + '</div>';
+  if (s) {
+    const clr = SURGE_CLR[s.label] || 'var(--text)';
+    html += '<div class="surge-val" style="color:' + clr + '">' + s.label + ' &middot; ' + s.surge + '/60</div>'
+      + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer; the lower of this and the swell/wind score sets CTB&rsquo;s rating.</div>';
+  }
+  el.innerHTML = html + '</div>';
   el.style.display = 'block';
 }
 // CTB only: the Bower Lane surge for this hour. Lazy-loads the series and guards
