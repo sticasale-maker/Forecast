@@ -6186,8 +6186,9 @@ function setupRating(site, score, h) {
 function onRateWhen() {
   if (!_rateCtx) return;
   const h = _hourlyMatrix[+document.getElementById('rateWhen').value];
-  const score = calcScore(_rateCtx.site, h).score;
-  _rateCtx.h = h; _rateCtx.score = score;
+  // Keep the whole result: sendRating reports the breakdown behind this exact score.
+  const res = calcScore(_rateCtx.site, h), score = res.score;
+  _rateCtx.h = h; _rateCtx.score = score; _rateCtx.res = res;
   const pct = toPct(score);
   const slider = document.getElementById('rateSlider');
   const done = _lsGet(_rateKey(_rateCtx));
@@ -6229,7 +6230,7 @@ function _rateSliderLabel() {
 }
 function sendRating() {
   if (!_rateCtx) return;
-  const { site, score, h } = _rateCtx;
+  const { site, score, h, res } = _rateCtx;
   const userPct = +document.getElementById('rateSlider').value;
   const forecastPct = toPct(score);
   vizTrack('forecast_rating', {
@@ -6238,8 +6239,14 @@ function sendRating() {
     forecast_band: label(score), user_band: label(userPct * 0.6),
     hours_after: Math.round((Date.now() - new Date(h.dateTime).getTime()) / 360000) / 10,
     inputs: { swell1H: h.swell1H, swell1Dir: h.swell1Dir, swell1P: h.swell1P,
-              swell2H: h.swell2H, swell2Dir: h.swell2Dir, windWaveH: h.windWaveH,
-              windWaveDir: h.windWaveDir, windKmh: h.windKmh, windDir: h.windDir, tideM: h.tideM },
+              swell2H: h.swell2H, swell2Dir: h.swell2Dir, swell2P: h.swell2P, windWaveH: h.windWaveH,
+              windWaveDir: h.windWaveDir, windWaveP: h.windWaveP, windKmh: h.windKmh, windDir: h.windDir, tideM: h.tideM },
+    // calcScore's breakdown behind forecast_pct (demerits on its 0-60 scale), so each
+    // report can be explained without recomputing it.
+    demerits: res ? res.demerits : undefined,
+    surge_cap: res && res.surgeCap ? res.surgeCap : undefined,
+    // Sent with #viz-admin open: the owner testing, not a dive. Kept out of tuning.
+    test: _isAdminView() || undefined,
   });
   _lsSet(_rateKey(_rateCtx), String(userPct));
   document.getElementById('rateSlider').disabled = true;
