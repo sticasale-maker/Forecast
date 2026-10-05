@@ -2334,12 +2334,18 @@ const CONFIG_DEFAULTS = {
 
 // Live CONFIG — starts as deep copy of defaults, overwritten by sheet on load
 let CONFIG = JSON.parse(JSON.stringify(CONFIG_DEFAULTS));
+// Why the last Sheet load was not used (empty when it was). Shown in the admin
+// validation panel; otherwise a rejected Sheet would only show up in the console.
+let _configProblems = [];
 
 // ── Sheet CSV parser ───────────────────────────────────────────────────────────
 function parseSheetCSV(text) {
   // Simple CSV split (no quoted fields needed for this sheet)
   return text.split('\n').map(line => line.split(','));
 }
+// Row labels compared case-, space- and underscore-blind, so a relabelled "Swell_Sens"
+// cannot silently skip its row and leave that part of CONFIG on the defaults.
+function sheetLabel(v) { return String(v == null ? '' : v).toLowerCase().replace(/[\s_]+/g, ' ').trim(); }
 
 // Column offsets (0-based) for each site's wind/sea/rif triplet, and for its
 // single sensitivity column. The first 13 sites are contiguous in both blocks;
@@ -2355,17 +2361,17 @@ function applySheetConfig(rows) {
   const n = function(v) { return parseFloat(v) || 0; };
 
   // Row 24 (0-based: 23) — Wind sens TUNE, cols C–O (indices 2–14)
-  if (rows[23] && rows[23][1] && rows[23][1].includes('Wind sens')) {
+  if (sheetLabel(rows[23] && rows[23][1]).includes('wind sens')) {
     CONFIG.windSens = SITE_SENS_COL.map(c => n(rows[23][c]));
   }
   // Row 25 (0-based: 24) — Swell sens TUNE
-  if (rows[24] && rows[24][1] && rows[24][1].includes('Swell sens')) {
+  if (sheetLabel(rows[24] && rows[24][1]).includes('swell sens')) {
     CONFIG.swellSens = SITE_SENS_COL.map(c => n(rows[24][c]));
   }
   // Row 27 (0-based: 26) — Swell period multiplier (spm), read directly from the
   // sheet cell (C27 etc.) in multiplier units — calcScore uses it as spm without
   // re-deriving. Do NOT read row 26 'Period power' (raw units, wrong scale).
-  if (rows[26] && rows[26][1] && rows[26][1].toLowerCase().includes('multiplier')) {
+  if (sheetLabel(rows[26] && rows[26][1]).includes('multiplier')) {
     CONFIG.periodPower = SITE_SENS_COL.map(c => n(rows[26][c]));
   }
 
@@ -2380,6 +2386,48 @@ function applySheetConfig(rows) {
     }
     CONFIG.lookup[key] = {wind, sea, rif};
   });
+}
+
+// Checks a parsed Sheet before the app scores from it. applySheetConfig's n() reads a
+// blank or text cell as 0, so a deleted cell, an inserted row or column, or a cleared
+// tab would otherwise load silently as calm water at every site. Calibrated on the live
+// Sheet on 5 Oct 2026: every table cell filled and numeric, hits -40..100, wind sens
+// 0.3-0.6, swell sens 0.3-10, spm 1.6-9.8, the direction tables summing to ~23,400.
+function sheetConfigProblems(rows, cfg) {
+  const p = [];
+  const cell = (r, c) => String((rows[r] || [])[c] ?? '').trim();
+  const num = s => s !== '' && isFinite(Number(s));
+  const colName = c => (c >= 26 ? String.fromCharCode(64 + Math.floor(c / 26)) : '') + String.fromCharCode(65 + c % 26);
+  [[23, 'wind sens'], [24, 'swell sens'], [26, 'multiplier']].forEach(([r, want]) => {
+    if (!sheetLabel(cell(r, 1)).includes(want)) p.push('B' + (r + 1) + ' is "' + cell(r, 1) + '", expected ' + want);
+    SITE_SENS_COL.forEach(c => { if (!num(cell(r, c))) p.push(colName(c) + (r + 1) + ' is "' + cell(r, c) + '"'); });
+  });
+  if (cell(31, 1) !== '0' || cell(62, 1) !== '348.75') {
+    p.push('direction rows have moved (B32 "' + cell(31, 1) + '", B63 "' + cell(62, 1) + '")');
+  }
+  let mass = 0, base = 0;
+  SITE_KEYS_ORDERED.forEach((key, si) => {
+    ['wind hit', 'sea', 'refraction'].forEach((want, off) => {
+      const c = SITE_DIR_COL[si] + off;
+      if (!sheetLabel(cell(30, c)).startsWith(want)) p.push(key + ': ' + colName(c) + '31 is "' + cell(30, c) + '", expected ' + want);
+      for (let r = 31; r <= 62; r++) {
+        const s = cell(r, c);
+        if (!num(s)) { p.push(key + ': ' + colName(c) + (r + 1) + ' is "' + s + '"'); continue; }
+        const v = Number(s);
+        if (v < -100 || v > 100) p.push(key + ': ' + colName(c) + (r + 1) + ' = ' + v + ', outside -100..100');
+        mass += Math.abs(v);
+      }
+    });
+    ['wind', 'sea', 'rif'].forEach(t => CONFIG_DEFAULTS.lookup[key][t].forEach(v => { base += Math.abs(v); }));
+  });
+  // A wiped or flooded table (all 0s, all 100s) passes every per-cell check above.
+  if (mass < base * 0.5 || mass > base * 2) {
+    p.push('direction tables sum to ' + Math.round(mass) + ' against ' + Math.round(base) + ' in the fallback');
+  }
+  cfg.windSens.forEach((v, i) => { if (!(v >= 0 && v <= 5)) p.push(SITE_KEYS_ORDERED[i] + ' wind sens ' + v + ' is outside 0..5'); });
+  cfg.swellSens.forEach((v, i) => { if (!(v >= 0 && v <= 25)) p.push(SITE_KEYS_ORDERED[i] + ' swell sens ' + v + ' is outside 0..25'); });
+  cfg.periodPower.forEach((v, i) => { if (!(v > 0 && v <= 25)) p.push(SITE_KEYS_ORDERED[i] + ' spm ' + v + ' is outside 0..25'); });
+  return p;
 }
 
 // ── Config loader with 1-hour cache ───────────────────────────────────────────
@@ -2399,10 +2447,17 @@ async function loadConfig() {
     const text = await res.text();
     const rows = parseSheetCSV(text);
     applySheetConfig(rows);
+    const problems = sheetConfigProblems(rows, CONFIG);
+    if (problems.length) {
+      _configProblems = problems;
+      throw new Error(problems.length + ' problem(s): ' + problems.slice(0, 3).join('; '));
+    }
+    _configProblems = [];
     localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), config: CONFIG }));
     console.log('Config: loaded from Google Sheet');
   } catch(e) {
-    console.warn('Config: sheet unavailable, using defaults.', e.message);
+    console.warn('Config: sheet unavailable or failed its checks, using defaults.', e.message);
+    if (!_configProblems.length) _configProblems = ['Sheet unavailable: ' + e.message];
     CONFIG = JSON.parse(JSON.stringify(CONFIG_DEFAULTS));
   }
 }
@@ -4692,6 +4747,24 @@ async function validateScores(data) {
   panel.classList.add('visible');
   badge.textContent = '…';
   badge.className   = '';
+  // Leads every outcome below when the app is not scoring from the Sheet.
+  const cfgNote = _configProblems.length
+    ? 'Sheet config not used, scoring on the built-in fallback: ' + _configProblems.slice(0, 3).join('; ') +
+      (_configProblems.length > 3 ? ' (+' + (_configProblems.length - 3) + ' more)' : '') + '. '
+    : '';
+  // The validation script writes to the Sheet with the owner's Google rights and its
+  // URL is public in this page, so it checks the admin passphrase against its own
+  // ADMIN_PASSPHRASE property. Sent by POST, so the passphrase stays out of URLs.
+  if (!_admToken) {
+    const pass = prompt('Admin passphrase, to compare scores with the Sheet:');
+    if (!pass || !pass.trim()) {
+      badge.textContent  = cfgNote ? '⚠ fallback' : '—';
+      badge.className    = cfgNote ? 'warn' : '';
+      status.textContent = cfgNote + 'Sheet comparison skipped: it needs the admin passphrase.';
+      return;
+    }
+    _admToken = pass;
+  }
   status.textContent = 'Writing inputs to sheet and reading scores…';
 
   // Build app scores + demerits for all 13 sites
@@ -4719,13 +4792,14 @@ async function validateScores(data) {
       swell2Dir:   Math.round(data.swell2Dir),
       swell2H:     data.swell2H,
       swell2P:     Math.round(data.swell2P),
+      token:       _admToken,
     });
 
     // Apps Script cold starts can exceed 10s — allow 25s and retry once.
     let res;
     for (let attempt = 1; ; attempt++) {
       try {
-        res = await vizFetch(APPS_SCRIPT_URL + '?' + params.toString(), {}, 25000);
+        res = await vizFetch(APPS_SCRIPT_URL, { method: 'POST', body: params }, 25000);
         break;
       } catch (e) {
         if (attempt >= 2) throw e;
@@ -4733,7 +4807,14 @@ async function validateScores(data) {
       }
     }
     if (!res.ok) throw new Error(`Script returned ${res.status}`);
-    const json = await res.json();
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e) {
+      throw new Error(/doPost/.test(text) ? 'the Sheet script has no doPost yet (paste the update into its editor)'
+                                          : 'the Sheet script did not reply with JSON');
+    }
+    if (json.error === 'unauthorised') throw new Error('the Sheet script refused the passphrase (or its ADMIN_PASSPHRASE property is not set)');
     if (json.error) throw new Error(json.error);
 
     const sheetScores   = json.sheetScores;   // { "CTB Bower Ln": 48, ... }
@@ -4793,17 +4874,18 @@ async function validateScores(data) {
       badge.textContent = `⚠ ${mismatches} diff${mismatches > 1 ? 's' : ''} > 2`;
       badge.className   = 'warn';
     }
+    if (cfgNote) { badge.textContent = '⚠ fallback · ' + badge.textContent; badge.className = 'warn'; }
 
     const inputSummary = `Tide ${data.tideM}m · Wind ${data.windDir}° ${data.windKmh}km/h · WW ${data.windWaveDir}° ${data.windWaveH}m ${data.windWaveP||0}s · Swell ${data.swell1Dir}° ${data.swell1H}m ${data.swell1P}s · Swell2 ${data.swell2Dir}° ${data.swell2H}m ${data.swell2P}s`;
     const omLabel = _omStatus.ok === null ? 'OM: pending'
                   : _omStatus.ok         ? `OM ✓ ${_omStatus.msg} · WW ${_omStatus.windWaveH?.toFixed(2) ?? '?'}m · S2 ${_omStatus.swell2H?.toFixed(2) ?? '?'}m`
                   :                        `OM ✗ ${_omStatus.msg}`;
-    status.textContent = `Validated ${new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} · ${inputSummary} · ${omLabel}`;
+    status.textContent = cfgNote + `Validated ${new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} · ${inputSummary} · ${omLabel}`;
 
   } catch(err) {
     badge.textContent  = 'Error';
     badge.className    = 'warn';
-    status.textContent = `Validation failed: ${err.message}`;
+    status.textContent = cfgNote + `Validation failed: ${err.message}`;
     console.warn('Validation error:', err);
   }
 }
