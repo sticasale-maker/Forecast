@@ -655,6 +655,9 @@
   #siteSheetSurge .surge-head .surge-ico { font-size:13px; line-height:1; }
   #siteSheetSurge .surge-val { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.5px; line-height:1; }
   #siteSheetSurge .surge-sub { font-family:'DM Sans',sans-serif; font-size:11.5px; color:var(--text-dim); line-height:1.45; margin-top:6px; }
+  /* Licence credit for the NSW Nearshore data the surge is modelled from (CC BY 4.0). */
+  #siteSheetSurge .surge-credit { font-family:'DM Sans',sans-serif; font-size:10.5px; color:var(--text-dim); line-height:1.4; margin-top:6px; opacity:0.85; }
+  #siteSheetSurge .surge-credit a { color:inherit; text-decoration:underline; }
   #siteSheetSurge .surge-notice {
     font-family:'DM Sans',sans-serif; font-size:12px; color:var(--text); line-height:1.45;
     background:rgba(245,166,35,0.12); border-left:3px solid #f5a623; border-radius:6px;
@@ -2268,7 +2271,10 @@ async function vizFetch(url, opts = {}, ms = 10000) {
   }
 }
 
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPPOtn-jlsI3-eu04_kS3FylNaiJtYJlfJ9RarZwIXfjbpuGHt9tEMgrHr74370-r_FrRN3vx4vIPD/pub?output=csv';
+// The MASTER tab by gid. A bare ?output=csv only resolves while ONE tab is published;
+// with more than one (MASTER + "daily sentence", since 5 Oct 2026) Google answers 400
+// and the app silently drops to CONFIG_DEFAULTS.
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPPOtn-jlsI3-eu04_kS3FylNaiJtYJlfJ9RarZwIXfjbpuGHt9tEMgrHr74370-r_FrRN3vx4vIPD/pub?gid=697410321&single=true&output=csv';
 // v2 (5 Oct 2026): periodPower now holds row 26's raw values. A v1 cache holds row-27
 // multipliers under the same name, which calcScore would misread, so it is ignored.
 const CONFIG_CACHE_KEY = 'viz_config_cache_v2';
@@ -5898,7 +5904,13 @@ function _drawSurge(el, key, map) {
     html += '<div class="surge-val" style="color:' + clr + '">' + s.label + ' &middot; ' + s.surge + '/60</div>'
       + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer; '
       + (BOWER_SURGE_CAP_ON ? 'the lower of this and the swell/wind score sets CTB&rsquo;s rating.'
-                            : 'not used in CTB&rsquo;s rating until the forecast updates.') + '</div>';
+                            : 'not used in CTB&rsquo;s rating until the forecast updates.') + '</div>'
+      // CC BY 4.0, in the form NSW asks for ("© State of New South Wales ([year])"),
+      // with the source, the licence, and a note that the surge is derived from it.
+      + '<div class="surge-credit">Wave data &copy; State of New South Wales (' + new Date().getFullYear() + '), '
+      + '<a href="https://nearshore.waves.nsw.gov.au/" target="_blank" rel="noopener noreferrer">NSW Nearshore Wave Tool</a>, '
+      + '<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. '
+      + 'The surge score is modelled from it.</div>';
   }
   el.innerHTML = html + '</div>';
   el.style.display = 'block';
