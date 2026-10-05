@@ -2240,8 +2240,10 @@ function dirLookup(arr, deg) {
 // Sheet mapping (1-based rows, 0-based in parsed CSV):
 //   Row 24 → Wind sens TUNE    (cols C–O = indices 2–14)
 //   Row 25 → Swell sens TUNE   (cols C–O = indices 2–14)
-//   Row 27 → Swell period multiplier (cols C–O = indices 2–14) — read directly
-//     as spm (sheet cell is authoritative; row 26 'Period power' is raw units)
+//   Row 26 → Period power      (cols C–O = indices 2–14). calcScore turns it into the
+//     refraction multiplier per hour, as the sheet's row 27 does: period² / Period power.
+//     Row 27 itself is NOT read: it is that formula evaluated at whatever swell period
+//     sits in the sheet's input cell B12, so it changes with every validation run.
 //   Rows 32–63 → direction table, sites as triplets wind/sea/rif starting col C
 //   Site column offsets (0-based): CTB=2,BIW=5,BIE=8,Steps=11,Monument=14,
 //     Chowder=17,CampCove=20,Fairlight=23,Gordons=26,Freshwater=29,
@@ -2267,23 +2269,22 @@ async function vizFetch(url, opts = {}, ms = 10000) {
 }
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPPOtn-jlsI3-eu04_kS3FylNaiJtYJlfJ9RarZwIXfjbpuGHt9tEMgrHr74370-r_FrRN3vx4vIPD/pub?output=csv';
-const CONFIG_CACHE_KEY = 'viz_config_cache';
+// v2 (5 Oct 2026): periodPower now holds row 26's raw values. A v1 cache holds row-27
+// multipliers under the same name, which calcScore would misread, so it is ignored.
+const CONFIG_CACHE_KEY = 'viz_config_cache_v2';
 const CONFIG_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 // ── Default CONFIG — fallback used ONLY when the sheet CSV is unreachable ──
-// Refreshed from the published sheet 2026-09-21. These had drifted badly: the
-// sheet's spm constant moved from 144 to 49, leaving every baked periodPower
-// ~3.5x too high, which silently inflated the refraction demerit on any sheet
-// outage. Re-sync these whenever the sheet's tuning rows change.
+// Re-sync these whenever the sheet's tuning rows change: tools/check_defaults.py
+// compares them with the live sheet.
 // Fallback when the Sheet cannot be read. Synced with the Sheet on 5 Oct 2026.
 const CONFIG_DEFAULTS = {
   windSens:   [0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.3 , 0.6 , 0.6],
   swellSens:  [1.65, 1.4 , 1.6 , 1.1 , 0.8 , 0.8 , 0.8 , 1   , 2.2 , 1.2 , 1.8 , 0.3 , 3   , 10],
-  // MULTIPLIER units — the sheet's 'Swell period multiplier' row (row 27) verbatim,
-  // used directly as spm in calcScore. The sheet currently derives it as
-  // 49/periodPower (49/30=1.633, 49/20=2.45, 49/10=4.9) but NEVER re-derive it here
-  // — read the cell, the sheet is authoritative and the constant has changed before.
-  periodPower:[1.633333333, 2.45       , 2.45       , 4.9        , 1.75       , 1.96       , 1.96       , 1.96       , 1.96       , 1.96       , 1.96       , 1.96       , 2.45       , 9.8],
+  // The sheet's row 26 'Period power', raw. Not a multiplier: calcScore divides the
+  // hour's swell period squared by it, which is what the sheet's row 27 formula does.
+  // (The old "49/periodPower" here was that formula at a 7 s period, frozen.)
+  periodPower:[30, 20, 20, 10, 28, 25, 25, 25, 25, 25, 25, 25, 20, 5],
   lookup: {
     CTB:       {wind:[100,100,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,30,60,70,85],
                 sea: [20,50,100,100,100,90,80,60,30,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -2368,11 +2369,12 @@ function applySheetConfig(rows) {
   if (sheetLabel(rows[24] && rows[24][1]).includes('swell sens')) {
     CONFIG.swellSens = SITE_SENS_COL.map(c => n(rows[24][c]));
   }
-  // Row 27 (0-based: 26) — Swell period multiplier (spm), read directly from the
-  // sheet cell (C27 etc.) in multiplier units — calcScore uses it as spm without
-  // re-deriving. Do NOT read row 26 'Period power' (raw units, wrong scale).
-  if (sheetLabel(rows[26] && rows[26][1]).includes('multiplier')) {
-    CONFIG.periodPower = SITE_SENS_COL.map(c => n(rows[26][c]));
+  // Row 26 (0-based: 25) — Period power, raw. calcScore makes the refraction
+  // multiplier from it per hour (swell period² / Period power), exactly as the sheet's
+  // row 27 formula =$B$12*($B$12/C$26) does. Row 27 is not read: its value is that
+  // formula at the swell period last written to B12, so it moves with every validation.
+  if (sheetLabel(rows[25] && rows[25][1]).includes('period power')) {
+    CONFIG.periodPower = SITE_SENS_COL.map(c => n(rows[25][c]));
   }
 
   // Rows 32–63 (0-based: 31–62) — direction table
@@ -2392,13 +2394,13 @@ function applySheetConfig(rows) {
 // blank or text cell as 0, so a deleted cell, an inserted row or column, or a cleared
 // tab would otherwise load silently as calm water at every site. Calibrated on the live
 // Sheet on 5 Oct 2026: every table cell filled and numeric, hits -40..100, wind sens
-// 0.3-0.6, swell sens 0.3-10, spm 1.6-9.8, the direction tables summing to ~23,400.
+// 0.3-0.6, swell sens 0.3-10, period power 5-30, the direction tables summing to ~23,400.
 function sheetConfigProblems(rows, cfg) {
   const p = [];
   const cell = (r, c) => String((rows[r] || [])[c] ?? '').trim();
   const num = s => s !== '' && isFinite(Number(s));
   const colName = c => (c >= 26 ? String.fromCharCode(64 + Math.floor(c / 26)) : '') + String.fromCharCode(65 + c % 26);
-  [[23, 'wind sens'], [24, 'swell sens'], [26, 'multiplier']].forEach(([r, want]) => {
+  [[23, 'wind sens'], [24, 'swell sens'], [25, 'period power']].forEach(([r, want]) => {
     if (!sheetLabel(cell(r, 1)).includes(want)) p.push('B' + (r + 1) + ' is "' + cell(r, 1) + '", expected ' + want);
     SITE_SENS_COL.forEach(c => { if (!num(cell(r, c))) p.push(colName(c) + (r + 1) + ' is "' + cell(r, c) + '"'); });
   });
@@ -2426,7 +2428,7 @@ function sheetConfigProblems(rows, cfg) {
   }
   cfg.windSens.forEach((v, i) => { if (!(v >= 0 && v <= 5)) p.push(SITE_KEYS_ORDERED[i] + ' wind sens ' + v + ' is outside 0..5'); });
   cfg.swellSens.forEach((v, i) => { if (!(v >= 0 && v <= 25)) p.push(SITE_KEYS_ORDERED[i] + ' swell sens ' + v + ' is outside 0..25'); });
-  cfg.periodPower.forEach((v, i) => { if (!(v > 0 && v <= 25)) p.push(SITE_KEYS_ORDERED[i] + ' spm ' + v + ' is outside 0..25'); });
+  cfg.periodPower.forEach((v, i) => { if (!(v > 0 && v <= 100)) p.push(SITE_KEYS_ORDERED[i] + ' period power ' + v + ' is outside 0..100'); });
   return p;
 }
 
@@ -2634,7 +2636,7 @@ const WW_PERIOD_FALLBACK = 5;
 // Formula (corrected to match sheet):
 //   swellPower   = h² × period^1.1
 //   s_demerit    = swellPower × seaHit/100 × swellSens        ← swellSens from CONFIG
-//   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = 144/periodPower from CONFIG
+//   rif_demerit  = (rif×swellPower×spm) / 1000               ← spm = swell1P² / Period power, per hour
 //   wind_demerit = windPower(kmh) × windHit/100 × windSens    ← windHit can be negative (bonus)
 //   windWave_d   = swellPower(wwH, wwP) × seaHit(wwDir)/100 × swellSens ← wwP = live Open-Meteo period, else 5
 //   tide_demerit = site.tide(tideBase, tideM)                 ← tideBase is per-site:
@@ -2646,7 +2648,10 @@ function calcScore(site, d) {
   const lk  = CONFIG.lookup[site.key];
   const windSens  = CONFIG.windSens[si];
   const swellSens = CONFIG.swellSens[si];
-  const spm       = CONFIG.periodPower[si];  // sheet row already stores the multiplier (144/periodPower) — use directly, do NOT divide again
+  // Refraction multiplier for the hour being scored, as the sheet's row 27 computes it:
+  // swell period² / Period power. Both swell terms use the swell-1 period, as there.
+  const pp        = CONFIG.periodPower[si];
+  const spm       = pp > 0 && d.swell1P > 0 ? (d.swell1P * d.swell1P) / pp : 0;
 
   const {windKmh, windDir, swell1H, swell1Dir, swell1P,
          swell2H, swell2Dir, swell2P, windWaveH, windWaveDir, windWaveP, tideM} = d;
@@ -6011,7 +6016,8 @@ function siteMapPayload(site, demerits, h) {
   const si = SITE_KEYS_ORDERED.indexOf(site.key);
   const lk = CONFIG.lookup[site.key];
   if (si < 0 || !lk) return null;
-  const spm  = CONFIG.periodPower[si];
+  const pp   = CONFIG.periodPower[si];
+  const spm  = pp > 0 && h.swell1P > 0 ? (h.swell1P * h.swell1P) / pp : 0;   // as calcScore
   const sens = CONFIG.swellSens[si] || 1;
   const sea  = Math.max(0, dirLookup(lk.sea, h.swell1Dir));
   const rif  =             dirLookup(lk.rif, h.swell1Dir);
