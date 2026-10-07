@@ -950,7 +950,7 @@
   .wx-feels { display:flex; align-items:baseline; flex-shrink:0; }
   /* Time display is now inline in the section title */
   #snapshotTitle span {
-    color:#fff; font-size:32px;
+    color:#fff; font-size:40px;
   }
   /* Centre the time between two rules instead of left-aligned with a trailing rule.
      Sticky so the day/time stays on screen while you reach the hour slider below. */
@@ -1220,7 +1220,7 @@
     .snapshot-controls { gap:8px; margin-top:10px; margin-bottom:14px; }
     .wx-strip       { padding:9px 13px; margin:0 0 9px; }
     .wx-icon        { font-size:26px; }
-    #snapshotTitle span { font-size:27px; }
+    #snapshotTitle span { font-size:34px; }
     #snapshotTitle  { margin-bottom:7px; padding:6px 0 4px; }
     .snap-tap-hint  { font-size:13px; padding:5px 12px; margin:-2px auto 8px; }
     .tap-hint-arrow { font-size:19px; }
@@ -6284,7 +6284,9 @@ function _refreshInstallCard() {
   } else if (inApp) {
     how.textContent = 'Open this page in Safari or Chrome first (⋯ menu → Open in browser), then add it to your home screen.';
   } else if (iOS) {
-    how.innerHTML = 'In Safari, tap <b>Share</b> <span aria-hidden="true">⎋</span> then <b>Add to Home Screen</b>. It opens full screen, and still shows the last forecast when you have no signal.';
+    // iOS 26+: Safari's default layout puts Share under the ••• button, and "Open as Web
+    // App" must stay on or the icon opens a Safari tab (steps as in Swim Manly).
+    how.innerHTML = 'Tap <b>Share</b> <span aria-hidden="true">&#8679;</span> (in Safari it&rsquo;s under <b>&bull;&bull;&bull;</b>, bottom-right), then <b>Add to Home Screen</b>, keep <b>Open as Web App</b> on and tap <b>Add</b>. It opens full screen, and still shows the last forecast when you have no signal.';
   } else {
     how.textContent = 'Use your browser menu → Install app / Add to Home screen. It opens full screen, and still shows the last forecast when you have no signal.';
   }
@@ -7852,6 +7854,225 @@ var VizSiteMap = (function () {
     if (ADMIN_MODE) openAnnounceAdmin();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+
+<!-- ===== Add-to-Home-Screen prompts, ported from Swim Manly (8 Oct 2026): Android install
+     pill, Android manual steps, iPhone steps, and a Facebook in-app escape. Never shown when
+     running from the home screen. Both apps share the app.viz.net.au origin and so share
+     localStorage: every key here is prefixed viz_fc_a2hs_ to stay apart from Swim's. ===== -->
+<style>
+  .a2hs-banner{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--tabbar-h, 64px) + env(safe-area-inset-bottom, 0px));z-index:9998;display:flex;align-items:center;gap:12px;background:var(--teal);color:#031018;border:2px solid #ffffff;border-radius:14px;padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,0.45);font-family:'DM Sans',sans-serif;font-size:13.5px;line-height:1.4;max-width:560px;margin:0 auto;}
+  .a2hs-banner-txt{flex:1;}
+  .a2hs-banner-txt strong{display:block;font-size:14.5px;margin-bottom:2px;}
+  .a2hs-steps{margin:6px 0 0;padding-left:20px;}
+  .a2hs-steps li{margin:3px 0;}
+  .a2hs-steps b{font-weight:700;}
+  .a2hs-cta{flex:none;background:var(--deep);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;padding:10px 18px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+  .a2hs-x{flex:none;align-self:flex-start;background:none;border:none;color:#031018;font-size:20px;line-height:1;padding:2px 6px;cursor:pointer;opacity:.7;-webkit-tap-highlight-color:transparent;}
+  .a2hs-x:hover{opacity:1;}
+  .a2hs-banner[hidden]{display:none!important;}
+</style>
+<div id="a2hsPill" class="a2hs-banner" role="dialog" aria-label="Install VIZ Forecast" hidden>
+  <span class="a2hs-banner-txt"><strong class="a2hs-h">&#128241; Opens straight to today&rsquo;s dive forecast</strong><span class="a2hs-lead">Put the VIZ Forecast tile on your home screen &mdash; one tap, full screen, and it still shows the last forecast with no signal at the site.</span></span>
+  <button id="a2hsInstall" type="button" class="a2hs-cta">Install</button>
+  <button id="a2hsClose" type="button" class="a2hs-x" aria-label="Dismiss install prompt">&times;</button>
+</div>
+<div id="a2hsIos" class="a2hs-banner" role="dialog" aria-label="Add to Home Screen" hidden>
+  <span class="a2hs-banner-txt"><strong class="a2hs-h">&#128241; Your dive forecast, one tap away</strong><span class="a2hs-lead">Add the VIZ Forecast tile to your Home Screen &mdash; it opens straight to the forecast, full screen:</span>
+    <!-- Steps as Swim Manly's, checked against Apple's iOS 27 guide (26 Sep 2026): since
+         iOS 26 Safari's default layout puts Share behind the ••• button, and "Open as Web
+         App" must stay ON or the icon opens a Safari tab, not the full-screen app. -->
+    <ol class="a2hs-steps">
+      <li>Tap <b>Share</b> <span aria-hidden="true">&#8679;</span> &mdash; in Safari it&rsquo;s under <b>&bull;&bull;&bull;</b> (bottom-right); in Chrome, top-right.</li>
+      <li>Scroll down and tap &lsquo;<b>Add to Home Screen</b>&rsquo;.</li>
+      <li>Keep &lsquo;<b>Open as Web App</b>&rsquo; on (so it opens full screen), then tap <b>Add</b>.</li>
+    </ol>
+  </span>
+  <button id="a2hsIosClose" type="button" class="a2hs-x" aria-label="Dismiss">&times;</button>
+</div>
+<div id="a2hsHint" class="a2hs-banner" role="dialog" aria-label="Install VIZ Forecast" hidden>
+  <span class="a2hs-banner-txt"><strong>&#128241; One tap to today&rsquo;s dive forecast</strong><span id="a2hsHintSteps">Tap the &#8942; menu (top-right), then &lsquo;<b>Install app</b>&rsquo; or &lsquo;<b>Add to Home screen</b>&rsquo;.</span></span>
+  <button id="a2hsHintClose" type="button" class="a2hs-x" aria-label="Dismiss">&times;</button>
+</div>
+<!-- Facebook/Instagram in-app browser (the VIZ group links land here): installing is
+     impossible inside it, so the only useful instruction is how to get out. -->
+<div id="a2hsInApp" class="a2hs-banner" role="dialog" aria-label="Open in browser to install" hidden>
+  <span class="a2hs-banner-txt"><strong>&#128241; Your dive forecast, one tap away</strong>Facebook&rsquo;s own browser can&rsquo;t add the VIZ Forecast tile to your home screen. Open this in your browser first:
+    <ol class="a2hs-steps">
+      <li>Tap the <b>&hellip;</b> (three dots) in the corner.</li>
+      <li>Choose &lsquo;<b>Open in external browser</b>&rsquo;.</li>
+      <li>There, tap <b>Share</b> <span aria-hidden="true">&#8679;</span> (in Safari it&rsquo;s under <b>&bull;&bull;&bull;</b>), then &lsquo;<b>Add to Home Screen</b>&rsquo;.</li>
+      <li>Keep &lsquo;<b>Open as Web App</b>&rsquo; on (so it opens full screen), then tap <b>Add</b>.</li>
+    </ol>
+  </span>
+  <button id="a2hsInAppClose" type="button" class="a2hs-x" aria-label="Dismiss">&times;</button>
+</div>
+<script>
+(function () {
+  var REMIND_MS = 2 * 24 * 60 * 60 * 1000;   // re-offer install at most once per ~2 days
+  var K = 'viz_fc_a2hs_';                     // shared origin with Swim Manly: keep our keys apart
+
+  if (typeof _isStandalone === 'function' && _isStandalone()) return;
+
+  var byId = function (id) { return document.getElementById(id); };
+  var pill = byId('a2hsPill');
+  var hint = byId('a2hsHint');
+  // Samsung Internet: no ⋮ menu. Its route is ≡ (bottom-right) → Add page to → Home screen.
+  try {
+    var hs = byId('a2hsHintSteps');
+    if (hs && /SamsungBrowser/.test(navigator.userAgent || '')) {
+      hs.innerHTML = 'Tap the <b>&#8801;</b> menu (bottom-right), then &lsquo;<b>Add page to</b>&rsquo; &rarr; &lsquo;<b>Home screen</b>&rsquo;.';
+    }
+  } catch (e) {}
+
+  function ls(k)      { try { return localStorage.getItem(K + k); } catch (e) { return null; } }
+  function lsSet(k,v) { try { localStorage.setItem(K + k, v); } catch (e) {} }
+
+  // A regular who hasn't installed: opened in a browser on 3+ different days this week.
+  // The banner names the habit and may break through the 2-day snooze once a week.
+  var REGULAR_DAYS = 3, REGULAR_EVERY_MS = 7 * 24 * 60 * 60 * 1000;
+  function dayKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  var visitDays = 0;
+  try {
+    var today = new Date(), keep = {};
+    for (var i = 0; i < 7; i++) keep[dayKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - i))] = 1;
+    var days = String(ls('visit_days') || '').split(',').filter(function (k) { return keep[k]; });
+    if (days.indexOf(dayKey(today)) < 0) days.push(dayKey(today));
+    lsSet('visit_days', days.join(','));
+    visitDays = days.length;
+  } catch (e) {}
+  var regularDue = visitDays >= REGULAR_DAYS && (Date.now() - parseInt(ls('regular_at') || '0', 10) > REGULAR_EVERY_MS);
+  var SUF = regularDue ? '_regular' : '';
+  var regularShown = false;
+  function regularCopy(el, lead) {
+    if (!regularDue || !el) return;
+    var h = el.querySelector('.a2hs-h'), l = el.querySelector('.a2hs-lead');
+    if (h) h.textContent = 'You’ve checked the dive sites ' + visitDays + ' days this week';
+    if (l) l.textContent = lead;
+  }
+
+  function installed() { return !!ls('installed_v1'); }
+  function remindDue() {
+    if (installed()) return false;
+    if (regularDue) return true;                         // once a week, through the snooze
+    var until = parseInt(ls('snooze_until') || '0', 10);
+    return !(until && Date.now() < until);
+  }
+  function snooze() {
+    lsSet('snooze_until', String(Date.now() + REMIND_MS));
+    if (regularShown) { lsSet('regular_at', String(Date.now())); regularDue = false; }
+  }
+  function fire(ev, props) {
+    try { if (typeof vizTrack === 'function') vizTrack(ev, Object.assign({ app: 'forecast' }, props || {})); } catch (e) {}
+  }
+
+  // Ask after the value, not before it: a real scroll, a tap on a control, or 25 s on the page.
+  var GATE_MS = 25000;
+  var gateOpen = false, waiting = [];
+  function openGate() {
+    if (gateOpen) return;
+    gateOpen = true;
+    var q = waiting.splice(0);
+    for (var i = 0; i < q.length; i++) { try { q[i](); } catch (e) {} }
+  }
+  function whenEngaged(fn) { if (gateOpen) { try { fn(); } catch (e) {} } else waiting.push(fn); }
+  try { if (/[?&]install=1(\b|&|$)/.test(location.search)) openGate(); } catch (e) {}
+  (function armGate() {
+    var t = setTimeout(openGate, GATE_MS);
+    function act() { clearTimeout(t); openGate(); }
+    try {
+      window.addEventListener('scroll', function () { if ((window.scrollY || 0) > 120) act(); }, { passive: true });
+      document.addEventListener('pointerup', function (e) {
+        var n = (e && e.target && e.target.closest) ? e.target.closest('button,a,input,[onclick]') : null;
+        if (n && !n.closest('.a2hs-banner')) act();      // taps inside a banner are not "engagement"
+      }, { passive: true });
+    } catch (e) {}
+  })();
+
+  // The 2-day cadence is spent only once a banner has really been on screen for SEEN_MS
+  // (an announcement popup can sit above it), or the moment the diver acts on it.
+  var SEEN_MS = 12000;
+  function show(el, variant, closeId) {
+    if (!el || !remindDue()) return;
+    if (!el.hidden) return;
+    el.hidden = false;
+    if (regularDue && variant !== 'inapp') regularShown = true;
+    fire('a2hs_shown', { variant: variant });
+    var seen = setTimeout(function () { if (!el.hidden) snooze(); }, SEEN_MS);
+    var x = closeId && byId(closeId);
+    if (x) x.addEventListener('click', function () {
+      clearTimeout(seen);
+      el.hidden = true;
+      snooze();
+      fire('a2hs_dismissed', { variant: variant });
+    });
+  }
+
+  // 0) Facebook / Instagram in-app browser: no install possible; say how to get out.
+  var ua = navigator.userAgent || '';
+  if (/FBAN|FBAV|FB_IAB|FBIOS|Instagram/i.test(ua)) {
+    whenEngaged(function () { show(byId('a2hsInApp'), 'inapp', 'a2hsInAppClose'); });
+    return;
+  }
+
+  // A) Android / Chromium. The page's own listener (with the More tab's install card)
+  // already captures the browser's prompt into _installPrompt; the pill reuses it.
+  var pillVariant = 'android';
+  function nativePrompt() { try { return typeof _installPrompt !== 'undefined' ? _installPrompt : null; } catch (e) { return null; } }
+  window.addEventListener('beforeinstallprompt', function () {
+    if (!remindDue()) return;
+    whenEngaged(function () {
+      if (hint) hint.hidden = true;                      // native prompt beats the manual hint
+      if (pill && pill.hidden) pillVariant = 'android' + SUF;
+      regularCopy(pill, 'Make it one tap — install the VIZ Forecast tile and it opens straight to the forecast.');
+      show(pill, pillVariant, 'a2hsClose');
+    });
+  });
+  if (pill) {
+    var installBtn = byId('a2hsInstall');
+    if (installBtn) installBtn.addEventListener('click', function () {
+      snooze();
+      var native = !!nativePrompt();
+      fire('a2hs_cta', { variant: pillVariant, native: native });
+      pill.hidden = true;
+      if (native && typeof installApp === 'function') installApp();   // prompts, then refreshes the More card
+      else if (hint) { hint.hidden = false; fire('a2hs_shown', { variant: 'android_manual' }); }
+    });
+  }
+  if (hint) {
+    var hintClose = byId('a2hsHintClose');
+    if (hintClose) hintClose.addEventListener('click', function () {
+      hint.hidden = true; snooze(); fire('a2hs_dismissed', { variant: 'android_manual' });
+    });
+  }
+  window.addEventListener('appinstalled', function () {
+    if (pill) pill.hidden = true;
+    if (hint) hint.hidden = true;
+    lsSet('installed_v1', '1');                          // installed → stop offering for good
+  });
+
+  // Android fallback: Chrome often never fires beforeinstallprompt, so offer the pill
+  // anyway once engaged; tapping it shows the ⋮ steps.
+  var isAndroid = /Android/.test(ua), isFirefox = /Firefox/.test(ua);
+  if (isAndroid && !isFirefox && remindDue()) {
+    whenEngaged(function () {
+      if (!nativePrompt() && pill && pill.hidden && (!hint || hint.hidden)) {
+        pillVariant = 'android_fallback' + SUF;
+        regularCopy(pill, 'Make it one tap — install the VIZ Forecast tile and it opens straight to the forecast.');
+        show(pill, pillVariant, 'a2hsClose');
+      }
+    });
+  }
+
+  // B) iOS (every browser installs through Share): the steps banner.
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS && !window.navigator.standalone && remindDue()) {
+    whenEngaged(function () {
+      regularCopy(byId('a2hsIos'), 'Make it one tap — add the VIZ Forecast tile to your Home Screen:');
+      show(byId('a2hsIos'), 'ios' + SUF, 'a2hsIosClose');
+    });
+  }
 })();
 </script>
 </body>
