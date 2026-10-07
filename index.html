@@ -8,6 +8,17 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
+    // An admin ?token= must never reach Analytics (page_location carries the whole URL):
+    // move it to localStorage, where the announcements admin already looks, and drop it
+    // from the address before the page view is sent.
+    try {
+      var _q = new URLSearchParams(location.search), _t = _q.get('token');
+      if (_t) {
+        localStorage.setItem('viz_admin_token', _t);
+        _q.delete('token');
+        history.replaceState(null, '', location.pathname + (_q.toString() ? '?' + _q : '') + location.hash);
+      }
+    } catch (e) {}
     gtag('config', 'G-0PXFDH2F9Z');
   </script>
   <!-- PWA / Home Screen Icon -->
@@ -2579,6 +2590,13 @@ function liveTidePhase(h) {
 // Does the live tide match this site's McFadyen best-tide phase?
 // Returns { ok, text } for the chip, or null when there's nothing to assert
 // (pref 'any', or the tide data isn't in yet).
+// True while hour h is the current hour. Copy says "now" only then; any other hour on the
+// slider gets "then" / "at that time", so a future hour never reads as live conditions.
+function _isNowHour(h) {
+  if (!h || !h.dateTime) return false;
+  const t = new Date(h.dateTime).getTime(), n = Date.now();
+  return n >= t && n < t + 3600000;
+}
 function mcfTideMatch(pref, h) {
   if (!pref || pref === 'any') return null;
   const ph = liveTidePhase(h);
@@ -2587,13 +2605,13 @@ function mcfTideMatch(pref, h) {
     if (ph.rising == null) return null;
     const want = pref === 'incoming';
     const ok = ph.rising === want;
-    return { ok, text: 'Best on the ' + pref + ' tide — ' + (ph.rising ? 'rising' : 'running out') + ' now' };
+    return { ok, text: 'Best on the ' + pref + ' tide — ' + (ph.rising ? 'rising' : 'running out') + (_isNowHour(h) ? ' now' : ' then') };
   }
   if (pref === 'high' || pref === 'low') {
     if (ph.highish == null) return null;
     const want = pref === 'high';
     const ok = ph.highish === want;
-    return { ok, text: 'Best on a ' + pref + ' tide — currently ' + (ph.highish ? 'high' : 'low') };
+    return { ok, text: 'Best on a ' + pref + ' tide — ' + (_isNowHour(h) ? 'currently ' : 'at that time ') + (ph.highish ? 'high' : 'low') };
   }
   return null;
 }
@@ -2803,7 +2821,7 @@ function describeConditions(site, score, demerits, h) {
   } else if (band === 'Caution') {
     s = `Some movement to be aware of, mainly from ${active.length ? active[0].detail : 'the tide'}`;
   } else { // Avoid
-    s = `Rough and exposed right now — driven by ${active.length ? active[0].detail : 'strong water movement'}`;
+    s = `Rough and exposed ${_isNowHour(h) ? 'right now' : 'at that time'} — driven by ${active.length ? active[0].detail : 'strong water movement'}`;
   }
 
   // Second hazard if it's also pulling real weight.
@@ -2894,6 +2912,9 @@ function describeTrend(site, h) {
   if (improveLater >= improveEarlier) { dir = 'later'; target = bestLater; }
   else                                { dir = 'earlier'; target = bestEarlier; }
 
+  // Never point at an hour that is still Avoid (below 20 on the 0-60 scale): "better"
+  // there is still a no-go, and naming the time reads as an invitation.
+  if (target.score < 20) return `It eases a little ${dir}, but every ${dir} hour still rates Avoid.`;
   const strong = bestDelta >= NOTABLE;
   const adv    = strong ? 'noticeably better' : 'a little better';
   const time   = fmtTime(target.r);
@@ -2972,7 +2993,7 @@ function tideVizNote(site, h) {
   }
   if (!rising) {
     const nextBit = peak ? ` The next high is at <b>${peak}</b>.` : '';
-    return `The tide is currently <b>running out</b>, which tends to carry murkier water from Botany Bay past this site and cut the visibility. It's normally clearer on the <b>incoming tide</b>, before the peak.${nextBit}`;
+    return `${_isNowHour(h) ? 'The tide is currently' : 'At that time the tide is'} <b>running out</b>, which tends to carry murkier water from Botany Bay past this site and cut the visibility. It's normally clearer on the <b>incoming tide</b>, before the peak.${nextBit}`;
   }
   // Rising but no upcoming high found in the data window.
   return `This site usually fishes clearest on the <b>incoming tide</b>, before the peak — the outgoing tide carries murkier water from Botany Bay past here and reduces visibility.`;
@@ -3002,16 +3023,16 @@ function renderTideGuidance(site, demerits, h) {
   if (stand) {
     const dir = stand.prefersLow ? 'low' : 'high';
     entryState = stand.frac <= 0.45 ? 'good' : stand.frac >= 0.55 ? 'bad' : 'ok';
-    const tail = entryState === 'good' ? ' <span class="tg-state">— the tide suits it now.</span>'
-               : entryState === 'bad'  ? ' <span class="tg-state">— the tide is against it now.</span>'
+    const tail = entryState === 'good' ? ' <span class="tg-state">— the tide suits it ' + (_isNowHour(h) ? 'now' : 'then') + '.</span>'
+               : entryState === 'bad'  ? ' <span class="tg-state">— the tide is against it ' + (_isNowHour(h) ? 'now' : 'then') + '.</span>'
                : '';
     lines.push({ cls: entryState, key: '🚪 Entry',
       txt: `Calmest water &amp; easiest entry around <b>${dir} water</b>${tail}` });
   } else if (!isBotany && m && (m.tide === 'high' || m.tide === 'low')) {
     // Model says tide barely swings the score, but McFadyen flags a depth need.
     entryState = (ph && ph.highish != null) ? (ph.highish === (m.tide === 'high') ? 'good' : 'bad') : 'ok';
-    const tail = entryState === 'good' ? ' <span class="tg-state">— it&rsquo;s there now.</span>'
-               : entryState === 'bad'  ? ' <span class="tg-state">— wrong end of the tide now.</span>'
+    const tail = entryState === 'good' ? ' <span class="tg-state">— it&rsquo;s there ' + (_isNowHour(h) ? 'now' : 'then') + '.</span>'
+               : entryState === 'bad'  ? ' <span class="tg-state">— wrong end of the tide ' + (_isNowHour(h) ? 'now' : 'then') + '.</span>'
                : '';
     lines.push({ cls: entryState, key: '🚪 Entry', mcf: true,
       txt: `Shallow entry — get in around <b>${m.tide} tide</b>${tail}` });
@@ -3026,8 +3047,8 @@ function renderTideGuidance(site, demerits, h) {
     }
   } else if (m && (m.tide === 'incoming' || m.tide === 'outgoing')) {
     clarityState = (ph && ph.rising != null) ? (ph.rising === (m.tide === 'incoming') ? 'good' : 'bad') : 'ok';
-    const tail = clarityState === 'good' ? ' <span class="tg-state">— running that way now.</span>'
-               : clarityState === 'bad'  ? ' <span class="tg-state">— not right now.</span>'
+    const tail = clarityState === 'good' ? ' <span class="tg-state">— running that way ' + (_isNowHour(h) ? 'now' : 'then') + '.</span>'
+               : clarityState === 'bad'  ? ' <span class="tg-state">— not ' + (_isNowHour(h) ? 'right now' : 'at that time') + '.</span>'
                : '';
     lines.push({ cls: clarityState, key: '👁 Clarity', mcf: true,
       txt: `Clearest water on the <b>${m.tide} tide</b>${tail}` });
@@ -3044,7 +3065,7 @@ function renderTideGuidance(site, demerits, h) {
   if (entryState && clarityState) {
     let note;
     if (entryState === 'good' && clarityState === 'good') {
-      note = '✓ Both line up right now — easy entry and clear water at the same time.';
+      note = '✓ Both line up ' + (_isNowHour(h) ? 'right now' : 'at that time') + ' — easy entry and clear water at the same time.';
     } else if (entryState === 'bad' && clarityState === 'bad') {
       note = 'Neither is ideal this hour — check the daily graph for a better window.';
     } else {
@@ -3265,9 +3286,33 @@ async function fetchOpenMeteoMarine() {
     return data;
 
   } catch(e) {
+    // A saved copy up to 48 h old beats scoring with no wind waves or second swell at all:
+    // both would read as 0, so every site would look calmer than the sea is.
+    try {
+      const cached = JSON.parse(localStorage.getItem(OPENMETEO_CACHE_KEY) || 'null');
+      const ageH = cached ? (Date.now() - cached.fetchedAt) / 3600000 : Infinity;
+      if (cached && cached.data && ageH < 48) {
+        console.warn('Open-Meteo Marine fetch failed, using the saved copy from ' + Math.round(ageH) + ' h ago:', e.message);
+        const c = cached.data.current;
+        _omStatus = { ok: true, stale: true, ageH, msg: 'saved copy, ' + Math.round(ageH) + ' h old (live fetch failed)', windWaveH: c?.windWaveH ?? null, swell2H: c?.swell2H ?? null };
+        return cached.data;
+      }
+    } catch(_) {}
     console.warn('Open-Meteo Marine fetch failed, secondary swell/wind wave will be 0:', e.message);
     _omStatus = { ok: false, msg: e.message, windWaveH: null, swell2H: null };
     return null;
+  }
+}
+
+// When the wind-wave / second-swell feed is missing, the scores leave both out and can
+// read calmer than the sea is. Say so where everyone sees it, not only in the admin panel.
+function noteMarineFeed() {
+  if (_omStatus.ok === false) {
+    showErrorBanner('Wind-wave and second-swell data didn’t load, so these scores leave them out and may read calmer than the sea is.',
+                    '⚠ Part of the forecast is missing');
+  } else if (_omStatus.stale) {
+    const el = document.getElementById('lastUpdated');
+    if (el) el.textContent += ' · wind waves from ' + Math.round(_omStatus.ageH) + ' h ago';
   }
 }
 
@@ -4075,6 +4120,12 @@ function toggleInputs() {
 }
 
 // ── Tide chart ────────────────────────────────────────────────────────────────
+// Midnight in Sydney on dayKey, at that date's own offset (+10 AEST, +11 AEDT).
+function sydneyMidnightMs(dayKey) {
+  const utc0 = Date.parse(dayKey + 'T00:00:00Z');
+  const hourAt = ms => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Australia/Sydney', hour: '2-digit', hourCycle: 'h23' }).format(ms);
+  return hourAt(utc0 - 11 * 3600000) === 0 ? utc0 - 11 * 3600000 : utc0 - 10 * 3600000;
+}
 function renderTideChart(dayKey, markMs) {
   const wrap = document.getElementById('tideChartWrap');
   const svg  = document.getElementById('tideChartSvg');
@@ -4082,7 +4133,7 @@ function renderTideChart(dayKey, markMs) {
 
   // Filter tide turning-point entries for the target day (Sydney time) ±buffer
   // We take entries from the previous and next day too to allow smooth curve at edges
-  const dayMs  = new Date(dayKey + 'T00:00:00+10:00').getTime();
+  const dayMs  = sydneyMidnightMs(dayKey);
   const winLo  = dayMs - 6 * 3600000;
   const winHi  = dayMs + 30 * 3600000;
   const pts = _tideEntries.filter(e => {
@@ -4272,7 +4323,16 @@ function renderTideChart(dayKey, markMs) {
 }
 
 
+let _viewsPainted = false;   // true after the first paint; later refreshes keep the diver's choice
 function renderForecastViewsFromMatrix(matrix, rawTideEntries) {
+  // What the diver had chosen before this refresh (null on the first paint), so a
+  // 2-hourly or back-to-the-app reload doesn't throw them from Saturday back to now.
+  let prev = null;
+  if (_viewsPainted && _selectedDayKey && _hourlyMatrix && _hourlyMatrix.length) {
+    const oldHours = _buildDayIndex()[_selectedDayKey] || [];
+    const m = _hourlyMatrix[oldHours[+document.getElementById('snapshotSlider').value || 0]];
+    if (m) prev = { day: _selectedDayKey, hour: new Date(m.dateTime).getHours() };
+  }
   _hourlyMatrix = matrix;
   if (rawTideEntries?.length) _tideEntries = rawTideEntries;
   if (!_hourlyMatrix.length) return;
@@ -4296,10 +4356,16 @@ function renderForecastViewsFromMatrix(matrix, rawTideEntries) {
     else if (nowMin < rise) preferHour = Math.ceil(rise / 60);
   }
 
+  // Keep the diver's day and hour while that day is still in the forecast and not past.
+  if (prev && _dayKeys.includes(prev.day) && prev.day >= today) {
+    _selectedDayKey = prev.day;
+    preferHour = prev.hour;
+  }
   renderDayButtons(dayIdx);
   renderTimeline(_hourlyMatrix);
   selectDay(_selectedDayKey, dayIdx, preferHour);
   dvInit();
+  _viewsPainted = true;
 }
 
 function renderForecastViews(raw) {
@@ -4575,8 +4641,11 @@ function dvDrawBars(pts) {
 }
 
 // ── Error banner helpers ───────────────────────────────────────────────────────
-function showErrorBanner(msg) {
+function showErrorBanner(msg, title) {
   const b = document.getElementById('errorBanner');
+  // The heading is the forecast-failed one unless a caller names a narrower problem.
+  const t = b.querySelector('strong');
+  if (t) t.textContent = title || '⚠ Could not load forecast data';
   document.getElementById('errorDetail').textContent =
     msg || 'The forecast server did not respond after 3 attempts.';
   b.style.display = 'block';
@@ -4626,6 +4695,7 @@ async function init() {
       setStatus(`Live · WillyWeather — cached ${ago} min ago`);
       document.getElementById('lastUpdated').textContent =
         'Data from ' + new Date(cache.fetchedAt).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      noteMarineFeed();
       if (_isAdminView()) validateScores(data); // run validation against sheet
       return;
     }
@@ -4642,6 +4712,7 @@ async function init() {
         new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}));
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      noteMarineFeed();
       if (_isAdminView()) validateScores(data); // run validation against sheet
     } catch(err) {
       console.error(err);
@@ -4681,7 +4752,10 @@ async function init() {
   }
 
   let lastLoadAt = Date.now();
-  await loadAndRender();
+  // Pull-to-refresh / Refresh asked for a live fetch; the saved copy stays as the fallback.
+  let forceFresh = false;
+  try { forceFresh = sessionStorage.getItem('viz_force_fresh') === '1'; sessionStorage.removeItem('viz_force_fresh'); } catch(e) {}
+  await loadAndRender(forceFresh);
 
   // Reopen on the tab the user was last on (Snapshot / Day / 5 Days / More).
   const savedTab = _lsGet('viz_tab');
@@ -4903,13 +4977,11 @@ async function validateScores(data) {
 
 // ── Hard refresh (button + pull-to-refresh) ────────────────────────────────────
 function hardRefresh() {
-  // Clear both data cache and config cache so everything reloads fresh
-  try { localStorage.removeItem('ww_cache'); } catch(e) {}
-  try { localStorage.removeItem('ww_tides_cache'); } catch(e) {}
-  try { localStorage.removeItem('viz_config_cache'); } catch(e) {}
-  try { localStorage.removeItem('om_marine_cache'); } catch(e) {}
-  try { localStorage.removeItem('om_marine_cache_v2'); } catch(e) {}
-  window.location.reload(true);
+  // Reload asking for a live fetch, but keep the saved forecast: with no signal (a car
+  // park at the dive site) the reload must still find it, and loadAndRender shows it,
+  // dated, when the live fetch fails. Deleting it here used to leave "No forecast".
+  try { sessionStorage.setItem('viz_force_fresh', '1'); } catch(e) {}
+  window.location.reload();
 }
 
 // ── Pull-to-refresh ────────────────────────────────────────────────────────────
@@ -4930,14 +5002,15 @@ function hardRefresh() {
   }
 
   function sheetOpen() {
-    const ov = document.getElementById('reportsSheetOverlay');
-    return ov && ov.classList.contains('open');
+    // Any open overlay (site sheet, community sheet, score info, announcements): a pull
+    // that starts while one is open is scrolling it, not asking for a refresh.
+    return !!document.querySelector('[id$="Overlay"].open, [id$="Overlay"].show');
   }
 
   document.addEventListener('touchstart', e => {
     // Don't hijack pulls when the community sheet is open or the touch began inside it
     if (sheetOpen()) return;
-    if (e.target && e.target.closest && e.target.closest('#reportsSheet')) return;
+    if (e.target && e.target.closest && e.target.closest('#reportsSheet, #siteSheet, [id$="Overlay"]')) return;
     if (!canPull()) return;
     startY   = e.touches[0].clientY;
     pulling  = true;
@@ -5873,7 +5946,9 @@ const BOWER_SURGE_URL = 'https://bold-rain-6ded.sticasale.workers.dev/bower-surg
 // Owner's note on the Bower Lane card ('' = none). Shown even when there is no surge
 // for the hour, so it survives a full NSW outage. Clear it once the Nearshore Wave
 // Tool is updating again.
-const BOWER_SURGE_NOTICE = 'The NSW Nearshore Wave Tool is down and hasn&rsquo;t updated since 30 Sep, so this Bower Lane forecast is out of date. <b>Current conditions are good</b> (5 Oct).';
+// Describe the DATA, never the sea: a typed "conditions are good" outlives the day it
+// was true and then invites entry on hours it never described.
+const BOWER_SURGE_NOTICE = 'NSW nearshore data hasn&rsquo;t updated since 30 Sep, so this Bower Lane surge figure is out of date.';
 // Whether the surge caps CTB's score (calcScore). Paused 5 Oct 2026: the Nearshore
 // Wave Tool is stuck on its 30 Sep run, and that stale surge was pulling a 95% CTB
 // down to Caution and Avoid. Set back to true, and clear BOWER_SURGE_NOTICE, once it
