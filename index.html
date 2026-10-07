@@ -5951,12 +5951,12 @@ const BOWER_SURGE_URL = 'https://bold-rain-6ded.sticasale.workers.dev/bower-surg
 // Tool is updating again.
 // Describe the DATA, never the sea: a typed "conditions are good" outlives the day it
 // was true and then invites entry on hours it never described.
-const BOWER_SURGE_NOTICE = 'NSW nearshore data hasn&rsquo;t updated since 30 Sep, so this Bower Lane surge figure is out of date.';
+const BOWER_SURGE_NOTICE = '';
 // Whether the surge caps CTB's score (calcScore). Paused 5 Oct 2026: the Nearshore
 // Wave Tool is stuck on its 30 Sep run, and that stale surge was pulling a 95% CTB
 // down to Caution and Avoid. Set back to true, and clear BOWER_SURGE_NOTICE, once it
 // updates again.
-const BOWER_SURGE_CAP_ON = false;
+const BOWER_SURGE_CAP_ON = true;
 let _bowerSurge = null, _bowerSurgeAt = 0;
 async function loadBowerSurge() {
   if (_bowerSurge && Date.now() - _bowerSurgeAt < 1800000) return _bowerSurge;
