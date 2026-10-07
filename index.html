@@ -2722,10 +2722,11 @@ function calcScore(site, d) {
   // Cabbage Tree Bay. The Swim app's nearshore SURGE (0-60, loaded async into
   // _bowerSurge) scores that exact spot, so for CTB the site score is the LOWER of
   // the two — surge can pull it down (a rough bay), never inflate it. No-op until
-  // the surge series is loaded, for any hour it lacks, or while BOWER_SURGE_CAP_ON is
-  // false. See renderSurge / [[ctb-surge-from-swim]].
+  // the surge series is loaded, for any hour it lacks, while BOWER_SURGE_CAP_ON is
+  // false, or while the NSW run is stale (bowerSurgeStale). See renderSurge /
+  // [[ctb-surge-from-swim]].
   let surgeCap = null;
-  if (site.key === 'CTB' && d && d.dateTime && typeof _bowerSurge === 'object' && _bowerSurge && BOWER_SURGE_CAP_ON) {
+  if (site.key === 'CTB' && d && d.dateTime && typeof _bowerSurge === 'object' && _bowerSurge && BOWER_SURGE_CAP_ON && !bowerSurgeStale()) {
     const b = _bowerSurge[d.dateTime.substring(0, 13) + ':00:00'];
     if (b && typeof b.surge === 'number' && b.surge < score) {
       surgeCap = { raw: score, surge: b.surge, label: b.label };
@@ -5952,12 +5953,19 @@ const BOWER_SURGE_URL = 'https://bold-rain-6ded.sticasale.workers.dev/bower-surg
 // Describe the DATA, never the sea: a typed "conditions are good" outlives the day it
 // was true and then invites entry on hours it never described.
 const BOWER_SURGE_NOTICE = '';
-// Whether the surge caps CTB's score (calcScore). Paused 5 Oct 2026: the Nearshore
-// Wave Tool is stuck on its 30 Sep run, and that stale surge was pulling a 95% CTB
-// down to Caution and Avoid. Set back to true, and clear BOWER_SURGE_NOTICE, once it
-// updates again.
+// Whether the surge caps CTB's score (calcScore). Manual override: the run-age guard
+// below already handles a stalled feed (5 Oct 2026: the tool kept serving its 30 Sep
+// run and that stale surge pulled a 95% CTB down to Caution and Avoid).
 const BOWER_SURGE_CAP_ON = true;
-let _bowerSurge = null, _bowerSurgeAt = 0;
+// Run-age guard: the Worker reports when the NSW run starts (runStart). A healthy run
+// is up to ~47h old just before the next daily one lands (seen: 23h old at 10am); past this limit
+// the surge is treated as stale: no cap, and the card says so. A missing runStart
+// (older Worker) never counts as stale.
+const BOWER_SURGE_MAX_RUN_AGE_H = 60;
+let _bowerSurge = null, _bowerSurgeAt = 0, _bowerSurgeRunMs = NaN;
+function bowerSurgeStale() {
+  return isFinite(_bowerSurgeRunMs) && Date.now() - _bowerSurgeRunMs > BOWER_SURGE_MAX_RUN_AGE_H * 3600000;
+}
 async function loadBowerSurge() {
   if (_bowerSurge && Date.now() - _bowerSurgeAt < 1800000) return _bowerSurge;
   try {
@@ -5966,6 +5974,7 @@ async function loadBowerSurge() {
     const j = await r.json();
     const map = {};
     (j.hours || []).forEach(x => { if (x && x.t) map[x.t] = x; });
+    _bowerSurgeRunMs = j.runStart ? Date.parse(j.runStart) : NaN;
     _bowerSurge = map; _bowerSurgeAt = Date.now();
     return map;
   } catch (e) { return null; }
@@ -5977,11 +5986,17 @@ function _drawSurge(el, key, map) {
   let html = '<div class="surge-card">'
     + '<div class="surge-head"><span class="surge-ico" aria-hidden="true">🌊</span>Surge &middot; Bower Lane</div>';
   if (BOWER_SURGE_NOTICE) html += '<div class="surge-notice">' + BOWER_SURGE_NOTICE + '</div>';
+  const stale = bowerSurgeStale();
+  if (s && stale && !BOWER_SURGE_NOTICE) {
+    const since = new Date(_bowerSurgeRunMs).toLocaleDateString('en-AU', { timeZone: 'Australia/Sydney', day: 'numeric', month: 'short' });
+    html += '<div class="surge-notice">NSW nearshore data hasn&rsquo;t updated since ' + since
+      + ', so this Bower Lane surge figure is out of date.</div>';
+  }
   if (s) {
     const clr = SURGE_CLR[s.label] || 'var(--text)';
     html += '<div class="surge-val" style="color:' + clr + '">' + s.label + ' &middot; ' + s.surge + '/60</div>'
       + '<div class="surge-sub">Cabbage Tree Bay nearshore model, shared from the Swim app. Higher is calmer; '
-      + (BOWER_SURGE_CAP_ON ? 'the lower of this and the swell/wind score sets CTB&rsquo;s rating.'
+      + (BOWER_SURGE_CAP_ON && !stale ? 'the lower of this and the swell/wind score sets CTB&rsquo;s rating.'
                             : 'not used in CTB&rsquo;s rating until the forecast updates.') + '</div>'
       // CC BY 4.0, in the form NSW asks for ("© State of New South Wales ([year])"),
       // with the source, the licence, and a note that the surge is derived from it.
