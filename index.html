@@ -4914,7 +4914,10 @@ async function validateScores(data) {
       if (!key || !appResults[key]) return;
       const app  = appResults[key];
       const sd   = sheetDemerits?.[key] || {};
-      const diff = sheetScore - app.score;
+      // The Sheet's score column isn't floored: past 60 demerits it goes negative, while
+      // the app clamps to 0..60. Compare on the app's scale so a -15 vs 0 (both a firm
+      // Avoid) isn't flagged as a disagreement.
+      const diff = Math.max(0, Math.min(60, sheetScore)) - app.score;
       const isMismatch = Math.abs(diff) > 2;
       if (isMismatch) mismatches++;
       rows.push({ sheetName, key, sheetScore, app, sd, diff, isMismatch });
