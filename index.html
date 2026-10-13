@@ -81,10 +81,10 @@
   .wrap { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:0 20px 0; }
 
   header {
-    padding:14px 0 22px;   /* sits close to the top of the screen */
+    padding:14px 0 12px;   /* sits close to the top of the screen */
     display:flex; align-items:flex-end; gap:24px;
     border-bottom:1px solid var(--border);
-    margin-bottom:28px;
+    margin-bottom:12px;
     flex-wrap:wrap;
   }
   .logo {
@@ -852,7 +852,7 @@
      big enough label to read at a glance. */
   .day-btn {
     flex:1 1 0; min-width:max-content;
-    font-family:'DM Mono',monospace; font-size:17px; text-transform:uppercase;
+    font-family:'DM Mono',monospace; font-size:17px; font-weight:700; text-transform:uppercase;
     letter-spacing:0.5px; padding:9px 8px; border-radius:8px;
     border:1px solid var(--border); background:transparent;
     color:var(--text-dim); cursor:pointer; transition:all 0.15s;
@@ -1186,7 +1186,7 @@
 
   /* Header: stack logo + text tighter, shrink logo image */
   @media (max-width:480px) {
-    header { padding:2px 0 10px; gap:10px; margin-bottom:12px; }
+    header { padding:2px 0 5px; gap:10px; margin-bottom:4px; }
     .logo-img { width:46px !important; height:46px !important; }
     .logo { font-size:clamp(30px,9vw,48px) !important; }
     .header-sub { font-size:11px; letter-spacing:1px; }
@@ -1224,7 +1224,7 @@
     .wx-strip       { padding:9px 13px; margin:0 0 9px; }
     .wx-icon        { font-size:26px; }
     #snapshotTitle span { font-size:34px; }
-    #snapshotTitle  { margin-bottom:7px; padding:6px 0 4px; }
+    #snapshotTitle  { margin-bottom:7px; padding:2px 0 4px; }
     .snap-tap-hint  { font-size:13px; padding:5px 12px; margin:-2px auto 8px; }
     .tap-hint-arrow { font-size:19px; }
     .snap-sort      { margin:0 0 5px; gap:6px; padding:0 12px; }
@@ -1248,7 +1248,7 @@
   }
   /* The big desktop header is worth trimming too once the window is short. */
   @media (max-height:900px) and (min-width:481px) {
-    header    { padding:14px 0 12px; margin-bottom:12px; }
+    header    { padding:14px 0 8px; margin-bottom:6px; }
     .logo-img { width:clamp(52px,5.2vw,66px); height:clamp(52px,5.2vw,66px); }
   }
   @media (max-height:720px) {
@@ -1260,7 +1260,7 @@
     .wx-strip       { padding:8px 13px; margin:0 0 8px; }
   }
   @media (max-height:720px) and (max-width:480px) {
-    header    { padding:8px 0 8px; margin-bottom:10px; }
+    header    { padding:8px 0 4px; margin-bottom:4px; }
     .logo-img { width:44px !important; height:44px !important; }
   }
 
