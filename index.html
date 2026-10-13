@@ -848,9 +848,12 @@
   .day-btns {
     display:flex; gap:8px; flex-wrap:wrap;
   }
+  /* Equal-width buttons share the row (wrapping only if a label won't fit), with a
+     big enough label to read at a glance. */
   .day-btn {
-    font-family:'DM Mono',monospace; font-size:12px; text-transform:uppercase;
-    letter-spacing:1px; padding:8px 14px; border-radius:8px;
+    flex:1 1 0; min-width:max-content;
+    font-family:'DM Mono',monospace; font-size:17px; text-transform:uppercase;
+    letter-spacing:0.5px; padding:9px 8px; border-radius:8px;
     border:1px solid var(--border); background:transparent;
     color:var(--text-dim); cursor:pointer; transition:all 0.15s;
     white-space:nowrap;
@@ -1227,7 +1230,7 @@
     .snap-sort      { margin:0 0 5px; gap:6px; padding:0 12px; }
     .new-here { margin-left:12px; margin-right:12px; }
     .snap-sort-btn  { padding:4px 10px; font-size:11px; }
-    .day-btn        { padding:7px 11px; font-size:11px; }
+    .day-btn        { padding:8px 4px; font-size:16px; }
     .day-btns       { gap:6px; }
   }
 
@@ -1381,21 +1384,6 @@
     <span id="errorDetail">The forecast server did not respond.</span>
     <br>
     <button class="retry-btn" onclick="retryLoad()">↺ Try Again</button>
-  </div>
-
-  <!-- Current weather + feels-like (tracks the selected time) -->
-  <div class="wx-strip" id="wxStrip" style="display:none;">
-    <div class="wx-left">
-      <span class="wx-icon" id="wxIcon">🌡️</span>
-      <div class="wx-textcol">
-        <span class="wx-cond" id="wxCond">—</span>
-        <span class="wx-sun" id="wxSun"></span>
-      </div>
-    </div>
-    <div class="wx-right">
-      <span class="wx-feels-text" id="wxFeels">—</span>
-      <span class="wx-watertemp" id="wxWaterTemp"></span>
-    </div>
   </div>
 
   <!-- View tabs -->
@@ -1611,6 +1599,22 @@
             <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Current weather + feels-like (tracks the selected time). Sits under the
+         slider so the day buttons above it have room to be read. -->
+    <div class="wx-strip" id="wxStrip" style="display:none;">
+      <div class="wx-left">
+        <span class="wx-icon" id="wxIcon">🌡️</span>
+        <div class="wx-textcol">
+          <span class="wx-cond" id="wxCond">—</span>
+          <span class="wx-sun" id="wxSun"></span>
+        </div>
+      </div>
+      <div class="wx-right">
+        <span class="wx-feels-text" id="wxFeels">—</span>
+        <span class="wx-watertemp" id="wxWaterTemp"></span>
       </div>
     </div>
 
