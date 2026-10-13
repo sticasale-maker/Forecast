@@ -1231,7 +1231,8 @@
     .new-here { margin-left:12px; margin-right:12px; }
     .snap-sort-btn  { padding:4px 10px; font-size:11px; }
     .day-btn        { padding:8px 4px; font-size:16px; }
-    .day-btns       { gap:6px; }
+    /* Edge to edge: cancel the controls bar's 12px side padding for the day row. */
+    .day-btns       { gap:4px; margin:0 -12px; }
   }
 
   /* Short viewports: squeeze the snapshot stack so the day buttons + hour slider
