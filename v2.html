@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VIZ v2 — when to dive</title>
+<meta name="description" content="When to dive, not just whether. 17 Sydney and NSW dive entries, hour by hour.">
+<meta name="theme-color" content="#f7f7f5">
+<!--
+  VIZ FORECAST v2 — the thin client for /forecast2.
+
+  SHIPS NO MODEL. Every number on this page arrives from the Worker. There are no lobes,
+  no sensitivities, no exponents, no thresholds and no coastline geometry in this file,
+  and none may ever be added: once a constant is in the page it is in the git history and
+  in every cache for ever. v1's index.html scores in the browser and therefore ships its
+  own tuning; moving that server-side is the entire reason /forecast2 exists. The only
+  model-adjacent numbers here are the two BAND CUTS, which are display semantics — the
+  same Easy/Caution/Avoid v1 shows — not tuning.
+
+  TIME-FIRST, BY REGION (owner, 23 Oct 2026). v1 ranked 14 sites by score. With 17 over
+  350 km that is a category error: nobody chooses between Seal Rocks and Oak Park on the
+  same morning. So sites are grouped by region, and the hero of each row is a strip of the
+  day's hours rather than a single number — because the useful answer is "go at 7, not
+  11", and 241 hours of forecast is what v2 has that v1 did not.
+
+  CONFIDENCE IS VISIBLE BUT QUIET (owner). A site resting on five reports should not look
+  as certain as one resting on sixty-two. The counts below are provenance, not model.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --bg:#f7f7f5; --surface:#fff; --line:#e4e3de; --rule:#f0efea;
+    --ink:#15150f; --ink-2:#55544c; --ink-3:#8d8c82;
+    --easy:#1b8a4b; --easy-bg:#d8f0e1;
+    --caution:#b07503; --caution-bg:#fbeecd;
+    --avoid:#bf3024; --avoid-bg:#fbddd9;
+    --none:#f2f1ec;
+    --accent:#0c5c8a;
+    --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg:#121210; --surface:#1b1b18; --line:#2e2e29; --rule:#232320;
+      --ink:#f2f1ea; --ink-2:#b4b3a8; --ink-3:#7d7c72;
+      --easy:#4fc27e; --easy-bg:#17361f;
+      --caution:#e0a52a; --caution-bg:#3a2d0c;
+      --avoid:#ef6a5c; --avoid-bg:#3d1713;
+      --none:#232320; --accent:#64b5e6;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{background:var(--bg)}
+  body{
+    background:var(--bg);color:var(--ink);
+    font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;padding-bottom:48px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+  header{padding:22px 0 10px}
+  h1{font-size:19px;letter-spacing:-.02em;display:flex;align-items:baseline;gap:9px}
+  h1 b{font-weight:800}
+  h1 span{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+          color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:1px 5px}
+  .sub{color:var(--ink-3);font-size:12.5px;margin-top:4px}
+  .sub b{color:var(--ink-2);font-weight:600}
+
+  /* day picker */
+  .days{display:flex;gap:6px;overflow-x:auto;padding:12px 0 4px;margin:0 -16px;
+        padding-left:16px;padding-right:16px;scrollbar-width:none}
+  .days::-webkit-scrollbar{display:none}
+  .day{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);
+       border-radius:9px;padding:6px 11px;cursor:pointer;text-align:center;
+       font:inherit;color:var(--ink-2);min-width:58px}
+  .day b{display:block;font-size:13px;color:var(--ink);font-weight:700}
+  .day i{display:block;font-size:10.5px;font-style:normal;letter-spacing:.05em;
+         text-transform:uppercase;color:var(--ink-3)}
+  .day[aria-pressed="true"]{background:var(--ink);border-color:var(--ink)}
+  .day[aria-pressed="true"] b,.day[aria-pressed="true"] i{color:var(--bg)}
+
+  /* region + rows */
+  .region{margin:22px 0 0}
+  .region h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+             color:var(--ink-3);display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .region h2 em{font-style:normal;font-weight:500;letter-spacing:0;text-transform:none;
+                font-size:11.5px;color:var(--ink-3);opacity:.8}
+  .rows{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+        box-shadow:var(--shadow);overflow:hidden}
+  .row{display:block;width:100%;text-align:left;background:none;border:0;
+       border-top:1px solid var(--rule);padding:11px 13px;cursor:pointer;font:inherit;color:inherit}
+  .row:first-child{border-top:0}
+  .row:hover{background:var(--rule)}
+  .row-top{display:flex;align-items:baseline;gap:9px}
+  .name{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+  .verdict{margin-left:auto;font-size:12.5px;font-weight:600;white-space:nowrap}
+  .verdict.easy{color:var(--easy)} .verdict.caution{color:var(--caution)}
+  .verdict.avoid{color:var(--avoid)} .verdict.none{color:var(--ink-3);font-weight:500}
+
+  /* the strip — the hero of the row */
+  .strip{display:flex;gap:2px;margin-top:7px;height:19px}
+  .cell{flex:1;border-radius:2px;background:var(--none);position:relative}
+  .cell.easy{background:var(--easy-bg)} .cell.caution{background:var(--caution-bg)}
+  .cell.avoid{background:var(--avoid-bg)}
+  .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
+  .ticks{display:flex;gap:2px;margin-top:3px}
+  .ticks span{flex:1;font-size:9.5px;color:var(--ink-3);text-align:center;
+              letter-spacing:-.02em;overflow:hidden}
+
+  .conf{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-3);
+        margin-top:6px}
+  .conf.thin{color:var(--caution)}
+
+  /* detail */
+  .detail{border-top:1px solid var(--rule);padding:12px 13px 14px;background:var(--rule)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:10px 12px}
+  .stat b{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;
+          text-transform:uppercase;color:var(--ink-3)}
+  .stat span{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+  .ten{margin-top:13px}
+  .ten b{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+         color:var(--ink-3);display:block;margin-bottom:5px}
+  .ten .strip{height:13px}
+  .why{margin-top:11px;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0 0;font-size:11.5px;color:var(--ink-3)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;
+            margin-right:5px;vertical-align:-1px}
+  footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.6}
+  footer a{color:var(--accent)}
+  .msg{padding:36px 0;text-align:center;color:var(--ink-3);font-size:13.5px}
+  @media (max-width:560px){ .ticks span:not(.t6){visibility:hidden} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><b>VIZ</b> <span>v2</span></h1>
+    <p class="sub" id="sub">loading the forecast…</p>
+    <div class="days" id="days"></div>
+  </header>
+  <main id="main"><p class="msg">Fetching conditions for 17 entries…</p></main>
+  <div class="legend" id="legend"></div>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+"use strict";
+var API = "https://bold-rain-6ded.sticasale.workers.dev/forecast2";
+
+/* The two band cuts, on the Worker's internal 0-60 scale. DISPLAY semantics, the same
+   Easy/Caution/Avoid v1 shows — not tuning, and the only cuts this file may hold. */
+var EASY = 40, CAUTION = 20;
+function band(s){ return s == null ? "none" : s >= EASY ? "easy" : s >= CAUTION ? "caution" : "avoid"; }
+function bandName(b){ return b === "easy" ? "Easy" : b === "caution" ? "Caution"
+                          : b === "avoid" ? "Avoid" : "No forecast"; }
+
+/* Regions north to south. Grouping, not geography the model uses — the Worker sends the
+   order and these are the human names for the clusters in it. */
+var REGIONS = [
+  ["Far north",        "3 hours up the coast", ["SealRocks"]],
+  ["Northern beaches", "",                     ["Freshwater","Fairlight","CTB"]],
+  ["Harbour",          "",                     ["Chowder","CampCove"]],
+  ["Eastern suburbs",  "",                     ["NorthBondi","SharkPoint","Gordons","SouthCoogee","LittleBay"]],
+  ["Botany Bay",       "",                     ["BIE","BIW"]],
+  ["Kurnell",          "",                     ["Monument","Steps"]],
+  ["Cronulla",         "",                     ["Oak"]],
+  ["South coast",      "about 90 minutes",     ["BassPoint","Bushranger"]]
+];
+var LABEL = {
+  SealRocks:"Seal Rocks", Freshwater:"Freshwater", Fairlight:"Fairlight",
+  CTB:"Cabbage Tree Bay", Chowder:"Chowder Bay", CampCove:"Camp Cove",
+  NorthBondi:"North Bondi", SharkPoint:"Shark Point", Gordons:"Gordons Bay",
+  SouthCoogee:"South Coogee", LittleBay:"Little Bay", BIE:"Bare Island east",
+  BIW:"Bare Island west", Monument:"The Monument", Steps:"The Steps",
+  Oak:"Oak Park", BassPoint:"Bass Point", Bushranger:"Bushrangers Bay"
+};
+/* PROVENANCE, not model: how many diver reports sit behind each site's tuning.
+   Regenerate from tools/site_status.json. Counts only — no sensitivities, no thresholds. */
+var REPORTS = {
+  Steps:62, BassPoint:53, BIW:44, SharkPoint:25, Monument:26, Oak:15, Bushranger:12,
+  Gordons:10, LittleBay:5, SealRocks:5, NorthBondi:3, Freshwater:2, Fairlight:1,
+  CTB:-1, Chowder:0, BIE:0, CampCove:0, SouthCoogee:0
+};
+
+var DAY0 = 5, DAY1 = 19;           /* the daylight hours a dive actually happens in */
+var data = null, dayIx = 0, openSite = null;
+
+function hourOf(s){ return parseInt(String(s).slice(11,13),10); }
+function dateOf(s){ return String(s).slice(0,10); }
+function fmtHour(h){ return h === 12 ? "12p" : h > 12 ? (h-12)+"p" : h+"a"; }
+
+/* Index the payload's flat hour array into days, once. */
+function buildDays(hours){
+  var days = [], seen = {};
+  for (var i = 0; i < hours.length; i++) {
+    var d = dateOf(hours[i]), h = hourOf(hours[i]);
+    if (!(d in seen)) { seen[d] = days.length; days.push({ date:d, idx:[] }); }
+    if (h >= DAY0 && h <= DAY1) days[seen[d]].idx.push({ i:i, h:h });
+  }
+  return days.filter(function(x){ return x.idx.length >= 6; }).slice(0,10);
+}
+
+/* Describe a day in one phrase: the longest run of the best band present. */
+function summarise(cells){
+  var have = {};
+  cells.forEach(function(c){ have[c.b] = 1; });
+  var best = have.easy ? "easy" : have.caution ? "caution" : have.avoid ? "avoid" : "none";
+  if (best === "none") return { b:"none", t:"No forecast" };
+  var bestRun = null, run = null;
+  for (var i = 0; i < cells.length; i++) {
+    if (cells[i].b === best) { if (!run) run = { a:i, z:i }; else run.z = i; }
+    else { if (run && (!bestRun || run.z-run.a > bestRun.z-bestRun.a)) bestRun = run; run = null; }
+  }
+  if (run && (!bestRun || run.z-run.a > bestRun.z-bestRun.a)) bestRun = run;
+  var name = bandName(best);
+  if (bestRun.z - bestRun.a + 1 === cells.length) return { b:best, t:name + " all day" };
+  var from = cells[bestRun.a].h, to = cells[bestRun.z].h, phrase;
+  if (bestRun.a === 0) phrase = name + " till " + fmtHour(to+1);
+  else if (bestRun.z === cells.length-1) phrase = name + " from " + fmtHour(from);
+  else phrase = name + " " + fmtHour(from) + "–" + fmtHour(to+1);
+
+  /* NAME THE DETERIORATION. Describing only the best run read "Caution till 3p" on a
+     Shark Point day whose strip turned Avoid at 3p — the one fact a diver needed, left
+     out. If the day holds a worse band than the headline, it is said, and which side of
+     the window it falls on. */
+  var rank = { easy:3, caution:2, avoid:1, none:0 }, worst = best, worstAfter = false;
+  for (var j = 0; j < cells.length; j++) {
+    if (j >= bestRun.a && j <= bestRun.z) continue;
+    if (rank[cells[j].b] && rank[cells[j].b] < rank[worst]) {
+      worst = cells[j].b; worstAfter = j > bestRun.z;
+    }
+  }
+  if (worst !== best) phrase += ", " + bandName(worst) + (worstAfter ? " after" : " earlier");
+  return { b:best, t:phrase };
+}
+
+function cellsFor(key, day){
+  var s = data.sites[key];
+  return day.idx.map(function(p){
+    var v = s && s.score ? s.score[p.i] : null;
+    return { h:p.h, i:p.i, v:v, b:band(v) };
+  });
+}
+
+function nowIndex(){
+  var now = new Date(), best = -1, bestD = Infinity;
+  for (var i = 0; i < data.hours.length; i++) {
+    var t = new Date(data.hours[i].replace(" ","T") + "+11:00");
+    var d = Math.abs(t - now);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return bestD < 3*3600*1000 ? best : -1;
+}
+
+function confidenceEl(key){
+  var n = REPORTS[key];
+  if (n === -1) return '<span class="conf">✓ mirrors the Manly Swim surge model</span>';
+  if (n >= 20)  return '<span class="conf">✓ ' + n + ' diver reports behind this</span>';
+  if (n > 0)    return '<span class="conf thin">⚠ only ' + n + ' diver report'
+                       + (n>1?'s':'') + ' behind this</span>';
+  return '<span class="conf thin">⚠ no local reports behind this</span>';
+}
+
+function render(){
+  var day = DAYS[dayIx], nowI = nowIndex(), html = "";
+  REGIONS.forEach(function(reg){
+    var keys = reg[2].filter(function(k){ return data.sites[k] || (data.noNode||[]).indexOf(k) >= 0; });
+    if (!keys.length) return;
+    html += '<section class="region"><h2>' + reg[0]
+          + (reg[1] ? ' <em>' + reg[1] + '</em>' : '') + '</h2><div class="rows">';
+    keys.forEach(function(key){
+      var unavailable = !data.sites[key];
+      var cells = unavailable ? [] : cellsFor(key, day);
+      var sum = unavailable ? { b:"none", t:"Not forecast yet" } : summarise(cells);
+      html += '<button class="row" data-site="' + key + '" aria-expanded="'
+            + (openSite === key) + '">'
+            + '<span class="row-top"><span class="name">' + LABEL[key] + '</span>'
+            + '<span class="verdict ' + sum.b + '">' + sum.t + '</span></span>';
+      if (!unavailable) {
+        html += '<span class="strip">' + cells.map(function(c){
+          return '<span class="cell ' + c.b + (c.i === nowI ? ' now' : '') + '" title="'
+               + fmtHour(c.h) + ' — ' + bandName(c.b) + '"></span>';
+        }).join("") + '</span><span class="ticks">' + cells.map(function(c){
+          return '<span' + (c.h % 6 === 0 ? ' class="t6"' : '') + '>'
+               + (c.h % 3 === 0 ? fmtHour(c.h) : '') + '</span>';
+        }).join("") + '</span>';
+      }
+      html += confidenceEl(key) + '</button>';
+      if (openSite === key && !unavailable) html += detailFor(key, cells, nowI);
+    });
+    html += '</div></section>';
+  });
+  document.getElementById("main").innerHTML = html;
+  [].forEach.call(document.querySelectorAll(".row"), function(b){
+    b.onclick = function(){ openSite = openSite === b.dataset.site ? null : b.dataset.site; render(); };
+  });
+}
+
+function detailFor(key, cells, nowI){
+  /* the hour shown: now if today and in range, else the middle of the best run */
+  var pick = cells.filter(function(c){ return c.i === nowI; })[0];
+  if (!pick) { var s = summarise(cells);
+    pick = cells.filter(function(c){ return c.b === s.b; })[Math.floor(cells.length/6)] || cells[0]; }
+  var S = data.sites[key], i = pick.i, W = data.weather || {};
+  function at(a){ return a && a[i] != null ? a[i] : null; }
+  /* MIRROR THE WORKER'S TIDE FALLBACK. Three WillyWeather locations — coogee, cronulla
+     and shellharbour — return wind but no tide at all, so Shark Point, Oak, Gordons,
+     Little Bay, North Bondi and South Coogee have none of their own. The scorer already
+     substitutes `main` (Sydney) for them, which is the tide the model was calibrated
+     against; reading only the site's own group showed a bare dash while the score behind
+     it was responding to tide perfectly well. */
+  var wind = null, tide = null;
+  for (var wk in W) { if (W[wk] && W[wk].sites && W[wk].sites.indexOf(key) >= 0) {
+      wind = { k: at(W[wk].windKmh), d: at(W[wk].windDir) }; tide = at(W[wk].tideM); } }
+  if (!wind && W.main) wind = { k: at(W.main.windKmh), d: at(W.main.windDir) };
+  if (tide == null && W.main) tide = at(W.main.tideM);
+
+  var sea = at(S.swellH), ws = at(S.seaH);
+  var combined = (sea != null && ws != null) ? Math.sqrt(sea*sea + ws*ws) : sea;
+  var stat = function(l, v){ return '<span class="stat"><b>' + l + '</b><span>' + v + '</span></span>'; };
+  var dirTxt = function(d){ if (d == null) return "–";
+    var p = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    return p[Math.round(d/22.5) % 16]; };
+
+  var ten = DAYS.map(function(d){
+    var c = cellsFor(key, d), s2 = summarise(c);
+    return '<span class="cell ' + s2.b + '" title="' + d.date + ' — ' + s2.t + '"></span>';
+  }).join("");
+
+  return '<div class="detail">'
+    + '<div class="grid">'
+    + stat("At " + fmtHour(pick.h), bandName(pick.b))
+    + stat("Sea at entry", combined != null ? combined.toFixed(2) + " m" : "–")
+    + stat("Swell", (sea != null ? sea.toFixed(2) + " m " : "") + dirTxt(at(S.swellDir))
+        + (at(S.swellP) != null ? " · " + at(S.swellP).toFixed(0) + "s" : ""))
+    + stat("Wind wave", ws != null ? ws.toFixed(2) + " m" : "–")
+    + stat("Wind", wind && wind.k != null ? Math.round(wind.k) + " km/h " + dirTxt(wind.d) : "–")
+    + stat("Tide", tide != null ? tide.toFixed(2) + " m" : "–")
+    + '</div>'
+    + '<div class="ten"><b>Next ' + DAYS.length + ' days</b><span class="strip">' + ten + '</span></div>'
+    + '<p class="why">Entry type: ' + ((data.entryTypes||{})[key] || "–")
+    + '. Sea at the entry is the swell and the wind wave combined, as the nearshore model '
+    + 'puts them at this site — not the offshore forecast. Wind is shown separately '
+    + 'because chop raised locally over the fetch is a different thing from the wind '
+    + 'wave that travelled here.</p>'
+    + '</div>';
+}
+
+var DAYS = [];
+function renderDays(){
+  var H = document.getElementById("days"), out = "";
+  DAYS.forEach(function(d, n){
+    var dt = new Date(d.date + "T12:00:00+11:00");
+    out += '<button class="day" data-n="' + n + '" aria-pressed="' + (n === dayIx) + '">'
+         + '<i>' + (n === 0 ? "Today" : n === 1 ? "Tmrw"
+             : dt.toLocaleDateString("en-AU",{weekday:"short"})) + '</i>'
+         + '<b>' + dt.getDate() + '</b></button>';
+  });
+  H.innerHTML = out;
+  [].forEach.call(H.querySelectorAll(".day"), function(b){
+    b.onclick = function(){ dayIx = +b.dataset.n; renderDays(); render(); };
+  });
+}
+
+function boot(j){
+  data = j;
+  DAYS = buildDays(j.hours);
+  if (!DAYS.length) { document.getElementById("main").innerHTML =
+    '<p class="msg">The forecast came back without usable hours.</p>'; return; }
+  var age = Math.round((Date.now() - new Date(j.stamp)) / 60000);
+  document.getElementById("sub").innerHTML =
+    "When to dive, not just whether. <b>" + Object.keys(j.sites).length + " entries</b>, "
+    + "hour by hour · updated " + (age < 90 ? age + " min ago"
+      : Math.round(age/60) + " h ago");
+  document.getElementById("legend").innerHTML =
+    ['easy','caution','avoid'].map(function(b){
+      return '<span><i style="background:var(--' + b + '-bg);border:1px solid var(--' + b
+           + ')"></i>' + bandName(b) + '</span>'; }).join("")
+    + '<span><i style="background:var(--none);border:1px solid var(--line)"></i>No data</span>';
+  document.getElementById("foot").innerHTML =
+    "Scores are produced on the server from the NSW Nearshore model at a node beside each "
+    + "entry. This page renders them and holds no part of the model.<br>"
+    + "Conditions change faster than any forecast. Look at the water before you get in.";
+  renderDays(); render();
+}
+
+fetch(API, { cache: "no-store" })
+  .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+  .then(boot)
+  .catch(function(e){
+    document.getElementById("main").innerHTML =
+      '<p class="msg">Could not reach the forecast.<br>' + e.message + '</p>';
+    document.getElementById("sub").textContent = "offline";
+  });
+</script>
+</body>
+</html>
