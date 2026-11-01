@@ -101,8 +101,13 @@
   /* the strip — the hero of the row */
   .strip{display:flex;gap:2px;margin-top:7px;height:19px}
   .cell{flex:1;border-radius:2px;background:var(--none);position:relative}
-  .cell.easy{background:var(--easy-bg)} .cell.caution{background:var(--caution-bg)}
-  .cell.avoid{background:var(--avoid-bg)}
+  .cell.easy{--cellc:var(--easy-bg)} .cell.caution{--cellc:var(--caution-bg)}
+  .cell.avoid{--cellc:var(--avoid-bg)}
+  .cell.easy,.cell.caution,.cell.avoid{background:var(--cellc)}
+  .cell.s1{background:color-mix(in srgb, var(--cellc) 58%, var(--surface))}
+  .cell.s2{background:color-mix(in srgb, var(--cellc) 79%, var(--surface))}
+  .cell.s3{background:var(--cellc)}
+  .day.past i,.day.past b{opacity:.45}
   .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
   .ticks{display:flex;gap:2px;margin-top:3px}
   .ticks span{flex:1;font-size:9.5px;color:var(--ink-3);text-align:center;
@@ -111,6 +116,14 @@
   .conf{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-3);
         margin-top:6px}
   .conf.thin{color:var(--caution)}
+  h3.sub{font-size:11px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--ink-3);margin:18px 0 6px 2px}
+  .ask{background:var(--caution-bg);border-radius:10px;padding:11px 13px;margin:8px 0 2px}
+  .askh{margin:0 0 4px;font-size:14px;color:var(--caution)}
+  .askb{margin:0 0 9px;font-size:12.5px;line-height:1.55;color:var(--caution)}
+  .askbtn{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--caution);
+    background:var(--surface);color:var(--caution);border-radius:7px;cursor:pointer}
+  .askok{display:block;margin-top:7px;font-size:12px;color:var(--caution)}
 
   /* detail */
   .detail{border-top:1px solid var(--rule);padding:12px 13px 14px;background:var(--rule)}
@@ -156,17 +169,50 @@ function band(s){ return s == null ? "none" : s >= EASY ? "easy" : s >= CAUTION 
 function bandName(b){ return b === "easy" ? "Easy" : b === "caution" ? "Caution"
                           : b === "avoid" ? "Avoid" : "No forecast"; }
 
+/* WHERE IN THE BAND THE SCORE SITS. Three bands alone cannot show it: 68% and 98% are both
+   "easy" and looked identical, so a strip could not show a day getting worse until it
+   crossed a cut (owner, 2 Nov: "you can't see where in the color is the score").
+
+   Three steps per band, and DEEPER ALWAYS MEANS WORSE across all nine, so the whole strip
+   reads as one severity gradient rather than three unrelated ramps. MAX is the top of the
+   Worker's internal scale — display semantics, like EASY and CAUTION, not tuning. */
+var MAX = 60;
+function step(v){
+  if (v == null) return "";
+  var top = v >= EASY ? MAX : v >= CAUTION ? EASY : CAUTION;
+  var range = v >= EASY ? MAX - EASY : EASY - CAUTION;
+  if (!(range > 0)) return "s2";
+  var sev = (top - v) / range;
+  return "s" + Math.max(1, Math.min(3, 1 + Math.floor(sev * 3)));
+}
+
 /* Regions north to south. Grouping, not geography the model uses — the Worker sends the
    order and these are the human names for the clusters in it. */
+/* THE OWNER'S FOUR REGIONS (2 Nov 2026), because the binding constraint is driving
+   distance, not latitude. Below-the-bridge holds 11 of 18 sites, too long to scan, so it
+   sub-splits — the top level stays the owner's four.
+
+   CAMP COVE IS BELOW THE BRIDGE, and latitude would get that wrong. At -33.8391 it sits
+   north of the bridge's own latitude (-33.8523), but Watsons Bay is on the SOUTH shore and
+   it is an eastern-suburbs site. Chowder at -33.8398 is almost the same latitude and
+   genuinely north shore. Group by shore, not by number.
+
+   Grouping only — the Worker sends the order and these are the human names for it. */
 var REGIONS = [
-  ["Far north",        "3 hours up the coast", ["SealRocks"]],
-  ["Northern beaches", "",                     ["Freshwater","Fairlight","CTB"]],
-  ["Harbour",          "",                     ["Chowder","CampCove"]],
-  ["Eastern suburbs",  "",                     ["NorthBondi","SharkPoint","Gordons","SouthCoogee","LittleBay"]],
-  ["Botany Bay",       "",                     ["BIE","BIW"]],
-  ["Kurnell",          "",                     ["Monument","Steps"]],
-  ["Cronulla",         "",                     ["Oak"]],
-  ["South coast",      "about 90 minutes",     ["BassPoint","Bushranger"]]
+  ["Far north", "3 hours up the coast", [
+    ["", ["SealRocks"]]
+  ]],
+  ["Above the bridge", "", [
+    ["", ["Freshwater", "Fairlight", "CTB", "Chowder"]]
+  ]],
+  ["Below the bridge", "", [
+    ["Eastern suburbs", ["CampCove", "NorthBondi", "SharkPoint", "Gordons", "SouthCoogee", "LittleBay"]],
+    ["Botany Bay and Kurnell", ["BIE", "BIW", "Monument", "Steps"]],
+    ["Cronulla", ["Oak"]]
+  ]],
+  ["Far south", "about 90 minutes", [
+    ["", ["BassPoint", "Bushranger"]]
+  ]]
 ];
 var LABEL = {
   SealRocks:"Seal Rocks", Freshwater:"Freshwater", Fairlight:"Fairlight",
@@ -176,16 +222,40 @@ var LABEL = {
   BIW:"Bare Island west", Monument:"The Monument", Steps:"The Steps",
   Oak:"Oak Park", BassPoint:"Bass Point", Bushranger:"Bushrangers Bay"
 };
-/* PROVENANCE, not model: how many diver reports sit behind each site's tuning.
-   Regenerate from tools/site_status.json. Counts only — no sensitivities, no thresholds. */
+/* PROVENANCE, NOT MODEL: how much evidence stands behind each site, and what that makes
+   the score worth saying out loud. Counts and a tier — no sensitivities, no thresholds, no
+   lobe. Regenerate from `node tools/site_status.mjs`; last taken 2 Nov 2026.
+
+   Showing Steps at 88% and Chowder at 98% with equal confidence is a lie: one has 59
+   verdicts, the other none. Every row states its evidence.
+
+   tier:  "fitted"    25+ verdicts and passing both of the owner's release criteria
+          "borrowed"  calibrated elsewhere (CTB is the Manly Swim surge at Bower Lane)
+          "sheltered" no node and no swell response to model (Camp Cove)
+          "thin"      passes both criteria, but on too few verdicts to lean on
+          "checking"  plenty of verdicts AND one release criterion still failing
+          "none"      no verdicts at all — the number is a guess from a neighbour
+          "hold"      known wrong at the hard end; see SERVER_SIDE_PLAN.md C6 */
 var REPORTS = {
-  Steps:62, BassPoint:53, BIW:44, SharkPoint:25, Monument:26, Oak:15, Bushranger:12,
-  Gordons:10, LittleBay:5, SealRocks:5, NorthBondi:3, Freshwater:2, Fairlight:1,
-  CTB:-1, Chowder:0, BIE:0, CampCove:0, SouthCoogee:0
+  Steps:59, BIW:46, BassPoint:42, SharkPoint:25, Monument:25, Oak:15, Bushranger:11,
+  Gordons:9, LittleBay:6, SealRocks:5, NorthBondi:3, Freshwater:3, Fairlight:1,
+  SouthCoogee:1, Chowder:0, BIE:0, CampCove:0, CTB:0
+};
+var TIER = {
+  Steps:"fitted", BIW:"fitted", Monument:"fitted", SharkPoint:"fitted",
+  CTB:"borrowed", CampCove:"sheltered",
+  BassPoint:"checking", Oak:"checking", Gordons:"checking",
+  Bushranger:"thin", SealRocks:"thin", NorthBondi:"thin", Fairlight:"thin",
+  Chowder:"none", BIE:"none", SouthCoogee:"none",
+  LittleBay:"hold", Freshwater:"hold"
 };
 
 var DAY0 = 5, DAY1 = 19;           /* the daylight hours a dive actually happens in */
 var data = null, dayIx = 0, openSite = null;
+/* Sydney, because the forecast is in Sydney hours and the viewer may not be. */
+var TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
+var TOMORROW = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" })
+  .format(new Date(Date.now() + 86400000));
 
 function hourOf(s){ return parseInt(String(s).slice(11,13),10); }
 function dateOf(s){ return String(s).slice(0,10); }
@@ -255,46 +325,116 @@ function nowIndex(){
 }
 
 function confidenceEl(key){
-  var n = REPORTS[key];
-  if (n === -1) return '<span class="conf">✓ mirrors the Manly Swim surge model</span>';
-  if (n >= 20)  return '<span class="conf">✓ ' + n + ' diver reports behind this</span>';
-  if (n > 0)    return '<span class="conf thin">⚠ only ' + n + ' diver report'
-                       + (n>1?'s':'') + ' behind this</span>';
-  return '<span class="conf thin">⚠ no local reports behind this</span>';
+  var n = REPORTS[key], t = TIER[key];
+  if (t === "borrowed")  return '<span class="conf">✓ mirrors the Manly Swim surge model</span>';
+  if (t === "sheltered") return '<span class="conf">✓ wind chop only — no swell reaches here</span>';
+  if (t === "hold")      return '<span class="conf thin">⚠ under review — known wrong in bigger seas</span>';
+  if (t === "fitted")    return '<span class="conf">✓ ' + n + ' diver reports behind this</span>';
+  /* "checking" and "thin" are DIFFERENT problems and must not share a sentence. Bass Point
+     has 42 verdicts and is provisional because a dived day still reads Avoid; Fairlight has
+     one verdict and no failing check. "Only 42 diver reports" read as nonsense. */
+  if (t === "checking")  return '<span class="conf thin">⚠ ' + n
+                              + ' reports, and one check still failing</span>';
+  if (t === "none")      return '<span class="conf thin">⚠ '
+                              + (n > 0 ? 'barely calibrated — ' + n + ' local report'
+                                         + (n > 1 ? 's' : '')
+                                       : 'not calibrated — no local reports') + '</span>';
+  return '<span class="conf thin">⚠ only ' + n + ' diver report' + (n > 1 ? 's' : '')
+       + ' behind this</span>';
+}
+
+/* ASK ONLY WHERE AN ANSWER WOULD CHANGE A NUMBER. 85% of all hours are Easy, and a page
+   that said "Easy" every day would score 85% band agreement — so a tap confirming an Easy
+   hour cannot separate a good model from a constant. The scarce datum is a NAMED verdict on
+   a NON-EASY hour at a site that is not already calibrated. See SERVER_SIDE_PLAN.md C4.
+
+   It asks for a VIZ post rather than an in-app tap on purpose (owner, 2 Nov: "a proper
+   named post on VIZ is more reliable"). The draft carries site, date and a clock time,
+   which is the shape tools/corpus.py already parses — so the post becomes a VERDICT with a
+   name on it, through the existing pipeline, rather than an anonymous number. */
+function askEl(key, sum, day){
+  if (sum.b === "easy" || sum.b === "none") return "";
+  var t = TIER[key];
+  if (t === "fitted" || t === "borrowed" || t === "sheltered") return "";
+  /* NEVER ASK ABOUT A DAY THAT HAS NOT HAPPENED. Asking a diver to rate Saturday is asking
+     for a prediction, which is the model's job and not evidence of anything. Only today and
+     earlier. (This fired on a day six ahead the first time it was rendered.) */
+  if (!day || !day.date || day.date > TODAY) return "";
+  var NL = String.fromCharCode(10);
+  var draft = [LABEL[key] + ", " + day.date + ", in the water __:__ .",
+               "App said " + bandName(sum.b) + ". I would call it ___",
+               "Viz ___ m, water ___ C."].join(NL);
+  return '<div class="ask"><p class="askh">Diving ' + LABEL[key] + '? Tell the group how it went.</p>'
+       + '<p class="askb">' + (REPORTS[key] > 0
+            ? (TIER[key] === "checking"
+                 ? 'This site has ' + REPORTS[key] + ' reports and still fails one of our checks.'
+                 : 'Only ' + REPORTS[key] + ' report' + (REPORTS[key] > 1 ? 's' : '') + ' stand behind this score.')
+            : 'Nothing local stands behind this score yet.')
+       + ' A named post on VIZ is worth far more than a tap — it carries your name, the hour '
+       + 'and your own words. Best written after you are out.</p>'
+       + '<button class="askbtn" data-draft="' + draft.replace(/"/g, "&quot;").split(NL).join("&#10;")
+       + '">Copy a VIZ post</button>'
+       + '<span class="askok" hidden>Copied — paste it into the VIZ group</span></div>';
 }
 
 function render(){
   var day = DAYS[dayIx], nowI = nowIndex(), html = "";
   REGIONS.forEach(function(reg){
-    var keys = reg[2].filter(function(k){ return data.sites[k] || (data.noNode||[]).indexOf(k) >= 0; });
-    if (!keys.length) return;
+    var subs = reg[2].map(function(sub){
+      return [sub[0], sub[1].filter(function(k){
+        return data.sites[k] || (data.noNode || []).indexOf(k) >= 0;
+      })];
+    }).filter(function(sub){ return sub[1].length; });
+    if (!subs.length) return;
     html += '<section class="region"><h2>' + reg[0]
-          + (reg[1] ? ' <em>' + reg[1] + '</em>' : '') + '</h2><div class="rows">';
-    keys.forEach(function(key){
-      var unavailable = !data.sites[key];
-      var cells = unavailable ? [] : cellsFor(key, day);
-      var sum = unavailable ? { b:"none", t:"Not forecast yet" } : summarise(cells);
-      html += '<button class="row" data-site="' + key + '" aria-expanded="'
-            + (openSite === key) + '">'
-            + '<span class="row-top"><span class="name">' + LABEL[key] + '</span>'
-            + '<span class="verdict ' + sum.b + '">' + sum.t + '</span></span>';
-      if (!unavailable) {
-        html += '<span class="strip">' + cells.map(function(c){
-          return '<span class="cell ' + c.b + (c.i === nowI ? ' now' : '') + '" title="'
-               + fmtHour(c.h) + ' — ' + bandName(c.b) + '"></span>';
-        }).join("") + '</span><span class="ticks">' + cells.map(function(c){
-          return '<span' + (c.h % 6 === 0 ? ' class="t6"' : '') + '>'
-               + (c.h % 3 === 0 ? fmtHour(c.h) : '') + '</span>';
-        }).join("") + '</span>';
-      }
-      html += confidenceEl(key) + '</button>';
-      if (openSite === key && !unavailable) html += detailFor(key, cells, nowI);
+          + (reg[1] ? ' <em>' + reg[1] + '</em>' : '') + '</h2>';
+    subs.forEach(function(sub){
+      if (sub[0]) html += '<h3 class="sub">' + sub[0] + '</h3>';
+      html += '<div class="rows">';
+      sub[1].forEach(function(key){
+        var unavailable = !data.sites[key];
+        var cells = unavailable ? [] : cellsFor(key, day);
+        var sum = unavailable ? { b:"none", t:"Not forecast yet" } : summarise(cells);
+        html += '<button class="row" data-site="' + key + '" aria-expanded="'
+              + (openSite === key) + '">'
+              + '<span class="row-top"><span class="name">' + LABEL[key] + '</span>'
+              + '<span class="verdict ' + sum.b + '">' + sum.t + '</span></span>';
+        if (!unavailable) {
+          html += '<span class="strip">' + cells.map(function(c){
+            return '<span class="cell ' + c.b + ' ' + step(c.v) + (c.i === nowI ? ' now' : '') + '" title="'
+                 + fmtHour(c.h) + ' — ' + bandName(c.b) + '"></span>';
+          }).join("") + '</span><span class="ticks">' + cells.map(function(c){
+            return '<span' + (c.h % 6 === 0 ? ' class="t6"' : '') + '>'
+                 + (c.h % 3 === 0 ? fmtHour(c.h) : '') + '</span>';
+          }).join("") + '</span>';
+        }
+        html += confidenceEl(key) + '</button>';
+        if (openSite === key && !unavailable) {
+          html += detailFor(key, cells, nowI) + askEl(key, sum, day);
+        }
+      });
+      html += '</div>';
     });
-    html += '</div></section>';
+    html += '</section>';
   });
   document.getElementById("main").innerHTML = html;
   [].forEach.call(document.querySelectorAll(".row"), function(b){
     b.onclick = function(){ openSite = openSite === b.dataset.site ? null : b.dataset.site; render(); };
+  });
+  /* The draft goes to the clipboard rather than anywhere of ours: the post belongs to the
+     diver, in the group, under their name. Nothing is sent from here. */
+  [].forEach.call(document.querySelectorAll(".askbtn"), function(b){
+    b.onclick = function(ev){
+      ev.stopPropagation();
+      var ok = b.parentNode.querySelector(".askok");
+      var txt = b.dataset.draft;
+      function done(){ if (ok) { ok.hidden = false; } b.textContent = "Copied"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(done, function(){ b.textContent = "Press and hold to copy"; });
+      } else {
+        b.textContent = "Press and hold to copy";
+      }
+    };
   });
 }
 
@@ -326,7 +466,12 @@ function detailFor(key, cells, nowI){
 
   var ten = DAYS.map(function(d){
     var c = cellsFor(key, d), s2 = summarise(c);
-    return '<span class="cell ' + s2.b + '" title="' + d.date + ' — ' + s2.t + '"></span>';
+    /* the day's step comes from its WORST scored hour, so the ten-day strip shades by the
+       same severity the band is chosen from rather than by an average nobody dives */
+    var worst = null;
+    c.forEach(function(x){ if (x.v != null && (worst === null || x.v < worst)) worst = x.v; });
+    return '<span class="cell ' + s2.b + ' ' + step(worst) + '" title="' + d.date
+         + ' — ' + s2.t + '"></span>';
   }).join("");
 
   return '<div class="detail">'
@@ -353,9 +498,16 @@ function renderDays(){
   var H = document.getElementById("days"), out = "";
   DAYS.forEach(function(d, n){
     var dt = new Date(d.date + "T12:00:00+11:00");
-    out += '<button class="day" data-n="' + n + '" aria-pressed="' + (n === dayIx) + '">'
-         + '<i>' + (n === 0 ? "Today" : n === 1 ? "Tmrw"
-             : dt.toLocaleDateString("en-AU",{weekday:"short"})) + '</i>'
+    /* LABEL FROM THE DATE, NOT THE INDEX. The payload starts YESTERDAY (the Worker fetches
+       WillyWeather from yesterday so the hours before today's first tide turn are bracketed
+       by one), so index 0 is not today and "Today"/"Tmrw" by position were both a day out. */
+    var lbl = d.date === TODAY ? "Today"
+            : d.date === TOMORROW ? "Tmrw"
+            : d.date < TODAY ? "Yest"
+            : dt.toLocaleDateString("en-AU", { weekday:"short" });
+    out += '<button class="day' + (d.date < TODAY ? ' past' : '') + '" data-n="' + n
+         + '" aria-pressed="' + (n === dayIx) + '">'
+         + '<i>' + lbl + '</i>'
          + '<b>' + dt.getDate() + '</b></button>';
   });
   H.innerHTML = out;
@@ -369,6 +521,13 @@ function boot(j){
   DAYS = buildDays(j.hours);
   if (!DAYS.length) { document.getElementById("main").innerHTML =
     '<p class="msg">The forecast came back without usable hours.</p>'; return; }
+  /* OPEN ON TODAY, NOT ON DAYS[0]. The payload deliberately STARTS YESTERDAY — the Worker
+     fetches WillyWeather from yesterday so the hours before today's first tide turn are
+     bracketed by one, which is a real fix and not a bug. But it means index 0 is yesterday,
+     so defaulting dayIx to 0 opened the app on a day already gone. */
+  var ti = -1;
+  for (var d = 0; d < DAYS.length; d++) { if (DAYS[d].date >= TODAY) { ti = d; break; } }
+  dayIx = ti >= 0 ? ti : DAYS.length - 1;
   var age = Math.round((Date.now() - new Date(j.stamp)) / 60000);
   document.getElementById("sub").innerHTML =
     "When to dive, not just whether. <b>" + Object.keys(j.sites).length + " entries</b>, "
