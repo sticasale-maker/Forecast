@@ -24,6 +24,7 @@
   <!-- PWA / Home Screen Icon -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#061020">
+  <script>try{var lightV=localStorage.getItem('viz_light');if(!lightV){var lightM=document.cookie.match(/(?:^|; )viz_light=([^;]*)/);lightV=lightM&&lightM[1];}if(lightV==='1'){document.documentElement.classList.add('light');document.querySelector('meta[name=theme-color]').content='#ffffff';}}catch(e){}</script>
   <link rel="apple-touch-icon" href="image_1.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1292,6 +1293,63 @@
   @media (prefers-reduced-motion:reduce) {
     * { transition:none !important; animation:none !important; }
   }
+  /* ── LIGHT DISPLAY (More › Light display, per device) ───────────────── */
+  html.light {
+    --deep:#ffffff; --teal:#00756a; --red:#c62828;
+    --text:#10263a; --text-dim:#45586a;
+    --card:#ffffff; --border:rgba(16,38,58,0.2);
+  }
+  html.light .logo, html.light .cond-value, html.light .site-name, html.light .adm-card h3,
+  html.light .adm-current b, html.light #reportsSheetHead, html.light #siteSheetHead, html.light .sr-title,
+  html.light .sr-q b, html.light .sr-val b, html.light #scoreInfoHead, html.light .si-band b, html.light .si-p b,
+  html.light .new-here .nh-title, html.light .install-card .ic-title, html.light #snapshotTitle span,
+  html.light .snap-tap-hint { color:var(--text); text-shadow:none; }
+  html.light .sr-when select, html.light .rc-row select,
+  html.light .adm-card textarea, html.light .adm-site textarea { color:var(--text); background:#fff; }
+  html.light .adm-site { background:#f3f6f8; }
+  html.light #reportsSheet, html.light #siteSheet, html.light #scoreInfo { background:#fff; }
+  html.light #snapshotTitle { background:rgba(255,255,255,0.94); }
+  html.light #tl-tooltip, html.light #ptr-indicator { background:#fff; color:var(--text); }
+  html.light .snapshot-controls { background:linear-gradient(to bottom, rgba(255,255,255,0.9), #fff 30%); }
+  html.light .view-tabs { background:#fff; border-top-color:rgba(16,38,58,0.2); box-shadow:0 -6px 18px rgba(16,38,58,0.12); }
+  html.light .tab-btn { color:#45586a; border-color:rgba(16,38,58,0.14); background:#f3f6f8; }
+  html.light .tab-btn:hover { border-color:rgba(16,38,58,0.3); }
+  html.light .score-bar-track, html.light .snap-bar-track { background:rgba(16,38,58,0.08); }
+  html.light .tl-day-sep { border-left-color:rgba(16,38,58,0.16); }
+  html.light #val-header { background:rgba(16,38,58,0.04); }
+  html.light .val-table td, html.light .val-demerit-row td { border-bottom-color:rgba(16,38,58,0.1); }
+  html.light .error-banner { color:#a31515; }
+  html.light #siteSheetBadge.yellow { color:#7a5c00; }
+  html.light #siteSheetBadge.red { color:#b02020; }
+  html.light #siteSheetTideNote b, html.light #siteMapHead .smh-line, html.light #siteMapLegend .smh-swell, html.light .smg-legend .smg-blue { color:#1f5f94; }
+  html.light #siteMapHead .smh-wind, html.light #siteMapLegend .smh-wind, html.light .smg-legend .smg-amber { color:#85570f; }
+  /* The score words take their colour inline from scoreColor(), which also fills the
+     bars, so they are darkened here rather than recoloured. */
+  html.light .smg-score, html.light .snap-zone-label, html.light .ss-score,
+  html.light .tg-state, html.light #siteSheetPollutionVerdict { filter:brightness(0.55); }
+  html.light #siteSheetBadge { color:#1b7a43; }
+  html.light #newHere b[style] { filter:brightness(0.55); text-shadow:none; }
+  html.light .day-btn.active, html.light .snap-sort-btn.active, html.light .dv-chip.active, html.light .nh-btn,
+  html.light .share-btn, html.light .adm-btn, html.light .error-banner .retry-btn,
+  html.light button[onclick="submitFeedback()"] { color:#fff !important; }
+  html.light body::before { display:none; }
+  html.light #dv-bar-labels > div { color:var(--text-dim) !important; }
+  html.light #about-heading { color:var(--text) !important; }
+  /* Chart text and lines are drawn with pale presentation attributes; CSS outranks those. */
+  html.light svg text[fill^="rgba(200,221,245"], html.light svg text[fill="#c8ddf5"] { fill:#45586a; }
+  html.light svg [stroke^="rgba(200,221,245"] { stroke:rgba(16,38,58,0.28); }
+  html.light svg line[stroke="#ffffff"] { stroke:#10263a; }
+  html.light .a2hs-cta { background:#10263a; }
+  /* The splash stays dark: it is a video with white text over it. */
+  html.light #splash-screen { --deep:#061020; --teal:#00c2a8; }
+  .display-row { display:flex; align-items:center; gap:12px; width:100%; max-width:480px; margin:0 0 16px; padding:14px 16px;
+    font:inherit; text-align:left; color:var(--text); background:var(--card); border:1px solid var(--border); border-radius:12px; cursor:pointer; }
+  .display-row small { display:block; margin-top:2px; font-size:12.5px; color:var(--text-dim); }
+  .display-row .ds-text { flex:1; font-size:15px; font-weight:500; }
+  .display-switch { flex:none; width:42px; height:25px; border-radius:13px; background:#5a7183; position:relative; transition:background .15s; }
+  .display-switch::after { content:''; position:absolute; top:3px; left:3px; width:19px; height:19px; border-radius:50%; background:#fff; transition:transform .15s; }
+  .display-row[aria-checked="true"] .display-switch { background:var(--teal); }
+  .display-row[aria-checked="true"] .display-switch::after { transform:translateX(17px); }
 </style>
 </head>
 <body data-tab="snapshot">
@@ -1686,6 +1744,9 @@
 
   <!-- MORE tab: about, how-to, feedback, share, coffee (was a footer under every tab) -->
   <div class="view-panel" id="panel-more" role="tabpanel" aria-label="More">
+  <button type="button" class="display-row" id="lightSwitch" role="switch" aria-checked="false" onclick="toggleLightDisplay()">
+    <span class="ds-text">Light display<small>White background and dark text, easier to read</small></span><span class="display-switch" aria-hidden="true"></span>
+  </button>
   <!-- COFFEE -->
   <div style="margin:4px 0 16px;padding:18px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:480px;">
     <p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin-bottom:14px;">
@@ -3602,6 +3663,16 @@ function scheduleNextRefresh(cb) {
 // ── Remembered choices: tab, favourite site ────────────────────────────────────
 const REMEMBERED_TABS = ['snapshot','dayview','timeline','more'];
 function _lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function toggleLightDisplay() {
+  var on = document.documentElement.classList.toggle('light');
+  _lsSet('viz_light', on ? '1' : '0');
+  try { document.cookie = 'viz_light=' + (on ? '1' : '0') + ';path=/;max-age=34560000;SameSite=Lax'; } catch (e) {}
+  document.getElementById('lightSwitch').setAttribute('aria-checked', on ? 'true' : 'false');
+  var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = on ? '#ffffff' : '#061020';
+}
+document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('lightSwitch').setAttribute('aria-checked', document.documentElement.classList.contains('light') ? 'true' : 'false');
+});
 function _lsSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
 let _favKey = _lsGet('viz_fav_site');
 
