@@ -207,7 +207,7 @@ var REGIONS = [
   ]],
   ["Below the bridge", "", [
     ["Eastern suburbs", ["CampCove", "NorthBondi", "SharkPoint", "Gordons", "SouthCoogee", "LittleBay"]],
-    ["Botany Bay and Kurnell", ["BIE", "BIW", "Monument", "Steps"]],
+    ["Botany Bay and Kurnell", ["BIE", "BIW", "BIWestmost", "Monument", "Steps"]],
     ["Cronulla", ["Oak"]]
   ]],
   ["Far south", "about 90 minutes", [
@@ -220,7 +220,8 @@ var LABEL = {
   NorthBondi:"North Bondi", SharkPoint:"Shark Point", Gordons:"Gordons Bay",
   SouthCoogee:"South Coogee", LittleBay:"Little Bay", BIE:"Bare Island east",
   BIW:"Bare Island west", Monument:"The Monument", Steps:"The Steps",
-  Oak:"Oak Park", BassPoint:"Bass Point", Bushranger:"Bushrangers Bay"
+  Oak:"Oak Park", BassPoint:"Bass Point", Bushranger:"Bushrangers Bay",
+  BIWestmost:"Bare Island westmost"
 };
 /* PROVENANCE, NOT MODEL: how much evidence stands behind each site, and what that makes
    the score worth saying out loud. Counts and a tier — no sensitivities, no thresholds, no
@@ -239,14 +240,14 @@ var LABEL = {
 var REPORTS = {
   Steps:59, BIW:46, BassPoint:42, SharkPoint:25, Monument:25, Oak:15, Bushranger:11,
   Gordons:9, LittleBay:6, SealRocks:5, NorthBondi:3, Freshwater:3, Fairlight:1,
-  SouthCoogee:1, Chowder:0, BIE:0, CampCove:0, CTB:0
+  SouthCoogee:1, Chowder:0, BIE:0, CampCove:0, CTB:0, BIWestmost:0
 };
 var TIER = {
   Steps:"fitted", BIW:"fitted", Monument:"fitted", SharkPoint:"fitted",
   CTB:"borrowed", CampCove:"sheltered",
   BassPoint:"checking", Oak:"checking", Gordons:"checking",
   Bushranger:"thin", SealRocks:"thin", NorthBondi:"thin", Fairlight:"thin",
-  Chowder:"none", BIE:"none", SouthCoogee:"none",
+  Chowder:"none", BIE:"none", SouthCoogee:"none", BIWestmost:"none",
   LittleBay:"hold", Freshwater:"hold"
 };
 
