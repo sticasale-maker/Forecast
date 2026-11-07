@@ -87,20 +87,15 @@
 
   /* The header, day picker included, stays put: scrolled down to a southern site, the
      days must still be one tap away. */
-  header{padding:14px 0 8px;position:sticky;top:0;z-index:20;background:var(--bg);
+  header{padding:8px 0 6px;position:sticky;top:0;z-index:20;background:var(--bg);
          margin:0 -16px;padding-left:16px;padding-right:16px;border-bottom:1px solid var(--line)}
-  .brand{display:flex;align-items:center;gap:12px}
-  .brand img{width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;
-             transition:width .15s,height .15s}
-  /* once scrolled, the frozen header slims to title + days so the rows keep the screen */
-  header.compact{padding-top:8px;padding-bottom:4px}
-  header.compact .brand img{width:30px;height:30px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  /* the header is one size, scrolled or not (owner, 7 Nov): small logo, title, days */
   header.compact .sub{display:none}
-  header.compact .theme-btn{width:30px;height:30px;font-size:14px}
-  header.compact .days{padding-top:7px}
-  .theme-btn{margin-left:auto;align-self:flex-start;width:36px;height:36px;border-radius:50%;
+  .theme-btn{margin-left:auto;align-self:center;width:30px;height:30px;border-radius:50%;
     border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer;
-    display:grid;place-items:center;font-size:17px;line-height:1}
+    display:grid;place-items:center;font-size:14px;line-height:1}
   .theme-btn:hover{color:var(--ink)}
   h1{font-size:19px;letter-spacing:-.02em;display:flex;align-items:baseline;gap:4px 9px;flex-wrap:wrap}
   h1 b{white-space:nowrap}
@@ -112,7 +107,7 @@
   .sub b{color:var(--ink-2);font-weight:600}
 
   /* day picker */
-  .days{display:flex;gap:6px;overflow-x:auto;padding:12px 0 4px;margin:0 -16px;
+  .days{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;margin:0 -16px;
         padding-left:16px;padding-right:16px;scrollbar-width:none}
   .days::-webkit-scrollbar{display:none}
   .day{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);
@@ -241,7 +236,7 @@
     <div class="brand">
       <img src="image_2.png" alt="VIZ logo">
       <div>
-        <h1><b>VIZ Forecast</b> <span>V2</span> <em class="upd" id="sub">loading…</em></h1>
+        <h1><b>Forecast</b> <span>V2</span> <em class="upd" id="sub">loading…</em></h1>
       </div>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch light or dark"></button>
     </div>
