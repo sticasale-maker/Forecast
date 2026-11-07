@@ -657,19 +657,28 @@ function mountMap(){
    on his site pages (`tide`), plus his short notes; v1's SITE_MCF, copied. BI Westmost is in
    the same bay as BI West, so it gets the Botany clarity story but no McFadyen page. */
 var BOTANY = { Steps:1, Monument:1, BIE:1, BIW:1, BIWestmost:1 };
-var MCF_BASE = "https://www.michaelmcfadyenscuba.info/viewpage.php?page_id=";
+/* Michael McFadyen's pages on the new site (dive.michaelmcfadyenscuba.info), matched by
+   name to v1's old page_ids and checked against the site's own coords.json (7 Nov 2026).
+   BI Westmost, Bass Point and Bushrangers matched by position (123-176 m). Freshwater,
+   South Coogee and Seal Rocks have no page near the entry, so they get no link. */
+var MCF_BASE = "https://dive.michaelmcfadyenscuba.info/";
 var MCF = {
-  CTB:{id:488,tide:"any"}, BIE:{id:256,tide:"any"}, Monument:{id:311,tide:"any"},
-  BIW:{id:261,tide:"any",note:"Tides have little impact; an outgoing tide can put a current through the deep section."},
-  Steps:{id:288,tide:"any",note:"Entry is swell-gated — reconsider if the Monuments buoy is over ~0.8 m."},
-  Chowder:{id:270,tide:"high",note:"Shallow — best at high tide; as little as 2 m over much of the route at low water."},
-  CampCove:{id:267,tide:"high",note:"Shallow bay; a metre or two deeper on a high tide. Well sheltered from southerly seas."},
-  Fairlight:{id:636,tide:"high",note:"“Best at or near high tide.” Shallow entry — flop in, do not jump."},
-  Gordons:{id:282,tide:"incoming",note:"“Better on the incoming tide.” Good day or night dive."},
-  SharkPoint:{id:325,tide:"any",note:"Advanced only — exposed entry, not for inexperienced divers without a guide."},
-  LittleBay:{id:297,tide:"any"},
-  Oak:{id:314,tide:"incoming",note:"Viz 3–15 m (avg 7–8), marginally better on an incoming tide. Behind-pool entry at low tide."},
-  NorthBondi:{id:313,tide:"any",note:"Ben Buckler Point; pick the entry to the sea state — calm seas open the southern platform. The flat rock area is entry-only and best at low tide; otherwise enter and exit via the boat ramp."}
+  CTB:{id:"fairy-bower",tide:"any"},
+  BIE:{id:"bare-island-left-eastern-side",tide:"any"},
+  Monument:{id:"the-monuments",tide:"any"},
+  BIW:{id:"bare-island-right-western-side",tide:"any",note:"Tides have little impact; an outgoing tide can put a current through the deep section."},
+  BIWestmost:{id:"larpa-bay-astrolabe-cove",tide:"any"},
+  Steps:{id:"inscription-point-the-steps",tide:"any",note:"Entry is swell-gated — reconsider if the Monuments buoy is over ~0.8 m."},
+  Chowder:{id:"chowder-bay",tide:"high",note:"Shallow — best at high tide; as little as 2 m over much of the route at low water."},
+  CampCove:{id:"camp-cove",tide:"high",note:"Shallow bay; a metre or two deeper on a high tide. Well sheltered from southerly seas."},
+  Fairlight:{id:"fairlight",tide:"high",note:"“Best at or near high tide.” Shallow entry — flop in, do not jump."},
+  Gordons:{id:"thompsons-bay-also-known-as-thommos-or-gordons-bay",tide:"incoming",note:"“Better on the incoming tide.” Good day or night dive."},
+  SharkPoint:{id:"shark-point",tide:"any",note:"Advanced only — exposed entry, not for inexperienced divers without a guide."},
+  LittleBay:{id:"little-bay",tide:"any"},
+  Oak:{id:"oak-park",tide:"incoming",note:"Viz 3–15 m (avg 7–8), marginally better on an incoming tide. Behind-pool entry at low tide."},
+  NorthBondi:{id:"north-bondi-ben-buckler-point",tide:"any",note:"Ben Buckler Point; pick the entry to the sea state — calm seas open the southern platform. The flat rock area is entry-only and best at low tide; otherwise enter and exit via the boat ramp."},
+  BassPoint:{id:"the-gutter-bass-point",tide:"any"},
+  Bushranger:{id:"bushrangers-bay",tide:"any"}
 };
 
 /* The weather group a site reads (wind, tide), and the Worker's own fallback to `main`. */
@@ -752,7 +761,7 @@ function tideGuide(key, day, pick){
     line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
   }
   if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
-    + '<a href="' + MCF_BASE + m.id + '" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
+    + '<a href="' + MCF_BASE + m.id + '/" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
   return lines.length ? '<div class="tg">' + lines.join("") + '</div>' : "";
 }
 
