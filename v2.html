@@ -133,7 +133,10 @@
   .row{display:block;width:100%;text-align:left;background:none;border:0;
        border-top:1px solid var(--rule);padding:11px 13px;cursor:pointer;font:inherit;color:inherit}
   .row:first-child{border-top:0}
-  .row:hover{background:var(--rule)}
+  .row-foot{display:flex;align-items:center;gap:10px}
+  .exp{margin-left:auto;margin-top:6px;font:inherit;font-size:12.5px;font-weight:600;color:var(--accent);
+       background:none;border:0;padding:4px 0 2px 8px;cursor:pointer;white-space:nowrap}
+  .strip.tap .cell{cursor:pointer}
   .row-top{display:flex;align-items:baseline;gap:9px}
   .name{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
   .verdict{margin-left:auto;font-size:12.5px;font-weight:600;white-space:nowrap}
@@ -153,6 +156,9 @@
   .cell.s3{background:color-mix(in srgb, var(--cellc) 92%, var(--surface))}
   .day.past i,.day.past b{opacity:.45}
   .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
+  /* the hour the map and stats are showing */
+  .cell.sel{outline:2.5px solid var(--accent);outline-offset:1px;z-index:2}
+  .maphint{font-size:11.5px;color:var(--ink-3);font-weight:400;text-transform:none;letter-spacing:0}
   .ticks{display:flex;gap:2px;margin-top:3px}
   .ticks span{flex:1;font-size:11.5px;font-weight:500;color:var(--ink-2);text-align:center;
               letter-spacing:-.02em;white-space:nowrap;overflow:visible;font-variant-numeric:tabular-nums}
@@ -192,7 +198,7 @@
   .why{margin-top:11px;font-size:12.5px;color:var(--ink-2);line-height:1.5}
 
   /* site map, inside an open row */
-  .mapcard{margin-top:13px}
+  .mapcard{margin:0 0 13px}
   .mapcard b.lbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
          color:var(--ink-3);display:block;margin-bottom:5px}
   #siteMapCanvas{width:100%;display:block;border-radius:9px}
@@ -368,6 +374,9 @@ var TIER = {
 
 var DAY0 = 5, DAY1 = 22;           /* dawn to 10pm: the dive hours, night dives included */
 var data = null, dayIx = 0, openSite = null;
+/* The hour the open site's map and stats show, picked by tapping the bar. It is an hour of
+   the day, not an index, so it carries across days: pick a day, then a time. */
+var selH = null;
 /* Sydney, because the forecast is in Sydney hours and the viewer may not be. */
 var TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
 var TOMORROW = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" })
@@ -511,21 +520,26 @@ function render(){
         var unavailable = !data.sites[key];
         var cells = unavailable ? [] : cellsFor(key, day);
         var sum = unavailable ? { b:"none", t:"Not forecast yet" } : summarise(cells);
-        html += '<button class="row" data-site="' + key + '" aria-expanded="'
-              + (openSite === key) + '">'
+        var isOpen = openSite === key && !unavailable;
+        html += '<div class="row" data-site="' + key + '">'
               + '<span class="row-top"><span class="name">' + LABEL[key] + '</span>'
               + '<span class="verdict ' + sum.b + '">' + sum.t + '</span></span>';
         if (!unavailable) {
-          html += '<span class="strip">' + cells.map(function(c){
-            return '<span class="cell ' + c.b + ' ' + step(c.v) + (c.i === nowI ? ' now' : '') + '" title="'
+          var shown = isOpen ? pickCell(cells, nowI) : null;
+          html += '<span class="strip tap">' + cells.map(function(c){
+            return '<span class="cell ' + c.b + ' ' + step(c.v) + (c.i === nowI ? ' now' : '')
+                 + (shown && c.h === shown.h ? ' sel' : '') + '" data-h="' + c.h
+                 + '" role="button" aria-label="Show ' + fmtHour(c.h) + '" title="'
                  + fmtHour(c.h) + ' — ' + bandName(c.b) + '"></span>';
           }).join("") + '</span><span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
           }).join("") + '</span>';
         }
-        html += confidenceEl(key) + '</button>';
-        if (openSite === key && !unavailable) {
+        html += '<span class="row-foot">' + confidenceEl(key)
+              + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
+                 + (isOpen ? 'Hide ▴' : 'Details ▾') + '</button>') + '</span></div>';
+        if (isOpen) {
           html += detailFor(key, cells, nowI) + askEl(key, sum, day);
         }
       });
@@ -535,8 +549,23 @@ function render(){
   });
   document.getElementById("main").innerHTML = html;
   mountMap();
-  [].forEach.call(document.querySelectorAll(".row"), function(b){
-    b.onclick = function(){ openSite = openSite === b.dataset.site ? null : b.dataset.site; render(); };
+  /* Re-rendering can open or close a row above this one; keep the tapped row where the
+     finger left it. */
+  function keep(key, fn){
+    var el = document.querySelector('.row[data-site="' + key + '"]');
+    var y0 = el ? el.getBoundingClientRect().top : 0;
+    fn(); render();
+    var el2 = document.querySelector('.row[data-site="' + key + '"]');
+    if (el && el2) window.scrollBy(0, el2.getBoundingClientRect().top - y0);
+  }
+  [].forEach.call(document.querySelectorAll(".row"), function(r){
+    var key = r.dataset.site, ex = r.querySelector(".exp"), st = r.querySelector(".strip.tap");
+    if (ex) ex.onclick = function(){ keep(key, function(){ openSite = openSite === key ? null : key; }); };
+    if (st) st.onclick = function(ev){
+      var c = ev.target.closest ? ev.target.closest(".cell") : null;
+      if (!c || c.dataset.h == null) return;
+      keep(key, function(){ selH = +c.dataset.h; openSite = key; });
+    };
   });
   /* The draft goes to the clipboard rather than anywhere of ours: the post belongs to the
      diver, in the group, under their name. Nothing is sent from here. */
@@ -573,7 +602,10 @@ function mapSlot(key, pick, wind){
     swellDir: at(S.swellDir), swellH: at(S.swellH), swellP: at(S.swellP),
     windDir: wind ? wind.d : null, windKmh: k,
     chop: Math.max(0, Math.min(1, (k - 5) / 30)), windOnly: windOnly } };
-  return '<div class="mapcard"><b class="lbl">Map at ' + fmtHour(pick.h) + '</b>'
+  var dd = new Date(DAYS[dayIx].date + "T12:00:00+11:00")
+    .toLocaleDateString("en-AU", { weekday:"short", day:"numeric", month:"short" });
+  return '<div class="mapcard"><b class="lbl">Map · ' + dd + ', ' + fmtHour(pick.h)
+    + ' <span class="maphint">— tap an hour on the bar to move it</span></b>'
     + '<div id="mapSlot"></div><p class="maplegend">'
     + (windOnly
       ? 'The <span class="wd">wind</span> arrow shows where the wind is heading; the coloured '
@@ -778,11 +810,18 @@ function dayVerdict(key, cells){
   return '<p class="dayv">' + out + '</p>';
 }
 
-function detailFor(key, cells, nowI){
-  /* the hour shown: now if today and in range, else the middle of the best run */
-  var pick = cells.filter(function(c){ return c.i === nowI; })[0];
+/* The hour shown: the one tapped, else now if today and in range, else the middle of the
+   best run. */
+function pickCell(cells, nowI){
+  var pick = selH != null ? cells.filter(function(c){ return c.h === selH; })[0] : null;
+  if (!pick) pick = cells.filter(function(c){ return c.i === nowI; })[0];
   if (!pick) { var s = summarise(cells);
     pick = cells.filter(function(c){ return c.b === s.b; })[Math.floor(cells.length/6)] || cells[0]; }
+  return pick;
+}
+
+function detailFor(key, cells, nowI){
+  var pick = pickCell(cells, nowI);
   var S = data.sites[key], i = pick.i, W = data.weather || {};
   function at(a){ return a && a[i] != null ? a[i] : null; }
   /* MIRROR THE WORKER'S TIDE FALLBACK. Three WillyWeather locations — coogee, cronulla
@@ -816,6 +855,7 @@ function detailFor(key, cells, nowI){
 
   var day = DAYS[dayIx];
   return '<div class="detail">'
+    + mapSlot(key, pick, wind)
     + dayVerdict(key, cells)
     + '<div class="grid">'
     + stat("At " + fmtHour(pick.h), bandName(pick.b))
@@ -828,7 +868,6 @@ function detailFor(key, cells, nowI){
     + '</div>'
     + tideGuide(key, day, pick)
     + '<div class="ten"><b>Next ' + DAYS.length + ' days</b><span class="strip">' + ten + '</span></div>'
-    + mapSlot(key, pick, wind)
     + '</div>';
 }
 
