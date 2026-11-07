@@ -553,10 +553,19 @@ function render(){
      finger left it. */
   function keep(key, fn){
     var el = document.querySelector('.row[data-site="' + key + '"]');
-    var y0 = el ? el.getBoundingClientRect().top : 0;
+    var y0 = el ? el.getBoundingClientRect().top : 0, wasOpen = openSite === key;
     fn(); render();
     var el2 = document.querySelector('.row[data-site="' + key + '"]');
-    if (el && el2) window.scrollBy(0, el2.getBoundingClientRect().top - y0);
+    if (!el2) return;
+    if (openSite === key && !wasOpen) {
+      /* A site just opened: bring it up under the frozen header, so the other sites' bars
+         are off screen and only this one's bar, map and verdict are in view. The header
+         slims once scrolled, so settle its size first, then measure it. */
+      var hdr = document.querySelector("header");
+      if (el2.getBoundingClientRect().top + window.scrollY > 90) hdr.classList.add("compact");
+      var target = el2.getBoundingClientRect().top + window.scrollY;   /* measured after slimming */
+      window.scrollTo(0, Math.max(0, target - hdr.offsetHeight));
+    } else if (el) window.scrollBy(0, el2.getBoundingClientRect().top - y0);
   }
   [].forEach.call(document.querySelectorAll(".row"), function(r){
     var key = r.dataset.site, ex = r.querySelector(".exp"), st = r.querySelector(".strip.tap");
