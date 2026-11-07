@@ -7,10 +7,13 @@
 <meta name="description" content="When to dive, not just whether. 17 Sydney and NSW dive entries, hour by hour.">
 <meta name="theme-color" content="#f7f7f5">
 <script>
-/* Theme before first paint, so a saved choice never flashes the other one. */
-try { var t = localStorage.getItem("viz_v2_theme");
-      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
-} catch (e) {}
+/* Theme before first paint, so a saved choice never flashes the other one. Dark is the
+   default (owner, 7 Nov 2026); light only for a viewer who picked it with the toggle. */
+(function(){ var t = "dark";
+  try { var v = localStorage.getItem("viz_v2_theme"); if (v === "light" || v === "dark") t = v; } catch (e) {}
+  document.documentElement.setAttribute("data-theme", t);
+  if (t === "dark") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#121210");
+})();
 </script>
 <!--
   VIZ FORECAST v2 — the thin client for /forecast2.
@@ -82,9 +85,19 @@ try { var t = localStorage.getItem("viz_v2_theme");
   }
   .wrap{max-width:860px;margin:0 auto;padding:0 16px}
 
-  header{padding:22px 0 10px}
+  /* The header, day picker included, stays put: scrolled down to a southern site, the
+     days must still be one tap away. */
+  header{padding:14px 0 8px;position:sticky;top:0;z-index:20;background:var(--bg);
+         margin:0 -16px;padding-left:16px;padding-right:16px;border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:center;gap:12px}
-  .brand img{width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  .brand img{width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;
+             transition:width .15s,height .15s}
+  /* once scrolled, the frozen header slims to title + days so the rows keep the screen */
+  header.compact{padding-top:8px;padding-bottom:4px}
+  header.compact .brand img{width:30px;height:30px}
+  header.compact .sub{display:none}
+  header.compact .theme-btn{width:30px;height:30px;font-size:14px}
+  header.compact .days{padding-top:7px}
   .theme-btn{margin-left:auto;align-self:flex-start;width:36px;height:36px;border-radius:50%;
     border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer;
     display:grid;place-items:center;font-size:17px;line-height:1}
@@ -111,10 +124,10 @@ try { var t = localStorage.getItem("viz_v2_theme");
 
   /* region + rows */
   .region{margin:22px 0 0}
-  .region h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  .region h2{font-size:13.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
              color:var(--ink-3);display:flex;align-items:center;gap:8px;margin-bottom:7px}
   .region h2 em{font-style:normal;font-weight:500;letter-spacing:0;text-transform:none;
-                font-size:11.5px;color:var(--ink-3);opacity:.8}
+                font-size:12.5px;color:var(--ink-3);opacity:.8}
   .rows{background:var(--surface);border:1px solid var(--line);border-radius:12px;
         box-shadow:var(--shadow);overflow:hidden}
   .row{display:block;width:100%;text-align:left;background:none;border:0;
@@ -166,6 +179,16 @@ try { var t = localStorage.getItem("viz_v2_theme");
   .ten b{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
          color:var(--ink-3);display:block;margin-bottom:5px}
   .ten .strip{height:13px}
+  .dayv{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px}
+  .dayv b{font-weight:650}
+  .tg{margin-top:13px;display:flex;flex-direction:column;gap:7px}
+  .tg-line{display:flex;gap:9px;font-size:12.5px;line-height:1.5;color:var(--ink-2);
+           padding:8px 10px;border-radius:8px;background:var(--surface);border-left:3px solid var(--line)}
+  .tg-line.good{border-left-color:var(--easy)} .tg-line.bad{border-left-color:var(--caution)}
+  .tg-key{flex:0 0 74px;font-weight:700;color:var(--ink);font-size:12px}
+  .tg-line b{color:var(--ink);font-weight:600}
+  .tg-state{color:var(--ink-3)}
+  .tg-line a{color:var(--accent)}
   .why{margin-top:11px;font-size:12.5px;color:var(--ink-2);line-height:1.5}
 
   /* site map, inside an open row */
@@ -223,7 +246,7 @@ try { var t = localStorage.getItem("viz_v2_theme");
 
 <script>
 "use strict";
-/* Light/dark toggle: follows the system until tapped, then remembers this device's choice. */
+/* Light/dark toggle: dark by default, then remembers this device's choice. */
 (function(){
   var btn = document.getElementById("themeBtn"), root = document.documentElement;
   var sysDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
@@ -245,6 +268,11 @@ try { var t = localStorage.getItem("viz_v2_theme");
     paint();
   });
   if (sysDark && sysDark.addEventListener) sysDark.addEventListener("change", paint);
+  var hdr = document.querySelector("header");
+  /* hysteresis: shrinking the header moves the page under it, which must not flip it back */
+  function slim(){ var y = window.scrollY, c = hdr.classList.contains("compact");
+    if (!c && y > 90) hdr.classList.add("compact"); else if (c && y < 8) hdr.classList.remove("compact"); }
+  window.addEventListener("scroll", slim, { passive: true }); slim();
   paint();
 })();
 var API = "https://bold-rain-6ded.sticasale.workers.dev/forecast2";
@@ -565,6 +593,191 @@ function mountMap(){
   if (!_map.set(_mapReq.key, _mapReq.name, _mapReq.d)) slot.parentNode.style.display = "none";
 }
 
+/* ENTRY / CLARITY NOTES — v1's two tide lenses, DISPLAY ONLY (nothing here touches a score).
+   Clarity at the Botany Bay entries: the outgoing tide drains murkier bay water past them,
+   so they run clearest on the incoming. Elsewhere only what Michael McFadyen states plainly
+   on his site pages (`tide`), plus his short notes; v1's SITE_MCF, copied. BI Westmost is in
+   the same bay as BI West, so it gets the Botany clarity story but no McFadyen page. */
+var BOTANY = { Steps:1, Monument:1, BIE:1, BIW:1, BIWestmost:1 };
+var MCF_BASE = "https://www.michaelmcfadyenscuba.info/viewpage.php?page_id=";
+var MCF = {
+  CTB:{id:488,tide:"any"}, BIE:{id:256,tide:"any"}, Monument:{id:311,tide:"any"},
+  BIW:{id:261,tide:"any",note:"Tides have little impact; an outgoing tide can put a current through the deep section."},
+  Steps:{id:288,tide:"any",note:"Entry is swell-gated — reconsider if the Monuments buoy is over ~0.8 m."},
+  Chowder:{id:270,tide:"high",note:"Shallow — best at high tide; as little as 2 m over much of the route at low water."},
+  CampCove:{id:267,tide:"high",note:"Shallow bay; a metre or two deeper on a high tide. Well sheltered from southerly seas."},
+  Fairlight:{id:636,tide:"high",note:"“Best at or near high tide.” Shallow entry — flop in, do not jump."},
+  Gordons:{id:282,tide:"incoming",note:"“Better on the incoming tide.” Good day or night dive."},
+  SharkPoint:{id:325,tide:"any",note:"Advanced only — exposed entry, not for inexperienced divers without a guide."},
+  LittleBay:{id:297,tide:"any"},
+  Oak:{id:314,tide:"incoming",note:"Viz 3–15 m (avg 7–8), marginally better on an incoming tide. Behind-pool entry at low tide."},
+  NorthBondi:{id:313,tide:"any",note:"Ben Buckler Point; pick the entry to the sea state — calm seas open the southern platform. The flat rock area is entry-only and best at low tide; otherwise enter and exit via the boat ramp."}
+};
+
+/* The weather group a site reads (wind, tide), and the Worker's own fallback to `main`. */
+function wxAt(key, field, i){
+  var W = (data && data.weather) || {}, v = null;
+  for (var k in W) if (W[k] && W[k].sites && W[k].sites.indexOf(key) >= 0 && W[k][field])
+    v = W[k][field][i];
+  if (v == null && W.main && W.main[field]) v = W.main[field][i];
+  return v == null ? null : v;
+}
+function dirName(d){ if (d == null) return "";
+  return ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(d/22.5) % 16]; }
+
+/* Tide over one day: hourly heights, turning points, and the rising (incoming) runs. */
+function tideDay(key, day){
+  var all = [], d = day.date;
+  for (var i = 0; i < data.hours.length; i++)
+    if (dateOf(data.hours[i]) === d) all.push({ i:i, h:hourOf(data.hours[i]), t:wxAt(key, "tideM", i) });
+  if (all.filter(function(x){ return x.t != null; }).length < 12) return null;
+  function T(j){ var x = all[j]; if (!x) { var k = j < 0 ? all[0].i + j : all[all.length-1].i + (j - all.length + 1);
+                   return wxAt(key, "tideM", k); } return x.t; }
+  var highs = [], lows = [], ts = [];
+  all.forEach(function(x, j){
+    var a = T(j-1), b = x.t, c = T(j+1);
+    if (b == null) return; ts.push(b);
+    if (a != null && c != null && b >= a && b > c) highs.push(x.h);
+    if (a != null && c != null && b <= a && b < c) lows.push(x.h);
+    x.rising = c != null ? c > b : (a != null ? b > a : null);
+  });
+  var mid = (Math.min.apply(null, ts) + Math.max.apply(null, ts)) / 2;
+  all.forEach(function(x){ x.highish = x.t != null ? x.t >= mid : null; });
+  return { hrs:all, highs:highs, lows:lows };
+}
+/* "6a–12p and from 7p" — the runs of `test` inside the dive hours. */
+function runsText(td, test){
+  var out = [], run = null, inDay = td.hrs.filter(function(x){ return x.h >= DAY0 && x.h <= DAY1; });
+  inDay.forEach(function(x, j){
+    if (test(x)) { if (!run) run = { a:x.h, z:x.h }; else run.z = x.h; }
+    if ((!test(x) || j === inDay.length - 1) && run) {
+      out.push(run.a === inDay[0].h && run.z === inDay[inDay.length-1].h ? "all day"
+             : run.z === inDay[inDay.length-1].h ? "from " + fmtHour(run.a)
+             : run.a === inDay[0].h ? "till " + fmtHour(run.z + 1)
+             : fmtHour(run.a) + "–" + fmtHour(run.z + 1));
+      run = null; }
+  });
+  return out.join(" and ");
+}
+function hoursList(hs){
+  hs = hs.filter(function(h){ return h >= DAY0 - 2 && h <= DAY1 + 1; });
+  return hs.map(function(h){ return "about " + fmtHour(h); }).join(" and ");
+}
+
+function tideGuide(key, day, pick){
+  var td = tideDay(key, day), m = MCF[key], lines = [];
+  var cur = td ? td.hrs.filter(function(x){ return x.h === pick.h; })[0] : null;
+  var at = " at " + fmtHour(pick.h);
+  function line(cls, k, txt){ lines.push('<div class="tg-line ' + cls + '"><span class="tg-key">' + k
+                                        + '</span><span>' + txt + '</span></div>'); }
+  /* entry: McFadyen's depth need at the shallow entries */
+  if (m && (m.tide === "high" || m.tide === "low")) {
+    var when = td ? hoursList(m.tide === "high" ? td.highs : td.lows) : "";
+    var ok = cur && cur.highish != null ? (cur.highish === (m.tide === "high")) : null;
+    line(ok === true ? "good" : ok === false ? "bad" : "", "🚪 Entry",
+      "Shallow entry — get in around <b>" + m.tide + " tide</b>"
+      + (when ? " (" + m.tide + " " + when + ")" : "") + "."
+      + (ok === true ? ' <span class="tg-state">It’s there' + at + '.</span>'
+         : ok === false ? ' <span class="tg-state">Wrong end of the tide' + at + '.</span>' : ""));
+  }
+  /* clarity: Botany outflow, or McFadyen's incoming/outgoing */
+  var flow = BOTANY[key] ? "incoming" : (m && (m.tide === "incoming" || m.tide === "outgoing") ? m.tide : null);
+  if (flow) {
+    var runs = td ? runsText(td, function(x){ return x.rising === (flow === "incoming"); }) : "";
+    var okc = cur && cur.rising != null ? (cur.rising === (flow === "incoming")) : null;
+    var txt = "Clearest water on the <b>" + flow + " tide</b>"
+      + (runs ? " — today it runs " + (flow === "incoming" ? "in " : "out ") + runs : "") + ".";
+    if (BOTANY[key]) txt += (td && td.highs.length ? " Be in before the high at <b>" + hoursList(td.highs).replace(/about /g, "") + "</b>." : "")
+      + " Once it turns and runs out, murkier water draining from Botany Bay passes by and drops the visibility.";
+    txt += okc === true ? ' <span class="tg-state">Running that way' + at + '.</span>'
+         : okc === false ? ' <span class="tg-state">Not' + at + '.</span>' : "";
+    line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
+  }
+  if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
+    + '<a href="' + MCF_BASE + m.id + '" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
+  return lines.length ? '<div class="tg">' + lines.join("") + '</div>' : "";
+}
+
+/* DAY VERDICT — v1's describeConditions + describeTrend, rebuilt from what the Worker sent:
+   the hourly scores (their bands) and the swell, wind wave and wind beside them. It names
+   the best window, what turns the rest of the day worse and when, and the best hour. Words
+   only; it changes no score. */
+function dayVerdict(key, cells){
+  var S = data.sites[key], sc = cells.filter(function(c){ return c.v != null; });
+  if (!sc.length) return "";
+  var rank = { easy:3, caution:2, avoid:1 };
+  var windOnly = (data.windOnly || []).indexOf(key) >= 0 || (data.noNode || []).indexOf(key) >= 0;
+  function g(a, i){ return a && a[i] != null ? a[i] : null; }
+  function cond(i){ return { sw:windOnly ? null : g(S.swellH, i), sd:g(S.swellDir, i), sp:g(S.swellP, i),
+                             ww:g(S.seaH, i), wk:wxAt(key, "windKmh", i), wd:wxAt(key, "windDir", i) }; }
+  function full(c){ /* the biggest thing in the water */
+    var o = [];
+    if (c.sw != null && c.sw >= 0.25) o.push({ v:c.sw / 0.5, t:c.sw.toFixed(1) + " m " + dirName(c.sd) + " swell"
+                                              + (c.sp ? " at " + Math.round(c.sp) + "s" : "") });
+    if (c.ww != null && c.ww >= 0.2) o.push({ v:c.ww / 0.3, t:c.ww.toFixed(1) + " m wind waves" });
+    if (c.wk != null && c.wk >= 12) o.push({ v:c.wk / 15, t:Math.round(c.wk) + " km/h " + dirName(c.wd) + " wind" });
+    o.sort(function(a, b){ return b.v - a.v; });
+    return o;
+  }
+  function change(a, b){ /* what grew most between a (better) and b (worse) */
+    var o = [];
+    if (a.sw != null && b.sw != null) o.push({ v:(b.sw - a.sw) / 0.5, t:"the " + dirName(b.sd) + " swell builds to "
+                                              + b.sw.toFixed(1) + " m" + (b.sp ? " at " + Math.round(b.sp) + "s" : "") });
+    if (a.ww != null && b.ww != null) o.push({ v:(b.ww - a.ww) / 0.3, t:"wind waves build to " + b.ww.toFixed(1) + " m" });
+    if (a.wk != null && b.wk != null) o.push({ v:(b.wk - a.wk) / 15, t:"the " + dirName(b.wd) + " wind rises to "
+                                              + Math.round(b.wk) + " km/h" });
+    o.sort(function(x, y){ return y.v - x.v; });
+    return o[0] && o[0].v > 0.15 ? o[0].t : null;
+  }
+  /* ties go to the hour nearest late morning, not to the pre-dawn first one */
+  var top = sc.reduce(function(a, c){ return c.v > a.v || (c.v === a.v && Math.abs(c.h - 11) < Math.abs(a.h - 11)) ? c : a; });
+  var low = sc.reduce(function(a, c){ return c.v < a.v ? c : a; });
+  var bestB = top.b, worstB = low.b, out;
+
+  if (bestB === worstB) {
+    var f = full(cond(low.i));
+    if (bestB === "easy") out = !f.length ? "Mostly flat with very little water movement all day."
+      : /wind$/.test(f[0].t) && f[0].v >= 25/15
+        ? "Easy all day, even as the " + f[0].t.replace(/^(\d+ km\/h) (\w+) wind$/, "$2 wind reaches $1") + "."
+        : "Settled all day, with only minor " + f[0].t + ".";
+    else if (bestB === "caution") out = "Some movement to be aware of all day, mainly from " + (f[0] ? f[0].t : "the tide") + ".";
+    else out = "Rough and exposed all day — driven by " + (f[0] ? f[0].t : "strong water movement") + ".";
+  } else {
+    /* the longest run of the best band, and the first worst-band hour either side of it */
+    var run = null, cur = null;
+    cells.forEach(function(c, j){
+      if (c.b === bestB) { if (!cur) cur = { a:j, z:j }; else cur.z = j; }
+      else { if (cur && (!run || cur.z - cur.a > run.z - run.a)) run = cur; cur = null; }
+    });
+    if (cur && (!run || cur.z - cur.a > run.z - run.a)) run = cur;
+    var win = run.a === 0 ? "till " + fmtHour(cells[run.z].h + 1)
+            : run.z === cells.length - 1 ? "from " + fmtHour(cells[run.a].h)
+            : fmtHour(cells[run.a].h) + "–" + fmtHour(cells[run.z].h + 1);
+    out = "<b>" + bandName(bestB) + " " + win + "</b>";
+    var after = null, before = null, j;
+    for (j = run.z + 1; j < cells.length; j++) if (rank[cells[j].b] < rank[bestB]) { after = cells[j]; break; }
+    for (j = run.a - 1; j >= 0; j--) if (rank[cells[j].b] < rank[bestB]) { before = cells[j]; break; }
+    var parts = [];
+    if (after) { var why = change(cond(cells[run.z].i), cond(after.i));
+      parts.push("from " + fmtHour(after.h) + " it turns " + bandName(after.b)
+                 + (why ? " as " + why : "")); }
+    if (before) { var why2 = change(cond(cells[run.a].i), cond(before.i));
+      parts.push("before " + fmtHour(cells[run.a].h) + " it’s " + bandName(before.b)
+                 + (why2 ? ", while " + why2.replace("builds to", "is").replace("rises to", "is at") : "")); }
+    out += parts.length ? "; " + parts.join(", and ") + "." : ".";
+    var lw = sc.filter(function(c){ return c.b === worstB; });
+    if (worstB !== (after || before || {}).b && lw.length)
+      out += " It reaches " + bandName(worstB) + " around " + fmtHour(lw[0].h) + ".";
+  }
+  /* the best hour, and what the water is doing then */
+  var tc = cond(top.i), bits = [];
+  var sea = tc.sw != null && tc.ww != null ? Math.sqrt(tc.sw*tc.sw + tc.ww*tc.ww) : (tc.ww != null ? tc.ww : tc.sw);
+  if (sea != null) bits.push(sea < 0.05 ? "flat at the entry" : "sea at the entry " + sea.toFixed(1) + " m");
+  if (tc.wk != null) bits.push(Math.round(tc.wk) + " km/h " + dirName(tc.wd) + " wind");
+  out += " Best around <b>" + fmtHour(top.h) + "</b>" + (bits.length ? " (" + bits.join(", ") + ")" : "") + ".";
+  return '<p class="dayv">' + out + '</p>';
+}
+
 function detailFor(key, cells, nowI){
   /* the hour shown: now if today and in range, else the middle of the best run */
   var pick = cells.filter(function(c){ return c.i === nowI; })[0];
@@ -601,7 +814,9 @@ function detailFor(key, cells, nowI){
          + ' — ' + s2.t + '"></span>';
   }).join("");
 
+  var day = DAYS[dayIx];
   return '<div class="detail">'
+    + dayVerdict(key, cells)
     + '<div class="grid">'
     + stat("At " + fmtHour(pick.h), bandName(pick.b))
     + stat("Sea at entry", combined != null ? combined.toFixed(2) + " m" : "–")
@@ -610,14 +825,11 @@ function detailFor(key, cells, nowI){
     + stat("Wind wave", ws != null ? ws.toFixed(2) + " m" : "–")
     + stat("Wind", wind && wind.k != null ? Math.round(wind.k) + " km/h " + dirTxt(wind.d) : "–")
     + stat("Tide", tide != null ? tide.toFixed(2) + " m" : "–")
+    + stat("Entry", ((data.entryTypes||{})[key] || "–").replace(/^./, function(c){ return c.toUpperCase(); }))
     + '</div>'
+    + tideGuide(key, day, pick)
     + '<div class="ten"><b>Next ' + DAYS.length + ' days</b><span class="strip">' + ten + '</span></div>'
     + mapSlot(key, pick, wind)
-    + '<p class="why">Entry type: ' + ((data.entryTypes||{})[key] || "–")
-    + '. Sea at the entry is the swell and the wind wave combined, as the nearshore model '
-    + 'puts them at this site — not the offshore forecast. Wind is shown separately '
-    + 'because chop raised locally over the fetch is a different thing from the wind '
-    + 'wave that travelled here.</p>'
     + '</div>';
 }
 
