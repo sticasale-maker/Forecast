@@ -135,7 +135,7 @@
   /* region + rows */
   .region{margin:22px 0 0}
   .region h2{font-size:13.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-             color:var(--ink-3);display:flex;align-items:center;gap:8px;margin-bottom:7px}
+             color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:7px}
   .region h2 em{font-style:normal;font-weight:500;letter-spacing:0;text-transform:none;
                 font-size:12.5px;color:var(--ink-3);opacity:.8}
   .rows{background:var(--surface);border:1px solid var(--line);border-radius:12px;
@@ -177,7 +177,7 @@
         margin-top:6px}
   .conf.thin{color:var(--caution)}
   h3.sub{font-size:11px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;
-    color:var(--ink-3);margin:18px 0 6px 2px}
+    color:var(--ink-2);margin:18px 0 6px 2px}
   .ask{background:var(--caution-bg);border-radius:10px;padding:11px 13px;margin:8px 0 2px}
   .askh{margin:0 0 4px;font-size:14px;color:var(--caution)}
   .askb{margin:0 0 9px;font-size:12.5px;line-height:1.55;color:var(--caution)}
@@ -215,7 +215,8 @@
   /* Sydney overview */
   .ov{margin-top:16px}
   .ov-head{display:flex;align-items:baseline;gap:8px;margin-bottom:7px}
-  .ov-head h2{font-size:13.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+  .ov-head h2{font-size:13.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink)}
+  .ov-head h2 span{color:var(--ink-3)}
   .ov-head h2 span{font-weight:500;letter-spacing:0;text-transform:none;font-size:12.5px}
   .ov-head .exp{margin-top:0}
   #ovCanvas{width:100%;display:block;border-radius:10px;cursor:pointer}
@@ -863,8 +864,10 @@ function pickCell(cells, nowI){
    for that hour (swell: WillyWeather's offshore figure once the Worker sends it). Its hour is the page's: the bar taps and the slider move the same selH. */
 var OV_LABEL = {"Freshwater": {"t": "Freshwater", "left": 0, "dy": 0}, "Fairlight": {"t": "Fairlight", "left": 1, "dy": 0}, "CTB": {"t": "CTB Bower Ln", "left": 1, "dy": 1.05}, "CampCove": {"t": "Camp Cove", "left": 0, "dy": -0.5}, "Chowder": {"t": "Chowder", "left": 1, "dy": 0}, "NorthBondi": {"t": "N Bondi", "left": 0, "dy": 0}, "SharkPoint": {"t": "Shark Pt", "left": 0, "dy": -0.45}, "Gordons": {"t": "Gordons", "left": 1, "dy": 0}, "SouthCoogee": {"t": "S Coogee", "left": 0, "dy": 0.45}, "LittleBay": {"t": "Little Bay", "left": 0, "dy": 0}, "BIWestmost": {"t": "BI W’most", "left": 1, "dy": 0}, "BIW": {"t": "BI W", "left": 1, "dy": 0.6}, "BIE": {"t": "BI E", "left": 0, "dy": 0}, "Monument": {"t": "Monument", "left": 0, "dy": -0.3}, "Steps": {"t": "Steps", "left": 0, "dy": 0.45}, "Oak": {"t": "Oak Park", "left": 0, "dy": 0}};
 var OV_OPEN = ["Freshwater", "NorthBondi", "SharkPoint", "Gordons", "SouthCoogee", "LittleBay", "Oak"];
+/* Open on every load (owner, 7 Nov 2026): "Hide" lasts only for this visit, so nobody
+   who once tapped it is left without the map. */
 var _ov = null, _ovOpen = true;
-try { _ovOpen = localStorage.getItem("viz_v2_ov") !== "0"; } catch (e) {}
+try { localStorage.removeItem("viz_v2_ov"); } catch (e) {}
 function ovHour(){
   var day = DAYS[dayIx], nowI = nowIndex();
   if (selH != null && day.idx.some(function(p){ return p.h === selH; })) return selH;
@@ -915,7 +918,7 @@ function renderOverview(){
 function ovSetup(){
   document.getElementById("ovHour").oninput = function(){ selH = +this.value; renderOverview(); render(); };
   document.getElementById("ovToggle").onclick = function(){
-    _ovOpen = !_ovOpen; try { localStorage.setItem("viz_v2_ov", _ovOpen ? "1" : "0"); } catch (e) {}
+    _ovOpen = !_ovOpen;
     renderOverview(); };
   document.getElementById("ovCanvas").onclick = function(ev){
     if (!_ov || !_ov._dots) return;
