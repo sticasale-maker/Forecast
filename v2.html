@@ -586,8 +586,10 @@ function confidenceEl(key){
   /* "checking" and "thin" are DIFFERENT problems and must not share a sentence. Bass Point
      has 42 verdicts and is provisional because a dived day still reads Avoid; Fairlight has
      one verdict and no failing check. "Only 42 diver reports" read as nonsense. */
+  /* Owner, 7 Nov 2026: drop "and one check still failing" from the public line; the
+     amber ⚠ still marks the site as provisional. */
   if (t === "checking")  return '<span class="conf thin">⚠ ' + n
-                              + ' reports, and one check still failing</span>';
+                              + ' diver reports behind this</span>';
   if (t === "none")      return '<span class="conf thin">⚠ '
                               + (n > 0 ? 'barely calibrated — ' + n + ' local report'
                                          + (n > 1 ? 's' : '')
@@ -620,7 +622,7 @@ function askEl(key, sum, day){
   return '<div class="ask"><p class="askh">Diving ' + LABEL[key] + '? Tell the group how it went.</p>'
        + '<p class="askb">' + (REPORTS[key] > 0
             ? (TIER[key] === "checking"
-                 ? 'This site has ' + REPORTS[key] + ' reports and still fails one of our checks.'
+                 ? 'This site has ' + REPORTS[key] + ' reports; borderline days would sharpen it most.'
                  : 'Only ' + REPORTS[key] + ' report' + (REPORTS[key] > 1 ? 's' : '') + ' stand behind this score.')
             : 'Nothing local stands behind this score yet.')
        + ' A named post on VIZ is worth far more than a tap — it carries your name, the hour '
