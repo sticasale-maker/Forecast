@@ -825,7 +825,6 @@ function detailFor(key, cells, nowI){
     + stat("Wind wave", ws != null ? ws.toFixed(2) + " m" : "–")
     + stat("Wind", wind && wind.k != null ? Math.round(wind.k) + " km/h " + dirTxt(wind.d) : "–")
     + stat("Tide", tide != null ? tide.toFixed(2) + " m" : "–")
-    + stat("Entry", ((data.entryTypes||{})[key] || "–").replace(/^./, function(c){ return c.toUpperCase(); }))
     + '</div>'
     + tideGuide(key, day, pick)
     + '<div class="ten"><b>Next ' + DAYS.length + ' days</b><span class="strip">' + ten + '</span></div>'
