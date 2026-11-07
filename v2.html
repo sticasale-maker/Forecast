@@ -6,6 +6,16 @@
 <title>VIZ Forecast V2 — when to dive</title>
 <meta name="description" content="When to dive, not just whether. 17 Sydney and NSW dive entries, hour by hour.">
 <meta name="theme-color" content="#f7f7f5">
+<!-- Home-screen icon: the VIZ logo (same files as v1). Its own manifest so an installed
+     shortcut opens v2, not v1. -->
+<link rel="manifest" href="manifest-v2.webmanifest">
+<link rel="apple-touch-icon" href="image_1.png">
+<link rel="icon" type="image/png" href="image_1.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIZ V2">
+<meta name="application-name" content="VIZ V2">
 <script>
 /* Theme before first paint, so a saved choice never flashes the other one. Dark is the
    default (owner, 7 Nov 2026); light only for a viewer who picked it with the toggle. */
@@ -87,7 +97,8 @@
 
   /* The header, day picker included, stays put: scrolled down to a southern site, the
      days must still be one tap away. */
-  header{padding:8px 0 6px;position:sticky;top:0;z-index:20;background:var(--bg);
+  /* safe-area: launched from the home screen the page runs under the iPhone status bar */
+  header{padding:calc(8px + env(safe-area-inset-top, 0px)) 0 6px;position:sticky;top:0;z-index:20;background:var(--bg);
          margin:0 -16px;padding-left:16px;padding-right:16px;border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:center;gap:10px}
   .brand img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
