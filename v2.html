@@ -164,6 +164,13 @@
   .cell.s1{background:color-mix(in srgb, var(--cellc) 34%, var(--surface))}
   .cell.s2{background:color-mix(in srgb, var(--cellc) 62%, var(--surface))}
   .cell.s3{background:color-mix(in srgb, var(--cellc) 92%, var(--surface))}
+  /* DARK THEME: BRIGHTER = BETTER (owner, 7 Nov 2026). Mixed into a dark surface, the
+     "pale" step comes out the darkest, so a vivid green read as the best Easy when it
+     was the worst. On dark the steps are swapped: s1, the best end of a band, is the
+     most vivid and s3, the end nearest the next band down, the dimmest. Light theme
+     already reads that way (pale on white = lighter = better), so it is unchanged. */
+  :root[data-theme="dark"] .cell.s1{background:color-mix(in srgb, var(--cellc) 92%, var(--surface))}
+  :root[data-theme="dark"] .cell.s3{background:color-mix(in srgb, var(--cellc) 34%, var(--surface))}
   .day.past i,.day.past b{opacity:.45}
   .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
   /* the hour the map and stats are showing */
@@ -1107,10 +1114,10 @@ function boot(j){
     "updated " + (age < 90 ? age + " min ago" : Math.round(age/60) + " h ago");
   document.getElementById("legend").innerHTML =
     ['easy','caution','avoid'].map(function(b){
-      // All three steps, light to deep, so the strip's nuance has a key.
-      return '<span>' + [34, 62, 92].map(function(p){
-        return '<i class="st" style="background:color-mix(in srgb, var(--' + b + '-cell) '
-             + p + '%, var(--surface))"></i>'; }).join("") + bandName(b) + '</span>'; }).join("")
+      // All three steps, best end of the band first, drawn with the bars' own classes
+      // so the key always matches the bars on either theme.
+      return '<span>' + ['s1', 's2', 's3'].map(function(st){
+        return '<i class="st cell ' + b + ' ' + st + '"></i>'; }).join("") + bandName(b) + '</span>'; }).join("")
     + '<span><i style="background:var(--none);border:1px solid var(--line)"></i>No data</span>';
   document.getElementById("foot").innerHTML =
     "Conditions change faster than any forecast. Look at the water before you get in."
