@@ -9,7 +9,7 @@
 <meta property="og:site_name" content="VIZ Forecast">
 <meta property="og:title" content="VIZ Forecast V2 — when to dive, hour by hour">
 <meta property="og:description" content="Hour-by-hour swell, wind and tide for 19 Sydney and NSW dive entries, with a live map of the coast. By divers, for divers.">
-<meta property="og:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png?v=2">
+<meta property="og:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png?v=3">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/png">
@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VIZ Forecast V2 — when to dive, hour by hour">
 <meta name="twitter:description" content="Hour-by-hour swell, wind and tide for 19 Sydney and NSW dive entries, with a live map of the coast. By divers, for divers.">
-<meta name="twitter:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png?v=2">
+<meta name="twitter:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png?v=3">
 <meta name="theme-color" content="#f7f7f5">
 <!-- Home-screen icon: the VIZ logo (same files as v1). Its own manifest so an installed
      shortcut opens v2, not v1. -->
@@ -174,23 +174,15 @@
   .cell{flex:1;border-radius:2px;background:var(--none);position:relative}
   .cell.easy{--cellc:var(--easy-cell)} .cell.caution{--cellc:var(--caution-cell)}
   .cell.avoid{--cellc:var(--avoid-cell)}
-  /* ONE SCALE, BRIGHT GREEN AT ONE END AND BRIGHT RED AT THE OTHER (owner, 7 Nov 2026).
-     s1 is the best end of a band, s3 the end nearest the next band down:
-       Easy     fades as it worsens:   vivid green -> dim green
-       Caution  shifts in hue:         yellow -> amber -> orange (toward red)
-       Avoid    builds as it worsens:  dim red -> vivid red
-     Caution sits between two dim ends, so brightness cannot carry its order; hue does.
-     Same on both themes. */
-  .cell.easy,.cell.caution,.cell.avoid{background:color-mix(in srgb, var(--cellc) 62%, var(--surface))}
-  .cell.easy.s1{background:color-mix(in srgb, var(--easy-cell) 95%, var(--surface))}
-  .cell.easy.s2{background:color-mix(in srgb, var(--easy-cell) 62%, var(--surface))}
-  .cell.easy.s3{background:color-mix(in srgb, var(--easy-cell) 34%, var(--surface))}
-  .cell.caution.s1{background:color-mix(in srgb, #ead23c 90%, var(--surface))}
-  .cell.caution.s2{background:color-mix(in srgb, #f6a92f 90%, var(--surface))}
-  .cell.caution.s3{background:color-mix(in srgb, #f47a2b 92%, var(--surface))}
-  .cell.avoid.s1{background:color-mix(in srgb, var(--avoid-cell) 34%, var(--surface))}
-  .cell.avoid.s2{background:color-mix(in srgb, var(--avoid-cell) 62%, var(--surface))}
-  .cell.avoid.s3{background:color-mix(in srgb, var(--avoid-cell) 95%, var(--surface))}
+  /* ONE CONTINUOUS SCALE, bright green to bright red (owner, 7 Nov 2026): the nine steps
+     are one ramp, so each band's end touches the next band's start. Sampled at equal
+     perceptual (OKLab) distances along green -> lime -> yellow -> orange -> red, so no
+     step, inside a band or across a cut, jumps more than its neighbours. s1 is the best
+     end of a band, s3 the end nearest the next band down. Same on both themes. */
+  .cell.easy,.cell.caution,.cell.avoid{background:var(--cellc)}
+  .cell.easy.s1{background:#1fb85a}    .cell.easy.s2{background:#74c446}    .cell.easy.s3{background:#abcc2d}
+  .cell.caution.s1{background:#dfca2b} .cell.caution.s2{background:#efb52a} .cell.caution.s3{background:#f2972a}
+  .cell.avoid.s1{background:#f07828}   .cell.avoid.s2{background:#ea5624}   .cell.avoid.s3{background:#e2261f}
   .day.past i,.day.past b{opacity:.45}
   .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
   /* the hour the map and stats are showing */
