@@ -9,7 +9,7 @@
 <meta property="og:site_name" content="VIZ Forecast">
 <meta property="og:title" content="VIZ Forecast V2 — when to dive, hour by hour">
 <meta property="og:description" content="Hour-by-hour swell, wind and tide for 19 Sydney and NSW dive entries, with a live map of the coast. By divers, for divers.">
-<meta property="og:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png">
+<meta property="og:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/png">
@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VIZ Forecast V2 — when to dive, hour by hour">
 <meta name="twitter:description" content="Hour-by-hour swell, wind and tide for 19 Sydney and NSW dive entries, with a live map of the coast. By divers, for divers.">
-<meta name="twitter:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png">
+<meta name="twitter:image" content="https://app.viz.net.au/Forecast/og-cover-v2.png?v=2">
 <meta name="theme-color" content="#f7f7f5">
 <!-- Home-screen icon: the VIZ logo (same files as v1). Its own manifest so an installed
      shortcut opens v2, not v1. -->
@@ -174,19 +174,23 @@
   .cell{flex:1;border-radius:2px;background:var(--none);position:relative}
   .cell.easy{--cellc:var(--easy-cell)} .cell.caution{--cellc:var(--caution-cell)}
   .cell.avoid{--cellc:var(--avoid-cell)}
-  /* Three steps per band, wide apart: light = the safe end of the band, deep = the end
-     nearest the next band down. */
+  /* ONE SCALE, BRIGHT GREEN AT ONE END AND BRIGHT RED AT THE OTHER (owner, 7 Nov 2026).
+     s1 is the best end of a band, s3 the end nearest the next band down:
+       Easy     fades as it worsens:   vivid green -> dim green
+       Caution  shifts in hue:         yellow -> amber -> orange (toward red)
+       Avoid    builds as it worsens:  dim red -> vivid red
+     Caution sits between two dim ends, so brightness cannot carry its order; hue does.
+     Same on both themes. */
   .cell.easy,.cell.caution,.cell.avoid{background:color-mix(in srgb, var(--cellc) 62%, var(--surface))}
-  .cell.s1{background:color-mix(in srgb, var(--cellc) 34%, var(--surface))}
-  .cell.s2{background:color-mix(in srgb, var(--cellc) 62%, var(--surface))}
-  .cell.s3{background:color-mix(in srgb, var(--cellc) 92%, var(--surface))}
-  /* DARK THEME: BRIGHTER = BETTER (owner, 7 Nov 2026). Mixed into a dark surface, the
-     "pale" step comes out the darkest, so a vivid green read as the best Easy when it
-     was the worst. On dark the steps are swapped: s1, the best end of a band, is the
-     most vivid and s3, the end nearest the next band down, the dimmest. Light theme
-     already reads that way (pale on white = lighter = better), so it is unchanged. */
-  :root[data-theme="dark"] .cell.s1{background:color-mix(in srgb, var(--cellc) 92%, var(--surface))}
-  :root[data-theme="dark"] .cell.s3{background:color-mix(in srgb, var(--cellc) 34%, var(--surface))}
+  .cell.easy.s1{background:color-mix(in srgb, var(--easy-cell) 95%, var(--surface))}
+  .cell.easy.s2{background:color-mix(in srgb, var(--easy-cell) 62%, var(--surface))}
+  .cell.easy.s3{background:color-mix(in srgb, var(--easy-cell) 34%, var(--surface))}
+  .cell.caution.s1{background:color-mix(in srgb, #ead23c 90%, var(--surface))}
+  .cell.caution.s2{background:color-mix(in srgb, #f6a92f 90%, var(--surface))}
+  .cell.caution.s3{background:color-mix(in srgb, #f47a2b 92%, var(--surface))}
+  .cell.avoid.s1{background:color-mix(in srgb, var(--avoid-cell) 34%, var(--surface))}
+  .cell.avoid.s2{background:color-mix(in srgb, var(--avoid-cell) 62%, var(--surface))}
+  .cell.avoid.s3{background:color-mix(in srgb, var(--avoid-cell) 95%, var(--surface))}
   .day.past i,.day.past b{opacity:.45}
   .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
   /* the hour the map and stats are showing */
@@ -426,8 +430,8 @@ function bandName(b){ return b === "easy" ? "Easy" : b === "caution" ? "Caution"
    "easy" and looked identical, so a strip could not show a day getting worse until it
    crossed a cut (owner, 2 Nov: "you can't see where in the color is the score").
 
-   Three steps per band, and DEEPER ALWAYS MEANS WORSE across all nine, so the whole strip
-   reads as one severity gradient rather than three unrelated ramps. MAX is the top of the
+   Three steps per band, read as ONE scale from bright green (best) to bright red (worst);
+   the CSS on .cell.s1-s3 says how each band carries it. MAX is the top of the
    Worker's internal scale — display semantics, like EASY and CAUTION, not tuning. */
 var MAX = 60;
 function step(v){
