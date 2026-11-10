@@ -340,7 +340,22 @@
         <span class="ticks" id="ovTicks"></span></div>
     </div>
   </section>
-  <main id="main"><p class="msg">Fetching conditions…</p></main>
+  <main id="main"><p class="msg" id="loadmsg">Fetching the latest for your adventures…</p></main>
+  <script>
+  /* THE WAIT, MADE LIGHTER (owner, 11 Nov): the first load takes a few seconds, so the line
+     changes every 2.2 s. It stops itself once boot() replaces #main and the line is gone. */
+  (function(){
+    var L = ["Fetching the latest for your adventures…", "Asking the swell nicely…",
+      "Counting waves at the bommie…", "Checking if the octopus is home…",
+      "Defogging the mask…", "Untangling the kelp…", "Bribing the wind to calm down…",
+      "Consulting a very wise blue groper…"], i = 0;
+    var t = setInterval(function(){
+      var el = document.getElementById("loadmsg");
+      if (!el) { clearInterval(t); return; }
+      el.textContent = L[++i % L.length];
+    }, 2200);
+  })();
+  </script>
   <div class="legend" id="legend"></div>
   <div class="more">
     <section>
