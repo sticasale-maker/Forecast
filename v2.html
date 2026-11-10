@@ -287,8 +287,17 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0 0;font-size:11.5px;color:var(--ink-3)}
   .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;
             margin-right:5px;vertical-align:-1px}
-  .legend i.st{width:9px;margin-right:1px}
-  .legend i.st:last-of-type{margin-right:5px}
+  /* The key is ONE continuous scale (owner, 11 Nov: "make the dots contiguous and add the
+     score above"): nine steps edge to edge, the % at each step boundary above, band names
+     below. Ticks are computed from EASY/CAUTION/MAX, so they move if the cuts do. */
+  .legend{align-items:flex-end}
+  .legend .scale{display:inline-flex;flex-direction:column;gap:3px;padding:0 9px}
+  .legend .ticks{position:relative;height:12px;font-size:9.5px;font-variant-numeric:tabular-nums}
+  .legend .ticks b{position:absolute;bottom:0;transform:translateX(-50%);font-weight:500;line-height:1}
+  .legend .bar{display:flex;border-radius:3px;overflow:hidden}
+  .legend .bar i.st{display:block;width:30px;height:12px;margin:0;border-radius:0}
+  .legend .names{display:flex}
+  .legend .names span{flex:1;text-align:center}
   footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.6}
   footer a{color:var(--accent)}
   .disclaimer{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:11px}
@@ -1127,11 +1136,26 @@ function boot(j){
   document.getElementById("sub").textContent =
     "updated " + (age < 90 ? age + " min ago" : Math.round(age/60) + " h ago");
   document.getElementById("legend").innerHTML =
-    ['easy','caution','avoid'].map(function(b){
-      // All three steps, best end of the band first, drawn with the bars' own classes
-      // so the key always matches the bars on either theme.
-      return '<span>' + ['s1', 's2', 's3'].map(function(st){
-        return '<i class="st cell ' + b + ' ' + st + '"></i>'; }).join("") + bandName(b) + '</span>'; }).join("")
+    (function(){
+      // Nine steps, best first, drawn with the bars' own classes so the key always matches
+      // the bars on either theme. Boundaries mirror step(): each band split in thirds,
+      // Avoid spanning CAUTION..0 with the same width as Caution.
+      var B = ['easy','caution','avoid'], edges = [], cells = "";
+      var tops = [MAX, EASY, CAUTION], spans = [MAX - EASY, EASY - CAUTION, EASY - CAUTION];
+      B.forEach(function(b, k){
+        for (var j = 0; j < 3; j++) {
+          edges.push(Math.max(0, tops[k] - spans[k] * j / 3));
+          cells += '<i class="st cell ' + b + ' s' + (j + 1) + '"></i>';
+        }
+      });
+      edges.push(0);
+      var ticks = edges.map(function(v, i){
+        return '<b style="left:' + (i * 100 / 9).toFixed(3) + '%">' + Math.round(v * 100 / MAX)
+          + '</b>'; }).join("");
+      return '<span class="scale"><span class="ticks">' + ticks + '</span><span class="bar">' + cells
+        + '</span><span class="names">' + B.map(function(b){ return '<span>' + bandName(b) + '</span>'; }).join("")
+        + '</span></span>';
+    })()
     + '<span><i style="background:var(--none);border:1px solid var(--line)"></i>No data</span>';
   document.getElementById("foot").innerHTML =
     "Conditions change faster than any forecast. Look at the water before you get in."
