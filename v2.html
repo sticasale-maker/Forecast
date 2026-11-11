@@ -126,13 +126,14 @@
      screen app, which has none; overscroll-behavior stops Chrome's native one from firing
      too and reloading the whole page on top of ours. */
   html,body{overscroll-behavior-y:contain}
-  #ptr{position:fixed;left:50%;top:0;z-index:40;width:36px;height:36px;margin-left:-18px;
-       border-radius:50%;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);
-       display:flex;align-items:center;justify-content:center;color:var(--ink-3);
-       transform:translateY(-48px);opacity:0;pointer-events:none}
+  #ptr{position:fixed;left:50%;top:0;z-index:40;height:36px;padding:0 14px 0 10px;gap:7px;
+       border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);
+       display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:12.5px;
+       white-space:nowrap;transform:translate(-50%,-48px);opacity:0;pointer-events:none}
   #ptr.snap{transition:transform .2s ease,opacity .2s ease}
   #ptr.ready{color:var(--accent)}
   #ptr svg{width:18px;height:18px}
+  #ptr svg{flex-shrink:0}
   #ptr.busy svg{animation:ptrspin .8s linear infinite}
   @keyframes ptrspin{to{transform:rotate(360deg)}}
   .theme-btn{margin-left:auto;align-self:center;width:30px;height:30px;border-radius:50%;
@@ -315,6 +316,18 @@
   footer a{color:var(--accent)}
   .disclaimer{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:11px}
   .msg{padding:36px 0;text-align:center;color:var(--ink-3);font-size:13.5px}
+  .msg small{display:block;margin-top:8px;font-size:11px;opacity:.7}
+  .quip{margin:14px 0 2px;padding:9px 12px;border-radius:10px;font-size:13px;text-align:center;
+        background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+  .quip.easy{border-color:var(--easy-cell)}
+  .quip.avoid{border-color:var(--avoid-cell)}
+  /* the logo easter egg's toast */
+  #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom, 0px));z-index:50;
+         transform:translate(-50%, 20px);opacity:0;transition:transform .25s ease,opacity .25s ease;
+         background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);
+         border-radius:20px;padding:9px 16px;font-size:13px;color:var(--ink);max-width:calc(100% - 32px);
+         text-align:center;pointer-events:none}
+  #toast.on{transform:translate(-50%, 0);opacity:1}
   /* every second hour is labelled; a phone too narrow for that keeps every fourth */
   @media (max-width:340px){ .ticks span:not(.t4){visibility:hidden} }
 </style>
@@ -349,6 +362,7 @@
       "Counting waves at the bommie…", "Checking if the octopus is home…",
       "Defogging the mask…", "Untangling the kelp…", "Bribing the wind to calm down…",
       "Consulting a very wise blue groper…"], i = 0;
+    window.VIZ_QUIPS = L;
     var t = setInterval(function(){
       var el = document.getElementById("loadmsg");
       if (!el) { clearInterval(t); return; }
@@ -381,7 +395,7 @@
           <textarea id="fbText" placeholder="Questions? Ideas? Send a message and don't forget your email if you want to be recontacted. Thanks!"></textarea>
           <button type="button" id="fbSend">Submit</button>
         </div>
-        <div class="fb-thanks" id="fbThanks" hidden>Thank you, have a great day! 😊</div>
+        <div class="fb-thanks" id="fbThanks" hidden>Got it! Your message is swimming our way 🐟</div>
       </div>
     </section>
 
@@ -686,7 +700,7 @@ function render(){
       sub[1].forEach(function(key){
         var unavailable = !data.sites[key];
         var cells = unavailable ? [] : cellsFor(key, day);
-        var sum = unavailable ? { b:"none", t:"Not forecast yet" } : summarise(cells);
+        var sum = unavailable ? { b:"none", t:"Still surveying this one" } : summarise(cells);
         var isOpen = openSite === key && !unavailable;
         html += '<div class="row" data-site="' + key + '">'
               + '<span class="row-top"><span class="name">' + LABEL[key] + '</span>'
@@ -714,6 +728,18 @@ function render(){
     });
     html += '</section>';
   });
+  /* A LINE FOR THE EXTREMES (owner, 11 Nov: "add all the funny lines"). Only when EVERY
+     forecast site agrees all day, and the Avoid one still says don't go -- a joke beside a
+     warning must never make the warning feel optional. */
+  var allB = Object.keys(data.sites).map(function(k){
+    return cellsFor(k, day).map(function(c){ return c.b; }).filter(function(b){ return b !== "none"; });
+  }).filter(function(a){ return a.length; });
+  if (allB.length) {
+    var all = function(b){ return allB.every(function(a){ return a.every(function(x){ return x === b; }); }); };
+    if (all("avoid")) html = '<p class="quip avoid">Every site says no today. Good day to service your reg.</p>' + html;
+    else if (all("easy")) html = '<p class="quip easy">Green across the board. Whoever sacrificed a GoPro '
+      + 'to the ocean gods, thank you.</p>' + html;
+  }
   document.getElementById("main").innerHTML = html;
   mountMap();
   /* Re-rendering can open or close a row above this one; keep the tapped row where the
@@ -751,7 +777,7 @@ function render(){
       ev.stopPropagation();
       var ok = b.parentNode.querySelector(".askok");
       var txt = b.dataset.draft;
-      function done(){ if (ok) { ok.hidden = false; } b.textContent = "Copied"; }
+      function done(){ if (ok) { ok.hidden = false; } b.textContent = "Copied. Spread the viz"; }
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(txt).then(done, function(){ b.textContent = "Press and hold to copy"; });
       } else {
@@ -1152,7 +1178,7 @@ function boot(j){
   data = j;
   DAYS = buildDays(j.hours);
   if (!DAYS.length) { document.getElementById("main").innerHTML =
-    '<p class="msg">The forecast came back without usable hours.</p>'; return; }
+    '<p class="msg">The forecast came back empty-handed, like a spearo on a bad day.</p>'; return; }
   /* OPEN ON TODAY, NOT ON DAYS[0]. The payload deliberately STARTS YESTERDAY — the Worker
      fetches WillyWeather from yesterday so the hours before today's first tide turn are
      bracketed by one, which is a real fix and not a bug. But it means index 0 is yesterday,
@@ -1203,8 +1229,9 @@ fetch(API)
   .then(boot)
   .catch(function(e){
     document.getElementById("main").innerHTML =
-      '<p class="msg">Could not reach the forecast.<br>' + e.message + '</p>';
-    document.getElementById("sub").textContent = "offline";
+      '<p class="msg">The forecast went for a dive and hasn\'t surfaced.<br>'
+      + 'Check your signal and pull down to try again.<br><small>' + e.message + '</small></p>';
+    document.getElementById("sub").textContent = "offline · no bars, no viz";
   });
 
 /* PULL DOWN TO REFRESH. Only from the very top of the page, only on a mostly vertical drag
@@ -1217,14 +1244,17 @@ fetch(API)
   el.id = "ptr";
   el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
     + 'stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/>'
-    + '<path d="M20 4v5h-5"/></svg>';
+    + '<path d="M20 4v5h-5"/></svg><span>Pull to check the ocean</span>';
   document.body.appendChild(el);
   var y0 = null, x0 = 0, pull = 0, busy = false, locked = false;
+  var svg = el.querySelector("svg"), lab = el.querySelector("span");
   function show(d, snap){
     el.classList.toggle("snap", !!snap);
-    el.style.transform = "translateY(" + (d - 48) + "px) rotate(" + (d / MAXP * 300) + "deg)";
+    el.style.transform = "translate(-50%," + (d - 48) + "px)";
+    if (!busy) svg.style.transform = "rotate(" + (d / MAXP * 300) + "deg)";
     el.style.opacity = Math.min(1, d / PULL);
     el.classList.toggle("ready", d >= PULL);
+    lab.textContent = busy ? "Checking the ocean…" : d >= PULL ? "Let go!" : "Pull to check the ocean";
   }
   function reset(){ pull = 0; y0 = null; locked = false; show(0, true); }
   function blocked(t){
@@ -1253,9 +1283,26 @@ fetch(API)
   window.addEventListener("touchend", end, { passive: true });
   window.addEventListener("touchcancel", reset, { passive: true });
 
+  /* EASTER EGG: five taps on the logo within two seconds shows a random line. */
+  var logo = document.querySelector(".brand img"), taps = [], toast = document.createElement("div"), tt;
+  toast.id = "toast"; document.body.appendChild(toast);
+  var EXTRA = ["Equalise early, equalise often.", "The wobby saw you first.",
+    "No, that's not a shark. Probably.", "Viz: somewhere between pea soup and aquarium.",
+    "Plan the dive, dive the plan, blame the forecast."];
+  if (logo) logo.addEventListener("click", function(){
+    var now = Date.now();
+    taps = taps.filter(function(t){ return now - t < 2000; }); taps.push(now);
+    if (taps.length < 5) return;
+    taps = [];
+    var pool = (window.VIZ_QUIPS || []).concat(EXTRA);
+    toast.textContent = pool[Math.floor(Math.random() * pool.length)];
+    toast.classList.add("on"); clearTimeout(tt);
+    tt = setTimeout(function(){ toast.classList.remove("on"); }, 3200);
+  });
+
   function refresh(){
     busy = true; y0 = null;
-    el.classList.add("busy"); show(PULL, true);
+    svg.style.transform = ""; el.classList.add("busy"); show(PULL, true);
     var keep = (typeof DAYS !== "undefined" && DAYS && DAYS[dayIx]) ? DAYS[dayIx].date : null;
     fetch(API, { cache: "reload" })
       .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
@@ -1266,7 +1313,7 @@ fetch(API)
           break;
         }
       })
-      .catch(function(){ document.getElementById("sub").textContent = "refresh failed — try again"; })
+      .catch(function(){ document.getElementById("sub").textContent = "dumped by a wave — pull again"; })
       .then(function(){ busy = false; el.classList.remove("busy"); reset(); });
   }
 })();
@@ -2157,7 +2204,7 @@ var VizSiteMap = (function () {
     var contact = c.value.trim(), text = t.value.trim();
     if (!contact) { c.classList.add("bad"); c.focus(); return; }
     if (!text) { t.classList.add("bad"); t.focus(); return; }
-    send.disabled = true; send.textContent = "Sending…";
+    send.disabled = true; send.textContent = "Sending… (bubbles rising)";
     var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, 12000);
     try {
       var res = await fetch("https://formsubmit.co/ajax/vizgroupsydney@gmail.com", {
@@ -2175,7 +2222,7 @@ var VizSiteMap = (function () {
       }
     } catch (e) {
       send.disabled = false; send.textContent = "Submit";
-      alert("Network error — please check your connection and try again.");
+      alert("Your message got caught in the kelp. Check your connection and try again.");
     } finally { clearTimeout(timer); }
   };
 })();
