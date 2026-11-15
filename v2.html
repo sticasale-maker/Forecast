@@ -210,7 +210,13 @@
         margin-top:6px}
   .conf.thin{color:var(--caution)}
   h3.sub{font-size:11px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;
-    color:var(--ink-2);margin:18px 0 6px 2px}
+    color:var(--ink-2);margin:18px 0 6px 2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* VIZ OUTLOOK chip: information beside the safety score, never part of it, so it is
+     drawn in neutral ink and an outline, not in the band colours. */
+  .vizchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;
+           letter-spacing:0;text-transform:none;color:var(--ink-2);border:1px dashed var(--ink-3);
+           border-radius:10px;padding:1px 8px;line-height:1.5;cursor:help;max-width:100%;flex-wrap:wrap}
+  .vizchip b{font-weight:600}
   .ask{background:var(--caution-bg);border-radius:10px;padding:11px 13px;margin:8px 0 2px}
   .askh{margin:0 0 4px;font-size:14px;color:var(--caution)}
   .askb{margin:0 0 9px;font-size:12.5px;line-height:1.55;color:var(--caution)}
@@ -683,6 +689,77 @@ function askEl(key, sum, day){
        + '<span class="askok" hidden>Copied — paste it into the VIZ group</span></div>';
 }
 
+/* VIZ OUTLOOK (owner, 15 Nov 2026). tools/viz_signal.mjs joined 936 VIZ posts that give viz
+   in metres to the rain and swell around their dates. A metres forecast did not beat each
+   site's usual viz, but a WARNING did: with 40 mm+ of rain in the 7 days before, or swell
+   2.5 m+ in the 3 days up to the day, posts reported poor viz (70% or less of the site's
+   usual) 33% vs 17% of the time at Shellharbour, 34% vs 22% in Botany Bay and 25% vs 16% on
+   the eastern beaches. Oak and Manly showed no usable difference, Seal Rocks and the harbour
+   too few posts, so they get no chip. Hence "may be", never "will be": two days in three
+   that carry the chip are still fine.
+   Drivers: Open-Meteo daily rain at a land point and wave_height_max offshore, the same
+   variables the analysis used (it used their ERA5 archive; live values come from their
+   forecast models). Fetched once per load, after the forecast; no chip if it fails. */
+var VIZ_OUT = {
+  "Eastern suburbs":        { rain: [-33.92, 151.25], sea: [-33.92, 151.40] },
+  "Botany Bay and Kurnell": { rain: [-33.99, 151.21], sea: [-34.02, 151.35] },
+  "Far south":              { rain: [-34.58, 150.87], sea: [-34.60, 151.00] }
+};
+var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, vizDrv = null;
+function vizAddDays(d, n){ var t = new Date(d + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+function vizChip(name, date){
+  var D = vizDrv && vizDrv[name];
+  if (!D) return "";
+  // Either driver alone is evidence, so a missing one only switches off its own test:
+  // a big swell still raises the chip when the rain feed is down, and vice versa.
+  var r7 = 0, h = 0, n, x, rainOk = !!D.rain, hsOk = !!D.hs;
+  for (n = 1; n <= 7 && rainOk; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) rainOk = false; else r7 += x; }
+  for (n = 0; n <= 3 && hsOk; n++) { x = D.hs[vizAddDays(date, -n)]; if (x == null) hsOk = false; else h = Math.max(h, x); }
+  var wet = rainOk && r7 >= VIZ_RAIN_MM, big = hsOk && h >= VIZ_SWELL_M;
+  if (!wet && !big) return "";
+  var why = wet && big ? Math.round(r7) + " mm rain + " + h.toFixed(1) + " m swell"
+          : wet ? Math.round(r7) + " mm rain this week" : h.toFixed(1) + " m swell recently";
+  return ' <span class="vizchip" title="Viz outlook, not part of the safety score. After a week with '
+    + VIZ_RAIN_MM + ' mm+ of rain or ' + VIZ_SWELL_M + ' m+ swell, divers reported poor viz about twice as often '
+    + '(still only about 1 day in 3). Based on 936 VIZ group reports, 2020-2025.">'
+    + '<b>Viz may be reduced</b> · ' + why + '</span>';
+}
+function loadVizOutlook(){
+  var names = Object.keys(VIZ_OUT), P = function(k){ return names.map(function(n){ return VIZ_OUT[n][k]; }); };
+  var lat = function(k){ return P(k).map(function(a){ return a[0]; }).join(","); };
+  var lon = function(k){ return P(k).map(function(a){ return a[1]; }).join(","); };
+  var arr = function(j){ return Array.isArray(j) ? j : [j]; };
+  // Each feed may fail on its own (15 Nov: Open-Meteo's forecast host timed out while the
+  // marine host answered), so neither waits on, or sinks, the other.
+  // 8 s cap: a host that hangs instead of failing must not hold the other feed back.
+  var get = function(u){
+    var ac = window.AbortController ? new AbortController() : null;
+    var t = ac ? setTimeout(function(){ ac.abort(); }, 8000) : 0;
+    return fetch(u, ac ? { signal: ac.signal } : undefined)
+      .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+      .then(arr, function(){ return null; })
+      .then(function(v){ clearTimeout(t); return v; });
+  };
+  Promise.all([
+    get("https://api.open-meteo.com/v1/forecast?latitude=" + lat("rain") + "&longitude=" + lon("rain")
+      + "&daily=precipitation_sum&past_days=8&forecast_days=14&timezone=Australia%2FSydney"),
+    get("https://marine-api.open-meteo.com/v1/marine?latitude=" + lat("sea") + "&longitude=" + lon("sea")
+      + "&daily=wave_height_max&past_days=4&forecast_days=10&timezone=Australia%2FSydney")
+  ]).then(function(res){
+    var R = res[0], M = res[1], out = {};
+    var col = function(J, i, f){
+      if (!J || !J[i] || !J[i].daily) return null;
+      var o = {}; J[i].daily.time.forEach(function(d, k){ o[d] = J[i].daily[f][k]; }); return o;
+    };
+    names.forEach(function(n, i){
+      var rain = col(R, i, "precipitation_sum"), hs = col(M, i, "wave_height_max");
+      if (rain || hs) out[n] = { rain: rain, hs: hs };
+    });
+    vizDrv = out;
+    if (DAYS && DAYS.length) render();
+  });
+}
+
 function render(){
   var day = DAYS[dayIx], nowI = nowIndex(), html = "";
   REGIONS.forEach(function(reg){
@@ -693,9 +770,10 @@ function render(){
     }).filter(function(sub){ return sub[1].length; });
     if (!subs.length) return;
     html += '<section class="region"><h2>' + reg[0]
-          + (reg[1] ? ' <em>' + reg[1] + '</em>' : '') + '</h2>';
+          + (reg[1] ? ' <em>' + reg[1] + '</em>' : '')
+          + (subs.length === 1 && !subs[0][0] ? vizChip(reg[0], day.date) : '') + '</h2>';
     subs.forEach(function(sub){
-      if (sub[0]) html += '<h3 class="sub">' + sub[0] + '</h3>';
+      if (sub[0]) html += '<h3 class="sub">' + sub[0] + vizChip(sub[0], day.date) + '</h3>';
       html += '<div class="rows">';
       sub[1].forEach(function(key){
         var unavailable = !data.sites[key];
@@ -1220,6 +1298,7 @@ function boot(j){
     + "responsibility or liability for any injury, loss or damage arising from use of this "
     + "forecast. If in doubt, don't go out.</p>";
   renderDays(); render(); ovSetup(); renderOverview();
+  if (!vizDrv) loadVizOutlook();
 }
 
 /* The Worker sends max-age=900 and only rebuilds every 30 min, so let the browser reuse a
