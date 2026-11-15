@@ -710,8 +710,32 @@ function askEl(key, sum, day){
 var VIZ_OUT = {
   "Eastern suburbs":        { rain: [-33.92, 151.25], sea: [-33.92, 151.40] },
   "Botany Bay and Kurnell": { rain: [-33.99, 151.21], sea: [-34.02, 151.35] },
-  "Far south":              { rain: [-34.58, 150.87], sea: [-34.60, 151.00] }
+  "Far south":              { rain: [-34.58, 150.87], sea: [-34.60, 151.00] },
+  // rowOnly: fetched for the per-site rain chip (VIZ_RAIN_SITE), never a heading chip --
+  // Oak's posts showed no swell effect, so Cronulla gets no 40 mm / 2.5 m heading chip.
+  "Cronulla":               { rain: [-34.06, 151.15], sea: [-34.10, 151.30], rowOnly: true }
 };
+/* PER-SITE RAIN CHIP (owner, 15 Nov 2026). tools/viz_persite.mjs, season removed: at these three
+   sites viz drops after much less rain than the heading chip's 40 mm. Pooled 2020-25 rank corr
+   -0.23 (161 posts), 2026 -0.37 (22), and McFadyen's own Monument dives -0.45 (26). Shown on the
+   site's row from 20 mm in the 7 days before; above 40 mm the heading chip already says it,
+   except at Oak, whose heading has none. */
+var VIZ_RAIN_SITE = {
+  Oak:      { region: "Cronulla", ev: "After 20 mm+ of rain in the week before, VIZ posts at Oak Park reported poor viz 38% of the time against 23% (2020-2026), and the 2026 posts agree." },
+  Gordons:  { region: "Eastern suburbs", ev: "After 20 mm+ of rain in the week before, VIZ posts at Gordons Bay reported poor viz 31% of the time against 17% (41 reports, 2020-2026: few, but the same pattern as Oak Park and the Monument)." },
+  Monument: { region: "Botany Bay and Kurnell", ev: "After 20 mm+ of rain in the week before, VIZ posts at the Monument reported poor viz 45% of the time against 19% (2020-2026), and Michael McFadyen's own dives there show the same." }
+};
+var VIZ_RAIN_SITE_MM = 20;
+function vizRainRow(key, date){
+  var v = VIZ_RAIN_SITE[key]; if (!v) return "";
+  var D = vizDrv && vizDrv[v.region]; if (!D || !D.rain) return "";
+  var r7 = 0, n, x;
+  for (n = 1; n <= 7; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) return ""; r7 += x; }
+  if (!VIZ_DEMO && (r7 < VIZ_RAIN_SITE_MM || (r7 >= VIZ_RAIN_MM && !VIZ_OUT[v.region].rowOnly))) return "";
+  return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. '
+    + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + Math.round(r7) + ' mm rain this week'
+    + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
+}
 var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, vizDrv = null;
 /* PREVIEW SWITCH: v2.html?vizdemo=1 shows the chip on every eligible heading whatever the
    thresholds say, with the real rain/swell figures and a "preview" tag, so the chip can be
@@ -719,6 +743,7 @@ var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, vizDrv = null;
 var VIZ_DEMO = /[?&]vizdemo=1(&|#|$)/.test(location.search);
 function vizAddDays(d, n){ var t = new Date(d + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
 function vizChip(name, date){
+  if (VIZ_OUT[name] && VIZ_OUT[name].rowOnly) return "";
   var D = vizDrv && vizDrv[name];
   if (!D) return VIZ_DEMO && VIZ_OUT[name] ? ' <span class="vizchip"><b>Viz may be reduced</b> · preview, no data yet</span>' : "";
   // Either driver alone is evidence, so a missing one only switches off its own test:
@@ -804,7 +829,7 @@ function render(){
           }).join("") + '</span><span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day);
+          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day) + vizRainRow(key, day.date);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -1039,6 +1064,18 @@ var VIZ_SEASON = {
   LittleBay: { best:[6,7,8], worst:[9,10,11,12,1,2], bestTxt:"June–August", worstTxt:"September–February",
                ev:"Winter is the clearest stretch at Little Bay: in VIZ posts 64% good or better and none poor in winter, against 19-26% good and 35-44% poor from September to February. McFadyen's few dives there point the same way." }
 };
+/* USUAL VIZ RANGE (owner, 15 Nov 2026). tools/viz_range.mjs: each site's middle 60% of VIZ
+   reports (20th-80th percentile, whole metres) is an honest range when tested a year at a time;
+   adjusting it for season, tide or the chip sharpened it only ~2%, so it is the site's usual,
+   never today's forecast. `in10` is how many reports in 10 actually fall inside the rounded
+   range. Sites with 30+ reports only. */
+var VIZ_RANGE = {
+  BassPoint:{lo:6,hi:13,n:266,in10:7}, BIW:{lo:4,hi:8,n:209,in10:6}, Oak:{lo:4,hi:9,n:101,in10:7},
+  LittleBay:{lo:3,hi:8,n:91,in10:7,who:"mostly snorkellers and freedivers"}, Bushranger:{lo:4,hi:8,n:89,in10:6},
+  Steps:{lo:5,hi:8,n:68,in10:5}, Fairlight:{lo:3,hi:6,n:61,in10:7}, SharkPoint:{lo:8,hi:15,n:52,in10:7},
+  Chowder:{lo:3,hi:5,n:52,in10:7}, CTB:{lo:3,hi:8,n:44,in10:8}, Gordons:{lo:5,hi:10,n:41,in10:8},
+  Monument:{lo:3,hi:8,n:36,in10:6}, Freshwater:{lo:6,hi:9,n:33,in10:6}
+};
 function vizSeasonRow(key, day){
   var v = VIZ_SEASON[key]; if (!v) return "";
   var m = +day.date.slice(5, 7);
@@ -1090,6 +1127,12 @@ function tideGuide(key, day, pick){
     txt += okc === true ? ' <span class="tg-state">Running that way' + at + '.</span>'
          : okc === false ? ' <span class="tg-state">Not' + at + '.</span>' : "";
     line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
+  }
+  if (VIZ_RANGE[key]) {
+    var vr = VIZ_RANGE[key];
+    line("", "🔭 Usual viz", "Usually <b>" + vr.lo + "–" + vr.hi + " m</b> here: about " + vr.in10
+      + " VIZ reports in 10 fall in that range (" + vr.n + " reports, 2020–2026"
+      + (vr.who ? ", " + vr.who : "") + "). A guide to the site, not a forecast for the day.");
   }
   if (VIZ_SEASON[key]) {
     var vs = VIZ_SEASON[key], mo = +day.date.slice(5, 7);
