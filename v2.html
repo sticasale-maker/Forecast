@@ -800,7 +800,7 @@ function render(){
           }).join("") + '</span><span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizTideRow(key, day);
+          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -1018,6 +1018,31 @@ function vizRuns(td, rising){
   });
   return out.join(" and ");
 }
+/* VIZ BY SEASON (owner, 15 Nov 2026). Two independent records agree that Sydney viz has a
+   calendar: Michael McFadyen's own log (tools/mcfadyen_viz.mjs, 1,235 dives at these sites
+   1988-2026, one observer, one 8-word scale) and the VIZ group posts (1,261, 2020-2026). Both
+   put winter clearest (57% / 42% of dives good or better, against 31-39% / 20-28% the rest of
+   the year) and October murkiest. Only sites where BOTH records show the same best and worst
+   stretch get a line; the Monument does not (the posts say winter, his few dives autumn).
+   Months are 1-12; `ev` is what the line rests on. */
+var VIZ_SEASON = {
+  BIW:       { best:[6,7,8], worst:[3,4,5], bestTxt:"June–August", worstTxt:"March–May",
+               ev:"Winter is the clearest stretch at Bare Island west: McFadyen logged 30% of his dives there good or better in winter against 12% in autumn; VIZ posts show 57% against 15%." },
+  Steps:     { best:[6,7,8], worst:[9,10,11], bestTxt:"June–August", worstTxt:"September–November",
+               ev:"Winter is the clearest stretch at the Steps and Inscription Point: 58% of McFadyen's dives good or better in winter against 25% in spring, July best and October worst; VIZ posts show 60% against 19%." },
+  Oak:       { best:[6,7,8], worst:[12,1,2,3,4,5], bestTxt:"June–August", worstTxt:"December–May",
+               ev:"Winter is the clearest stretch at Oak Park: 58% of McFadyen's dives good or better in winter against 26-29% from December to May; VIZ posts show 39% against 11-17%." },
+  LittleBay: { best:[6,7,8], worst:[9,10,11,12,1,2], bestTxt:"June–August", worstTxt:"September–February",
+               ev:"Winter is the clearest stretch at Little Bay: in VIZ posts 64% good or better and none poor in winter, against 19-26% good and 35-44% poor from September to February. McFadyen's few dives there point the same way." }
+};
+function vizSeasonRow(key, day){
+  var v = VIZ_SEASON[key]; if (!v) return "";
+  var m = +day.date.slice(5, 7);
+  var t = v.best.indexOf(m) >= 0 ? "usually the <b>clearest</b> time of year here (" + v.bestTxt + ")"
+        : v.worst.indexOf(m) >= 0 ? "usually a <b>murkier</b> time of year here (clearest " + v.bestTxt + ")" : "";
+  return t ? '<span class="vizt" title="' + v.ev.replace(/"/g, "&quot;") + '">🗓 ' + t + '</span>' : "";
+}
+
 function vizTideRow(key, day){
   var v = VIZ_TIDE[key]; if (!v) return "";
   var td = tideDay(key, day); if (!td) return "";
@@ -1061,6 +1086,11 @@ function tideGuide(key, day, pick){
     txt += okc === true ? ' <span class="tg-state">Running that way' + at + '.</span>'
          : okc === false ? ' <span class="tg-state">Not' + at + '.</span>' : "";
     line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
+  }
+  if (VIZ_SEASON[key]) {
+    var vs = VIZ_SEASON[key], mo = +day.date.slice(5, 7);
+    line(vs.best.indexOf(mo) >= 0 ? "good" : vs.worst.indexOf(mo) >= 0 ? "bad" : "", "🗓 Season",
+      "Viz is usually best <b>" + vs.bestTxt + "</b> and murkiest " + vs.worstTxt + ". " + vs.ev);
   }
   if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
     + '<a href="' + MCF_BASE + m.id + '/" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
