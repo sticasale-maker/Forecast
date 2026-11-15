@@ -174,6 +174,9 @@
        border-top:1px solid var(--rule);padding:11px 13px;cursor:pointer;font:inherit;color:inherit}
   .row:first-child{border-top:0}
   .row-foot{display:flex;align-items:center;gap:10px}
+  /* per-site viz-by-tide line, on the row itself (owner, 15 Nov 2026) */
+  .vizt{display:block;font-size:12px;color:var(--ink-2);margin:5px 0 1px;line-height:1.4}
+  .vizt b{font-weight:600;color:var(--ink)}
   .exp{margin-left:auto;margin-top:6px;font:inherit;font-size:12.5px;font-weight:600;color:var(--accent);
        background:none;border:0;padding:4px 0 2px 8px;cursor:pointer;white-space:nowrap}
   .strip.tap .cell{cursor:pointer}
@@ -797,7 +800,7 @@ function render(){
           }).join("") + '</span><span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>';
+          }).join("") + '</span>' + vizTideRow(key, day);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -982,6 +985,52 @@ function hoursList(hs){
   return hs.map(function(h){ return "about " + fmtHour(h); }).join(" and ");
 }
 
+/* VIZ BY TIDE, FROM THE REPORTS (owner, 15 Nov 2026). tools/viz_tide.mjs put 622 timed VIZ
+   posts with a viz figure or verdict on the Fort Denison tide at their entry time. Across all
+   sites viz was poor 43% of the time at 0.6 m or less vs 20% at 1.3 m or more, in morning and
+   afternoon dives alike, so it is the tide and not the light. Only sites where the reports
+   show it on their own get a line; the counts are what each one rests on.
+   `flow`: which half of the tide runs clearer; `high`: also say "best near high". */
+var VIZ_TIDE = {
+  LittleBay:  { flow:"incoming", high:true,
+                ev:"In 80 timed reports, viz was poor 13% of the time near high tide against 41% near low, and 24% on the rise against 43% on the fall." },
+  BIW:        { flow:"incoming", high:true,
+                ev:"In 141 timed reports, viz was poor 12% of the time near high tide against 28% near low." },
+  Steps:      { flow:"incoming", high:true,
+                ev:"In 37 timed reports, the higher the tide the better the viz, the strongest tide link of any site." },
+  BassPoint:  { flow:"incoming",
+                ev:"In 44 timed reports, viz was poor 5% of the time on the rising tide against 30% on the falling, and about 40% above its usual on the rise." },
+  Bushranger: { flow:"outgoing",
+                ev:"In 64 timed reports, viz was poor 22% of the time on the falling tide against 47% on the rising; the incoming tide seems to stir the inner bay." }
+};
+/* Rising/falling runs inside daylight dive hours (6a-7p), "6a-10a and from 5p". */
+function vizRuns(td, rising){
+  var out = [], run = null, inDay = td.hrs.filter(function(x){ return x.h >= 6 && x.h <= 19 && x.rising != null; });
+  inDay.forEach(function(x, j){
+    var on = x.rising === rising;
+    if (on) { if (!run) run = { a:x.h, z:x.h }; else run.z = x.h; }
+    if ((!on || j === inDay.length - 1) && run) {
+      out.push(run.a === inDay[0].h && run.z === inDay[inDay.length-1].h ? "all day"
+             : run.z === inDay[inDay.length-1].h ? "from " + fmtHour(run.a)
+             : run.a === inDay[0].h ? "till " + fmtHour(run.z + 1)
+             : fmtHour(run.a) + "–" + fmtHour(run.z + 1));
+      run = null; }
+  });
+  return out.join(" and ");
+}
+function vizTideRow(key, day){
+  var v = VIZ_TIDE[key]; if (!v) return "";
+  var td = tideDay(key, day); if (!td) return "";
+  var runs = vizRuns(td, v.flow === "incoming");
+  var highs = v.high ? td.highs.filter(function(h){ return h >= 6 && h <= 19; }) : [];
+  var txt = v.high && highs.length
+    ? "best near high tide, <b>about " + highs.map(fmtHour).join(" and ") + "</b>"
+      + (runs ? "; rising " + runs : "")
+    : runs ? "best on the " + (v.flow === "incoming" ? "rising" : "falling") + " tide, <b>" + runs + "</b>"
+    : "best on the " + (v.flow === "incoming" ? "rising" : "falling") + " tide, none in daylight today";
+  return '<span class="vizt" title="' + v.ev.replace(/"/g, "&quot;") + '">👁 Viz usually ' + txt + '</span>';
+}
+
 function tideGuide(key, day, pick){
   var td = tideDay(key, day), m = MCF[key], lines = [];
   var cur = td ? td.hrs.filter(function(x){ return x.h === pick.h; })[0] : null;
@@ -999,7 +1048,8 @@ function tideGuide(key, day, pick){
          : ok === false ? ' <span class="tg-state">Wrong end of the tide' + at + '.</span>' : ""));
   }
   /* clarity: Botany outflow, or McFadyen's incoming/outgoing */
-  var flow = BOTANY[key] ? "incoming" : (m && (m.tide === "incoming" || m.tide === "outgoing") ? m.tide : null);
+  var flow = VIZ_TIDE[key] ? VIZ_TIDE[key].flow
+           : BOTANY[key] ? "incoming" : (m && (m.tide === "incoming" || m.tide === "outgoing") ? m.tide : null);
   if (flow) {
     var runs = td ? runsText(td, function(x){ return x.rising === (flow === "incoming"); }) : "";
     var okc = cur && cur.rising != null ? (cur.rising === (flow === "incoming")) : null;
@@ -1007,6 +1057,7 @@ function tideGuide(key, day, pick){
       + (runs ? " — today it runs " + (flow === "incoming" ? "in " : "out ") + runs : "") + ".";
     if (BOTANY[key]) txt += (td && td.highs.length ? " Be in before the high at <b>" + hoursList(td.highs).replace(/about /g, "") + "</b>." : "")
       + " Once it turns and runs out, murkier water draining from Botany Bay passes by and drops the visibility.";
+    if (VIZ_TIDE[key]) txt += " " + VIZ_TIDE[key].ev;
     txt += okc === true ? ' <span class="tg-state">Running that way' + at + '.</span>'
          : okc === false ? ' <span class="tg-state">Not' + at + '.</span>' : "";
     line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
