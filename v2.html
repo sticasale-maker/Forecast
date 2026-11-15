@@ -706,23 +706,27 @@ var VIZ_OUT = {
   "Far south":              { rain: [-34.58, 150.87], sea: [-34.60, 151.00] }
 };
 var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, vizDrv = null;
+/* PREVIEW SWITCH: v2.html?vizdemo=1 shows the chip on every eligible heading whatever the
+   thresholds say, with the real rain/swell figures and a "preview" tag, so the chip can be
+   seen on a quiet week. Never linked; the tag keeps a shared demo link from misleading. */
+var VIZ_DEMO = /[?&]vizdemo=1(&|#|$)/.test(location.search);
 function vizAddDays(d, n){ var t = new Date(d + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
 function vizChip(name, date){
   var D = vizDrv && vizDrv[name];
-  if (!D) return "";
+  if (!D) return VIZ_DEMO && VIZ_OUT[name] ? ' <span class="vizchip"><b>Viz may be reduced</b> · preview, no data yet</span>' : "";
   // Either driver alone is evidence, so a missing one only switches off its own test:
   // a big swell still raises the chip when the rain feed is down, and vice versa.
   var r7 = 0, h = 0, n, x, rainOk = !!D.rain, hsOk = !!D.hs;
   for (n = 1; n <= 7 && rainOk; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) rainOk = false; else r7 += x; }
   for (n = 0; n <= 3 && hsOk; n++) { x = D.hs[vizAddDays(date, -n)]; if (x == null) hsOk = false; else h = Math.max(h, x); }
-  var wet = rainOk && r7 >= VIZ_RAIN_MM, big = hsOk && h >= VIZ_SWELL_M;
-  if (!wet && !big) return "";
+  var wet = rainOk && (VIZ_DEMO || r7 >= VIZ_RAIN_MM), big = hsOk && (VIZ_DEMO || h >= VIZ_SWELL_M);
+  if (!wet && !big) return VIZ_DEMO ? ' <span class="vizchip"><b>Viz may be reduced</b> · preview, no data</span>' : "";
   var why = wet && big ? Math.round(r7) + " mm rain + " + h.toFixed(1) + " m swell"
           : wet ? Math.round(r7) + " mm rain this week" : h.toFixed(1) + " m swell recently";
   return ' <span class="vizchip" title="Viz outlook, not part of the safety score. After a week with '
     + VIZ_RAIN_MM + ' mm+ of rain or ' + VIZ_SWELL_M + ' m+ swell, divers reported poor viz about twice as often '
     + '(still only about 1 day in 3). Based on 936 VIZ group reports, 2020-2025.">'
-    + '<b>Viz may be reduced</b> · ' + why + '</span>';
+    + '<b>Viz may be reduced</b> · ' + why + (VIZ_DEMO ? ' · preview' : '') + '</span>';
 }
 function loadVizOutlook(){
   var names = Object.keys(VIZ_OUT), P = function(k){ return names.map(function(n){ return VIZ_OUT[n][k]; }); };
