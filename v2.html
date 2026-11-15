@@ -985,23 +985,23 @@ function hoursList(hs){
   return hs.map(function(h){ return "about " + fmtHour(h); }).join(" and ");
 }
 
-/* VIZ BY TIDE, FROM THE REPORTS (owner, 15 Nov 2026). tools/viz_tide.mjs put 622 timed VIZ
-   posts with a viz figure or verdict on the Fort Denison tide at their entry time. Across all
+/* VIZ BY TIDE, FROM THE REPORTS (owner, 15 Nov 2026). tools/viz_tide.mjs put 695 timed VIZ
+   posts (2020 to Nov 2026) with a viz figure or verdict on the Fort Denison tide at their entry time. Across all
    sites viz was poor 43% of the time at 0.6 m or less vs 20% at 1.3 m or more, in morning and
    afternoon dives alike, so it is the tide and not the light. Only sites where the reports
    show it on their own get a line; the counts are what each one rests on.
    `flow`: which half of the tide runs clearer; `high`: also say "best near high". */
 var VIZ_TIDE = {
   LittleBay:  { flow:"incoming", high:true,
-                ev:"In 80 timed reports, almost all from snorkellers and freedivers, viz was poor 13% of the time near high tide against 41% near low, and 24% on the rise against 43% on the fall. Divers head out of the bay to open water, where the incoming tide brings cleaner ocean water, as at Bass Point." },
+                ev:"In 87 timed reports, almost all from snorkellers and freedivers, viz was poor 12% of the time near high tide against 41% near low, and 23% on the rise against 40% on the fall. Divers head out of the bay to open water, where the incoming tide brings cleaner ocean water, as at Bass Point." },
   BIW:        { flow:"incoming", high:true,
-                ev:"In 141 timed reports, viz was poor 12% of the time near high tide against 28% near low." },
+                ev:"In 142 timed reports, viz was poor 12% of the time near high tide against 28% near low." },
   Steps:      { flow:"incoming", high:true,
-                ev:"In 37 timed reports, the higher the tide the better the viz, the strongest tide link of any site." },
+                ev:"In 48 timed reports, viz was poor 7% of the time near high tide against 37% near low." },
   BassPoint:  { flow:"incoming",
-                ev:"In 44 timed reports, viz was poor 5% of the time on the rising tide against 30% on the falling, and about 40% above its usual on the rise." },
+                ev:"In 49 timed reports, viz was poor 9% of the time on the rising tide against 31% on the falling." },
   Bushranger: { flow:"outgoing",
-                ev:"In 64 timed reports, viz was poor 22% of the time on the falling tide against 47% on the rising. The sheltered, shallow inner bay settles like a basin and drains out clear; the incoming tide brings in murkier outside water, about half the time whatever the swell." }
+                ev:"In 67 timed reports, viz was poor 21% of the time on the falling tide against 44% on the rising. The sheltered, shallow inner bay settles like a basin and drains out clear; the incoming tide brings in murkier outside water, about half the time whatever the swell." }
 };
 /* Rising/falling runs inside daylight dive hours (6a-7p), "6a-10a and from 5p". */
 function vizRuns(td, rising){
