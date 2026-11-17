@@ -718,9 +718,11 @@ var VIZ_OUT = {
    site's row from 20 mm in the 7 days before; above 40 mm the heading chip already says it.
    OAK MOVED TO THE RIVER CHIP (17 Nov 2026, tools/viz_mcf_full.mjs): on Michael McFadyen's
    Oak Park dives, nearly all before 2020 and so blind to the rule, 7-day rain did nothing
-   (rank corr -0.01, 60 dives) while the Hacking River's flow did (-0.37, 39). See VIZ_RIVER_SITE. */
+   (rank corr -0.01, 60 dives) while the Hacking River's flow did (-0.37, 39). See VIZ_RIVER_SITE.
+   GORDONS DROPPED, MONUMENT KEPT (owner, 17 Nov 2026; tools/viz_mcf_rain.mjs): re-run with BOM rain
+   GAUGES instead of the model rain, Gordons' 20 mm effect vanished (20-40 mm weeks 10% poor vs 23%),
+   while the Monument's held (about 40% vs 21%). */
 var VIZ_RAIN_SITE = {
-  Gordons:  { region: "Eastern suburbs", ev: "After 20 mm+ of rain in the week before, VIZ posts at Gordons Bay reported poor viz 31% of the time against 17% (41 reports, 2020-2026: few, but the same pattern as Oak Park and the Monument)." },
   Monument: { region: "Botany Bay and Kurnell", ev: "After 20 mm+ of rain in the week before, VIZ posts at the Monument reported poor viz 45% of the time against 19% (2020-2026), and Michael McFadyen's own dives there show the same." }
 };
 var VIZ_RAIN_SITE_MM = 20;
@@ -775,7 +777,8 @@ function vizChip(name, date){
           : wet ? Math.round(r7) + " mm rain this week" : h.toFixed(1) + " m swell today or yesterday";
   return ' <span class="vizchip" title="Viz outlook, not part of the safety score. After a week with '
     + VIZ_RAIN_MM + ' mm+ of rain, or on or just after a day of ' + VIZ_SWELL_M + ' m+ swell, divers reported poor viz about twice as often '
-    + '(still only about 1 day in 3). Based on 936 VIZ group reports, 2020-2025.">'
+    + '(still only about 1 day in 3). Based on 936 VIZ group reports, 2020-2025. '
+    + 'Rain hits the top few metres hardest: Michael McFadyen\'s dive reports often find it clearer deeper.">'
     + '<b>Viz may be reduced</b> · ' + why + (VIZ_DEMO ? ' · preview' : '') + '</span>';
 }
 function loadVizOutlook(){
