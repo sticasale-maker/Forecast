@@ -1253,7 +1253,13 @@ function vizBadge(key, day){
   var reduced = !!((head && vizChip(head, d)) || vizRainRow(key, d) || vizRiverRow(key, d) || vizSatRow(key, d));
   var better = !reduced && sea && sea.best.indexOf(m) >= 0;
   var murkyMonth = sea && sea.worst.indexOf(m) >= 0;
-  if (!rng && !w && !reduced) return "";
+  // water temperature at 15 m (the Worker's /ocean, Copernicus model corrected per site), on the same line
+  var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][d];
+  var temp = T && T.t15 != null ? Math.round(T.t15) + " °C at 15 m" + (T.layer != null && T.layer >= 1.5 ? ", cold layer" : "") : "";
+  var tempTitle = temp ? "Water about " + Math.round(T.t15) + " °C at 15 m" + (T.t0 != null ? " and " + Math.round(T.t0) + " °C at the surface" : "")
+    + ": Copernicus ocean model, corrected to divers' logs here, a guide to within 1–2 °C." : "";
+  if (!rng && !w && !reduced) return temp
+    ? '<span class="vbadge usual" title="' + tempTitle.replace(/"/g, "&quot;") + '"><span>🌡 ' + temp + '</span></span>' : "";
   var state = reduced ? "reduced" : better ? "better" : "usual";
   var head1 = reduced ? "Viz likely below usual" : better ? "Viz: better odds than usual" : "Viz: usual for here";
   var bits = [];
@@ -1261,11 +1267,12 @@ function vizBadge(key, day){
   if (better) bits.push("clearest time of year");
   else if (murkyMonth && !reduced) bits.push("murkier time of year");
   if (w && w.txt) bits.push('<i class="vkey" aria-hidden="true"></i>best viz ' + w.txt);
+  if (temp) bits.push("🌡 " + temp);
   var title = (reduced ? "A viz warning is out for this day: see the chip beside this line. " : "")
     + (better ? sea.ev + " " : murkyMonth ? sea.ev + " " : "")
     + (w ? "Best viz window " + (w.txt || "none in daylight today") + ", " + w.why + ". " + w.ev + " " : "")
     + (rng ? "Usual range " + rng.lo + "–" + rng.hi + " m: about " + rng.in10 + " reports in 10 fall inside it. " : "")
-    + "A guide from past reports, not a forecast of the metres.";
+    + "A guide from past reports, not a forecast of the metres." + (tempTitle ? " " + tempTitle : "");
   return '<span class="vbadge ' + state + '" title="' + title.replace(/"/g, "&quot;") + '">'
     + '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" class="d0"/><path d="M6 6V.8A5.2 5.2 0 0 1 11.2 6Z" class="d1"/><path d="M6 6v5.2A5.2 5.2 0 0 1 .8 6Z" class="d1"/></svg>'
     + '<b>' + head1 + '</b>' + (bits.length ? '<span>' + bits.join(" · ") + '</span>' : "") + '</span>';
