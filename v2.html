@@ -810,14 +810,19 @@ function vizRiverRow(key, date){
    - sat[site]: the latest clear satellite image's Secchi depth and whether it is in the site's
      murkiest third for the month. tools/viz_cmems_test.mjs: on those days VIZ posts reported poor
      viz 30% of the time vs 19% on the clearest third (2020-2026), the 2026 posts agreed, and it holds
-     on calm days, so it is not the swell again. Shown only at the five sites where it held on its own,
+     on calm days, so it is not the swell again. Shown at the open-coast sites (VIZ_SAT_SITES),
      and only when the image is at most 3 days older than the day shown (the tested window).
    - temp[site][date]: the global ocean model's temperature at 15 m and at the surface, corrected per
      site by its median miss against divers' reports (tools/viz_cmems_temp_test.mjs: McFadyen 1.11 vs
      1.28 C for "the usual for the month"). `layer` is the model's own surface-minus-15 m difference.
    Either part missing or stale -> nothing shown. Data credit: E.U. Copernicus Marine Service. */
 var OCEAN_API = "https://bold-rain-6ded.sticasale.workers.dev/ocean", oceanData = null;
-var VIZ_SAT_SITES = { BassPoint: 1, CTB: 1, Monument: 1, Oak: 1, Freshwater: 1 };
+/* Widened 18 Nov 2026 (owner, "do 2") from the five sites where it held on its own to the whole open
+   coast, on the pooled open-coast result (+0.22, 700+ posts). Inside a bay or the harbour stays out:
+   the nearest usable 4 km cell is outside, in other water (Steps, Bare Island, Bushrangers, Chowder,
+   Camp Cove, Fairlight). */
+var VIZ_SAT_SITES = { BassPoint: 1, CTB: 1, Monument: 1, Oak: 1, Freshwater: 1,
+  NorthBondi: 1, SharkPoint: 1, Gordons: 1, SouthCoogee: 1, LittleBay: 1 };
 function vizSatRow(key, date){
   var s = VIZ_SAT_SITES[key] && oceanData && oceanData.sat && oceanData.sat[key];
   if (!s || !s.img || date < s.img || date > vizAddDays(TODAY, 1) || vizAddDays(s.img, 3) < date) return "";
