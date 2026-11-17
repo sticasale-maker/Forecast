@@ -177,6 +177,19 @@
   /* per-site viz-by-tide line, on the row itself (owner, 15 Nov 2026) */
   .vizt{display:block;font-size:12px;color:var(--ink-2);margin:5px 0 1px;line-height:1.4}
   .vizt b{font-weight:600;color:var(--ink)}
+  /* viz outlook at a glance (18 Nov 2026): a tide-window stripe under the hour bar and a badge.
+     Accent and neutral ink only: the green/amber/red belong to the safety score. */
+  .vstripe{display:flex;gap:2px;margin-top:2px;height:3px}
+  .vstripe i{flex:1;border-radius:2px}
+  .vstripe i.on{background:var(--accent)}
+  .vbadge{display:flex;align-items:center;flex-wrap:wrap;gap:3px 7px;margin:6px 0 1px;font-size:12px;line-height:1.35;color:var(--ink-2);cursor:help}
+  .vbadge svg{width:13px;height:13px;flex:none}
+  .vbadge .d0{fill:var(--surface);stroke:var(--ink-2);stroke-width:1.1}
+  .vbadge .d1{fill:var(--ink-2)}
+  .vbadge b{font-weight:600;color:var(--ink)}
+  .vbadge.better b{color:var(--accent)} .vbadge.better .d1{fill:var(--accent)} .vbadge.better .d0{stroke:var(--accent)}
+  .vbadge.reduced svg{opacity:.45}
+  .vkey{display:inline-block;width:12px;height:3px;border-radius:2px;background:var(--accent);vertical-align:middle;margin:0 5px 2px 0}
   .exp{margin-left:auto;margin-top:6px;font:inherit;font-size:12.5px;font-weight:600;color:var(--accent);
        background:none;border:0;padding:4px 0 2px 8px;cursor:pointer;white-space:nowrap}
   .strip.tap .cell{cursor:pointer}
@@ -955,10 +968,10 @@ function render(){
                  + (shown && c.h === shown.h ? ' sel' : '') + '" data-h="' + c.h
                  + '" role="button" aria-label="Show ' + fmtHour(c.h) + '" title="'
                  + fmtHour(c.h) + ' — ' + bandName(c.b) + '"></span>';
-          }).join("") + '</span><span class="ticks">' + cells.map(function(c){
+          }).join("") + '</span>' + vizStripe(key, day, cells) + '<span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSatRow(key, day.date);
+          }).join("") + '</span>' + vizBadge(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSatRow(key, day.date);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -1161,21 +1174,6 @@ var VIZ_TIDE = {
   Bushranger: { flow:"outgoing",
                 ev:"In 67 timed reports, viz was poor 21% of the time on the falling tide against 44% on the rising. The sheltered, shallow inner bay settles like a basin and drains out clear; the incoming tide brings in murkier outside water, about half the time whatever the swell." }
 };
-/* Rising/falling runs inside daylight dive hours (6a-7p), "6a-10a and from 5p". */
-function vizRuns(td, rising){
-  var out = [], run = null, inDay = td.hrs.filter(function(x){ return x.h >= 6 && x.h <= 19 && x.rising != null; });
-  inDay.forEach(function(x, j){
-    var on = x.rising === rising;
-    if (on) { if (!run) run = { a:x.h, z:x.h }; else run.z = x.h; }
-    if ((!on || j === inDay.length - 1) && run) {
-      out.push(run.a === inDay[0].h && run.z === inDay[inDay.length-1].h ? "all day"
-             : run.z === inDay[inDay.length-1].h ? "from " + fmtHour(run.a)
-             : run.a === inDay[0].h ? "till " + fmtHour(run.z + 1)
-             : fmtHour(run.a) + "–" + fmtHour(run.z + 1));
-      run = null; }
-  });
-  return out.join(" and ");
-}
 /* VIZ BY SEASON (owner, 15 Nov 2026). Two independent records agree that Sydney viz has a
    calendar: Michael McFadyen's own log (tools/mcfadyen_viz.mjs, 1,235 dives at these sites
    1988-2026, one observer, one 8-word scale) and the VIZ group posts (1,261, 2020-2026). Both
@@ -1205,25 +1203,72 @@ var VIZ_RANGE = {
   Chowder:{lo:3,hi:5,n:52,in10:7}, CTB:{lo:3,hi:8,n:44,in10:8}, Gordons:{lo:5,hi:10,n:41,in10:8},
   Monument:{lo:3,hi:8,n:36,in10:6}, Freshwater:{lo:6,hi:9,n:33,in10:6}
 };
-function vizSeasonRow(key, day){
-  var v = VIZ_SEASON[key]; if (!v) return "";
-  var m = +day.date.slice(5, 7);
-  var t = v.best.indexOf(m) >= 0 ? "usually the <b>clearest</b> time of year here (" + v.bestTxt + ")"
-        : v.worst.indexOf(m) >= 0 ? "usually a <b>murkier</b> time of year here (clearest " + v.bestTxt + ")" : "";
-  return t ? '<span class="vizt" title="' + v.ev.replace(/"/g, "&quot;") + '">🗓 ' + t + '</span>' : "";
+/* VIZ OUTLOOK AT A GLANCE (owner, 18 Nov 2026: "i am looking at little bay, there is nothing other
+   than static text"). Two visual pieces on every row, built ONLY from the tested rules above -- no
+   new prediction:
+   1. A tide window stripe under the hour bar: the hours when the tide favours clarity at this site.
+      VIZ_TIDE sites: the tested side (rising or falling) plus, where `high`, the 2 h either side of
+      high water (the window tools/viz_tide.mjs tested); the other Botany sites: the incoming tide.
+   2. A one-line badge with a small Secchi disc and three states:
+        reduced  any viz warning for the day (swell/rain heading chip, the site rain, river or
+                 satellite chip) -- the chips still show beside it with their reasons;
+        better   none of those, and it is the site's tested clearest season (VIZ_SEASON best);
+        usual    otherwise, with the site's usual range (VIZ_RANGE) when it has one.
+      It adds the day's best tide window. Neutral ink and the app accent, never the safety colours. */
+var VIZ_HEAD = {};   // site -> the heading its region chip hangs on (as render() calls vizChip)
+REGIONS.forEach(function(reg){ reg[2].forEach(function(sub){
+  sub[1].forEach(function(k){ VIZ_HEAD[k] = sub[0] || (reg[2].length === 1 ? reg[0] : ""); }); }); });
+function vizWindow(key, day){
+  var v = VIZ_TIDE[key], flow = v ? v.flow : BOTANY[key] ? "incoming" : null;
+  if (!flow) return null;
+  var td = tideDay(key, day); if (!td) return null;
+  var good = {};
+  // Where high water is the tested signal (Little Bay, Bare Island west, the Steps: poor 7-12% near
+  // high against 28-41% near low), the window is the 2 h either side of high water ONLY; rising alone
+  // was weaker there and would paint most of the day. Elsewhere, the tested side of the tide.
+  td.hrs.forEach(function(x){
+    var g = v && v.high ? td.highs.some(function(H){ return Math.abs(x.h - H) <= 2; })
+                        : x.rising != null && x.rising === (flow === "incoming");
+    if (g) good[x.h] = 1;
+  });
+  var runs = [], run = null;
+  for (var h = 6; h <= 19; h++) {
+    if (good[h]) { if (!run) run = { a:h, z:h }; else run.z = h; }
+    if ((!good[h] || h === 19) && run) { runs.push(run); run = null; }
+  }
+  var hr = function(h){ return (h % 12 || 12) + (h < 12 ? "am" : "pm"); };
+  var txt = runs.map(function(r){ return hr(r.a) + "–" + hr(r.z + 1); }).join(" and ");
+  var why = v ? (v.high ? "the 2 hours either side of high tide" : "while the tide is " + (flow === "incoming" ? "coming in" : "going out"))
+              : "while the tide is coming in, before Botany Bay drains out";
+  return { good:good, txt:txt, why:why, ev:v ? v.ev : "" };
 }
-
-function vizTideRow(key, day){
-  var v = VIZ_TIDE[key]; if (!v) return "";
-  var td = tideDay(key, day); if (!td) return "";
-  var runs = vizRuns(td, v.flow === "incoming");
-  var highs = v.high ? td.highs.filter(function(h){ return h >= 6 && h <= 19; }) : [];
-  var txt = v.high && highs.length
-    ? "best near high tide, <b>about " + highs.map(fmtHour).join(" and ") + "</b>"
-      + (runs ? "; rising " + runs : "")
-    : runs ? "best on the " + (v.flow === "incoming" ? "rising" : "falling") + " tide, <b>" + runs + "</b>"
-    : "best on the " + (v.flow === "incoming" ? "rising" : "falling") + " tide, none in daylight today";
-  return '<span class="vizt" title="' + v.ev.replace(/"/g, "&quot;") + '">👁 Viz usually ' + txt + '</span>';
+function vizStripe(key, day, cells){
+  var w = vizWindow(key, day); if (!w) return "";
+  return '<span class="vstripe" title="Best viz window: ' + (w.txt || "none in daylight") + ' (' + w.why + ')">'
+    + cells.map(function(c){ return '<i' + (w.good[c.h] ? ' class="on"' : '') + '></i>'; }).join("") + '</span>';
+}
+function vizBadge(key, day){
+  var d = day.date, m = +d.slice(5, 7), rng = VIZ_RANGE[key], sea = VIZ_SEASON[key], w = vizWindow(key, day);
+  var head = VIZ_HEAD[key];
+  var reduced = !!((head && vizChip(head, d)) || vizRainRow(key, d) || vizRiverRow(key, d) || vizSatRow(key, d));
+  var better = !reduced && sea && sea.best.indexOf(m) >= 0;
+  var murkyMonth = sea && sea.worst.indexOf(m) >= 0;
+  if (!rng && !w && !reduced) return "";
+  var state = reduced ? "reduced" : better ? "better" : "usual";
+  var head1 = reduced ? "Viz likely below usual" : better ? "Viz: better odds than usual" : "Viz: usual for here";
+  var bits = [];
+  if (rng) bits.push((reduced || better ? "usually " : "") + rng.lo + "–" + rng.hi + " m");
+  if (better) bits.push("clearest time of year");
+  else if (murkyMonth && !reduced) bits.push("murkier time of year");
+  if (w && w.txt) bits.push('<i class="vkey" aria-hidden="true"></i>best viz ' + w.txt);
+  var title = (reduced ? "A viz warning is out for this day: see the chip beside this line. " : "")
+    + (better ? sea.ev + " " : murkyMonth ? sea.ev + " " : "")
+    + (w ? "Best viz window " + (w.txt || "none in daylight today") + ", " + w.why + ". " + w.ev + " " : "")
+    + (rng ? "Usual range " + rng.lo + "–" + rng.hi + " m: about " + rng.in10 + " reports in 10 fall inside it. " : "")
+    + "A guide from past reports, not a forecast of the metres.";
+  return '<span class="vbadge ' + state + '" title="' + title.replace(/"/g, "&quot;") + '">'
+    + '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" class="d0"/><path d="M6 6V.8A5.2 5.2 0 0 1 11.2 6Z" class="d1"/><path d="M6 6v5.2A5.2 5.2 0 0 1 .8 6Z" class="d1"/></svg>'
+    + '<b>' + head1 + '</b>' + (bits.length ? '<span>' + bits.join(" · ") + '</span>' : "") + '</span>';
 }
 
 function tideGuide(key, day, pick){
