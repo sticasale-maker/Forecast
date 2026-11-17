@@ -805,6 +805,47 @@ function vizRiverRow(key, date){
     + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + v.name + ' running high (' + pk.toFixed(1) + ' m³/s)'
     + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
 }
+/* COPERNICUS (owner, 18 Nov 2026). The Worker's /ocean route (swim-worker src/ocean.js) reads
+   Copernicus Marine through its public map-tile service a few points an hour and serves:
+   - sat[site]: the latest clear satellite image's Secchi depth and whether it is in the site's
+     murkiest third for the month. tools/viz_cmems_test.mjs: on those days VIZ posts reported poor
+     viz 30% of the time vs 19% on the clearest third (2020-2026), the 2026 posts agreed, and it holds
+     on calm days, so it is not the swell again. Shown only at the five sites where it held on its own,
+     and only when the image is at most 3 days older than the day shown (the tested window).
+   - temp[site][date]: the global ocean model's temperature at 15 m and at the surface, corrected per
+     site by its median miss against divers' reports (tools/viz_cmems_temp_test.mjs: McFadyen 1.11 vs
+     1.28 C for "the usual for the month"). `layer` is the model's own surface-minus-15 m difference.
+   Either part missing or stale -> nothing shown. Data credit: E.U. Copernicus Marine Service. */
+var OCEAN_API = "https://bold-rain-6ded.sticasale.workers.dev/ocean", oceanData = null;
+var VIZ_SAT_SITES = { BassPoint: 1, CTB: 1, Monument: 1, Oak: 1, Freshwater: 1 };
+function vizSatRow(key, date){
+  var s = VIZ_SAT_SITES[key] && oceanData && oceanData.sat && oceanData.sat[key];
+  if (!s || !s.img || date < s.img || date > vizAddDays(TODAY, 1) || vizAddDays(s.img, 3) < date) return "";
+  if (!VIZ_DEMO && !s.murky) return "";
+  var when = new Date(s.img + "T12:00:00Z").toLocaleDateString("en-AU", { weekday:"short", day:"numeric", month:"short", timeZone:"UTC" });
+  return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. On days the satellite '
+    + 'showed this site&#39;s murkiest third of water for the month, VIZ posts reported poor viz 30% of the time against 19% on its '
+    + 'clearest third (2020-2026), and the 2026 posts agreed. The satellite sees only the top few metres, from a 4 km pixel '
+    + 'just offshore. Data: E.U. Copernicus Marine Service."><b>Viz may be reduced</b> · satellite shows murkier water ('
+    + when + ')' + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
+}
+function oceanTempLine(key, date){
+  var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][date];
+  if (!T || T.t15 == null) return null;
+  var txt = "About <b>" + Math.round(T.t15) + " °C at 15 m</b>" + (T.t0 != null ? ", " + Math.round(T.t0) + " °C at the surface" : "") + ".";
+  if (T.layer != null && T.layer >= 1.5) txt += " <b>Cold layer:</b> about " + Math.round(T.layer) + " °C colder at 15 m than on top.";
+  return txt + " Copernicus ocean model, corrected to divers&#39; logs here: a guide to within 1–2 °C.";
+}
+function loadOcean(){
+  var ac = window.AbortController ? new AbortController() : null, t = ac ? setTimeout(function(){ ac.abort(); }, 8000) : 0;
+  fetch(OCEAN_API, ac ? { signal: ac.signal } : undefined).then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){
+      clearTimeout(t);
+      // stale guard: the Worker refreshes a few points every hour; two days without an update = something broke
+      if (!j || !j.updated || Date.now() - Date.parse(j.updated) > 48 * 3600 * 1000) return;
+      oceanData = j; if (DAYS && DAYS.length) render();
+    }, function(){ clearTimeout(t); });
+}
 var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, vizDrv = null;
 /* PREVIEW SWITCH: v2.html?vizdemo=1 shows the chip on every eligible heading whatever the
    thresholds say, with the real rain/swell figures and a "preview" tag, so the chip can be
@@ -912,7 +953,7 @@ function render(){
           }).join("") + '</span><span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date);
+          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSatRow(key, day.date);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -1222,6 +1263,8 @@ function tideGuide(key, day, pick){
     line(vs.best.indexOf(mo) >= 0 ? "good" : vs.worst.indexOf(mo) >= 0 ? "bad" : "", "🗓 Season",
       "Viz is usually best <b>" + vs.bestTxt + "</b> and murkiest " + vs.worstTxt + ". " + vs.ev);
   }
+  var ot = oceanTempLine(key, day.date);
+  if (ot) line("", "🌡 Water", ot);
   if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
     + '<a href="' + MCF_BASE + m.id + '/" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
   return lines.length ? '<div class="tg">' + lines.join("") + '</div>' : "";
@@ -1514,6 +1557,7 @@ function boot(j){
     + "forecast. If in doubt, don't go out.</p>";
   renderDays(); render(); ovSetup(); renderOverview();
   if (!vizDrv) loadVizOutlook();
+  if (!oceanData) loadOcean();
 }
 
 /* The Worker sends max-age=900 and only rebuilds every 30 min, so let the browser reuse a
