@@ -226,6 +226,7 @@
   .askbtn{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--caution);
     background:var(--surface);color:var(--caution);border-radius:7px;cursor:pointer}
   .askok{display:block;margin-top:7px;font-size:12px;color:var(--caution)}
+  .askok[hidden]{display:none}
 
   /* detail */
   .detail{border-top:1px solid var(--rule);padding:12px 13px 14px;background:var(--rule)}
@@ -276,6 +277,9 @@
              padding:9px 16px;cursor:pointer}
   .about p{font-size:14px;line-height:1.65;color:var(--ink-2);margin-bottom:12px}
   .about p.lead{color:var(--ink);font-weight:600}
+  .about ul.hit{margin:0 0 12px;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2)}
+  .about ul.hit li{margin-bottom:6px}
+  .about ul.hit b{color:var(--ink)}
   .about a{color:var(--accent)}
   .about img{width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);
              display:block;margin:6px 0 14px}
@@ -387,6 +391,16 @@
         <p class="lead">Why we built VIZ FORECAST</p>
         <p>Let's be honest: nothing beats a great day underwater—but only if the conditions are right. We got tired of the guesswork, so we built this tool to help our community determine if a site is "diveable" before packing the gear. Our data is powered by a proprietary wave transformation model, patiently tuned over years of real-world use by thousands of local divers, geekie details <a href="https://www.viz.net.au/divesite-forecast-explained" target="_blank" rel="noopener">here</a>.</p>
         <p>This project is entirely non-profit and run by volunteers who love diving as much as you do.</p>
+        <p class="lead">How good is the viz outlook? Our own scorecard</p>
+        <p>Every viz line in this app was checked against real dives: 1,100+ VIZ group reports from 2020 to 2026, and Michael McFadyen's 30-year dive log. Each rule was tested on years it had not seen.</p>
+        <ul class="hit">
+          <li><b>Usual viz range</b> (in Details): about 6 reports in 10 fall inside it. It describes the site, not the day.</li>
+          <li><b>"Viz may be reduced"</b>: on those days divers reported poor viz about 1 day in 3, against about 1 in 5 otherwise. So 2 days in 3 with the chip are still fine.</li>
+          <li><b>Port Hacking running high</b> (Oak Park): poor viz 32% of the time against 24%.</li>
+          <li><b>Tide and season lines</b>: tested per site; shown only where they held up.</li>
+          <li><b>What we can't do</b>: forecast the metres for a given day. We tested it, and it did not beat the site's usual viz. Treat any app that gives you an exact figure a week out with care.</li>
+        </ul>
+        <p>Every line says what it rests on. Your VIZ posts are what keep these numbers honest.</p>
         <p>A quick reminder: Always use your own judgment before entering the water. If the actual conditions differ from the forecast, please let us know via the Feedback form below—that feedback is exactly how we continue to improve for everyone.</p>
         <img src="marco2.png" alt="Marco Bordieri">
         <p class="meta">© Marco Bordieri — VIZ Group, September 2026</p>
@@ -666,28 +680,62 @@ function confidenceEl(key){
    It asks for a VIZ post rather than an in-app tap on purpose (owner, 2 Nov: "a proper
    named post on VIZ is more reliable"). The draft carries site, date and a clock time,
    which is the shape tools/corpus.py already parses — so the post becomes a VERDICT with a
-   name on it, through the existing pipeline, rather than an anonymous number. */
-function askEl(key, sum, day){
-  if (sum.b === "easy" || sum.b === "none") return "";
-  var t = TIER[key];
-  if (t === "fitted" || t === "borrowed" || t === "sheltered") return "";
+   name on it, through the existing pipeline, rather than an anonymous number.
+
+   RICHER DRAFT, ON EVERY SITE (owner, 17 Nov 2026: "the VIZ group is based on sharing ...
+   what's for them to post numbers into an app?"). The group stays the place people report;
+   the app's job is to make that post easier and fuller. So every open site, today, offers the
+   draft, pre-filled with what the app knows for the hour the diver tapped on the bar (swell,
+   wind waves, wind, tide), plus the fields worth comparing between divers (borrowed from Viz
+   App's standard log: viz, surge, particles, water temperature). The long "only N reports"
+   appeal stays where it was: a non-Easy day at a site that is not yet calibrated.
+   The time is filled in ONLY when the diver tapped an hour, as "ITW 9:00am" (an explicit am/pm
+   is what corpus.py reads most reliably); otherwise it stays blank -- a guessed time would be
+   read as fact. Viz stays "Viz ___ m", the shape corpus.py's RE_VIZ reads once filled. */
+function askEl(key, sum, day, cells, nowI){
   /* NEVER ASK ABOUT A DAY THAT HAS NOT HAPPENED. Asking a diver to rate Saturday is asking
      for a prediction, which is the model's job and not evidence of anything. Only today and
      earlier. (This fired on a day six ahead the first time it was rendered.) */
-  if (!day || !day.date || day.date > TODAY) return "";
+  if (!day || !day.date || day.date > TODAY || sum.b === "none") return "";
+  var t = TIER[key];
+  var appeal = sum.b !== "easy" && !(t === "fitted" || t === "borrowed" || t === "sheltered");
   var NL = String.fromCharCode(10);
-  var draft = [LABEL[key] + ", " + day.date + ", in the water __:__ .",
-               "App said " + bandName(sum.b) + ". I would call it ___",
-               "Viz ___ m, water ___ C."].join(NL);
-  return '<div class="ask"><p class="askh">Diving ' + LABEL[key] + '? Tell the group how it went.</p>'
-       + '<p class="askb">' + (REPORTS[key] > 0
-            ? (TIER[key] === "checking"
+  var tapped = selH != null ? (cells || []).filter(function(c){ return c.h === selH; })[0] : null;
+  var pick = tapped || (cells ? pickCell(cells, nowI) : null);
+  var when = new Date(day.date + "T12:00:00Z").toLocaleDateString("en-AU", { weekday:"short", day:"numeric", month:"short", timeZone:"UTC" });
+  var itw = tapped ? (tapped.h % 12 || 12) + ":00" + (tapped.h < 12 ? "am" : "pm") : "__:__";
+  /* what the app knew for that hour, in words a diver would write */
+  var cond = [];
+  if (pick && pick.i != null) {
+    var S = data.sites[key] || {}, i = pick.i, g = function(a){ return a && a[i] != null ? a[i] : null; };
+    var windOnly = (data.windOnly || []).indexOf(key) >= 0 || (data.noNode || []).indexOf(key) >= 0;
+    var sw = windOnly ? null : g(S.swellH), sp = g(S.swellP), sd = g(S.swellDir), ww = g(S.seaH);
+    var wk = wxAt(key, "windKmh", i), wd = wxAt(key, "windDir", i), tm = wxAt(key, "tideM", i), tn = wxAt(key, "tideM", i + 1);
+    if (sw != null) cond.push(sw.toFixed(1) + " m " + dirName(sd) + " swell" + (sp ? " at " + Math.round(sp) + "s" : ""));
+    if (ww != null && ww >= 0.2) cond.push(ww.toFixed(1) + " m wind waves");
+    if (wk != null) cond.push(Math.round(wk) + " km/h " + dirName(wd) + " wind");
+    if (tm != null) cond.push("tide " + tm.toFixed(1) + " m" + (tn != null ? (tn > tm ? " rising" : " falling") : ""));
+  }
+  var draft = [LABEL[key] + ", " + when + ", ITW " + itw,
+               "Viz ___ m · surge: none / light / strong · particles: clear / some / lots · water ___ C",
+               "App said " + bandName(pick && pick.b && pick.b !== "none" ? pick.b : sum.b) + ". I would call it ___"]
+    .concat(cond.length ? ["Forecast at " + ((pick.h % 12) || 12) + (pick.h < 12 ? "am" : "pm") + " (VIZ Forecast): " + cond.join(", ")] : [])
+    .join(NL);
+  var lead = appeal
+    ? '<p class="askh">Diving ' + LABEL[key] + '? Tell the group how it went.</p>'
+      + '<p class="askb">' + (REPORTS[key] > 0
+            ? (t === "checking"
                  ? 'This site has ' + REPORTS[key] + ' reports; borderline days would sharpen it most.'
                  : 'Only ' + REPORTS[key] + ' report' + (REPORTS[key] > 1 ? 's' : '') + ' stand behind this score.')
             : 'Nothing local stands behind this score yet.')
-       + ' A named post on VIZ is worth far more than a tap — it carries your name, the hour '
-       + 'and your own words. Best written after you are out.</p>'
-       + '<button class="askbtn" data-draft="' + draft.replace(/"/g, "&quot;").split(NL).join("&#10;")
+      + ' A named post on VIZ is worth far more than a tap — it carries your name, the hour '
+      + 'and your own words. Best written after you are out.</p>'
+    : '<p class="askh">Dived ' + LABEL[key] + ' today? Post it to VIZ.</p>';
+  return '<div class="ask">' + lead
+       + '<p class="askb">' + (tapped ? 'Filled in for ' + fmtHour(tapped.h) + '.'
+                                      : 'Tap the hour you were in on the bar above and the post fills in that hour’s conditions.')
+       + ' Add your viz, then paste it into the group with your photos.</p>'
+       + '<button class="askbtn" data-draft="' + draft.replace(/&/g, "&amp;").replace(/"/g, "&quot;").split(NL).join("&#10;")
        + '">Copy a VIZ post</button>'
        + '<span class="askok" hidden>Copied — paste it into the VIZ group</span></div>';
 }
@@ -870,7 +918,7 @@ function render(){
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
                  + (isOpen ? 'Hide ▴' : 'Details ▾') + '</button>') + '</span></div>';
         if (isOpen) {
-          html += detailFor(key, cells, nowI) + askEl(key, sum, day);
+          html += detailFor(key, cells, nowI) + askEl(key, sum, day, cells, nowI);
         }
       });
       html += '</div>';
