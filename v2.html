@@ -710,18 +710,16 @@ function askEl(key, sum, day){
 var VIZ_OUT = {
   "Eastern suburbs":        { rain: [-33.92, 151.25], sea: [-33.92, 151.40] },
   "Botany Bay and Kurnell": { rain: [-33.99, 151.21], sea: [-34.02, 151.35] },
-  "Far south":              { rain: [-34.58, 150.87], sea: [-34.60, 151.00] },
-  // rowOnly: fetched for the per-site rain chip (VIZ_RAIN_SITE), never a heading chip --
-  // Oak's posts showed no swell effect, so Cronulla gets no 40 mm / 2.5 m heading chip.
-  "Cronulla":               { rain: [-34.06, 151.15], sea: [-34.10, 151.30], rowOnly: true }
+  "Far south":              { rain: [-34.58, 150.87], sea: [-34.60, 151.00] }
 };
 /* PER-SITE RAIN CHIP (owner, 15 Nov 2026). tools/viz_persite.mjs, season removed: at these three
    sites viz drops after much less rain than the heading chip's 40 mm. Pooled 2020-25 rank corr
    -0.23 (161 posts), 2026 -0.37 (22), and McFadyen's own Monument dives -0.45 (26). Shown on the
-   site's row from 20 mm in the 7 days before; above 40 mm the heading chip already says it,
-   except at Oak, whose heading has none. */
+   site's row from 20 mm in the 7 days before; above 40 mm the heading chip already says it.
+   OAK MOVED TO THE RIVER CHIP (17 Nov 2026, tools/viz_mcf_full.mjs): on Michael McFadyen's
+   Oak Park dives, nearly all before 2020 and so blind to the rule, 7-day rain did nothing
+   (rank corr -0.01, 60 dives) while the Hacking River's flow did (-0.37, 39). See VIZ_RIVER_SITE. */
 var VIZ_RAIN_SITE = {
-  Oak:      { region: "Cronulla", ev: "After 20 mm+ of rain in the week before, VIZ posts at Oak Park reported poor viz 38% of the time against 23% (2020-2026), and the 2026 posts agree." },
   Gordons:  { region: "Eastern suburbs", ev: "After 20 mm+ of rain in the week before, VIZ posts at Gordons Bay reported poor viz 31% of the time against 17% (41 reports, 2020-2026: few, but the same pattern as Oak Park and the Monument)." },
   Monument: { region: "Botany Bay and Kurnell", ev: "After 20 mm+ of rain in the week before, VIZ posts at the Monument reported poor viz 45% of the time against 19% (2020-2026), and Michael McFadyen's own dives there show the same." }
 };
@@ -731,9 +729,30 @@ function vizRainRow(key, date){
   var D = vizDrv && vizDrv[v.region]; if (!D || !D.rain) return "";
   var r7 = 0, n, x;
   for (n = 1; n <= 7; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) return ""; r7 += x; }
-  if (!VIZ_DEMO && (r7 < VIZ_RAIN_SITE_MM || (r7 >= VIZ_RAIN_MM && !VIZ_OUT[v.region].rowOnly))) return "";
+  if (!VIZ_DEMO && (r7 < VIZ_RAIN_SITE_MM || r7 >= VIZ_RAIN_MM)) return "";
   return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. '
     + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + Math.round(r7) + ' mm rain this week'
+    + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
+}
+/* RIVER CHIP (owner, 17 Nov 2026: "do 5"). Port Hacking's river, not the rain, tracks Oak Park's
+   viz: VIZ posts rank corr -0.33 (105, season removed; holds on weeks under 20 mm of rain), and
+   Michael McFadyen's Oak Park dives -0.37 (39, nearly all before 2020, so blind to the rule).
+   Cut 3 m3/s peak over the day and the 5 before (about 3 days in 10): poor viz 32% vs 24% in the
+   posts, 25% vs 19% in 2026, 38% vs 22% on his 250 Shiprock dives inside Port Hacking. Below that
+   the chip would show on half of all days. Flow: GloFAS via the Open-Meteo flood API, which also
+   forecasts it, so the chip reads ahead like the rain chip. tools/viz_mcf_full.mjs, viz_forecastable.mjs. */
+var VIZ_RIVER_SITE = {
+  Oak: { at: [-34.075, 151.075], name: "Port Hacking", cut: 3,
+    ev: "When the Hacking River has run above 3 m3/s on the day or in the 5 days before (about 3 days in 10), VIZ posts at Oak Park reported poor viz 32% of the time against 24%, and Michael McFadyen's dives inside Port Hacking 38% against 22%. Flow from the GloFAS river model, which also forecasts it." }
+};
+var vizRiver = null;
+function vizRiverRow(key, date){
+  var v = VIZ_RIVER_SITE[key]; if (!v || !vizRiver || !vizRiver[key]) return "";
+  var Q = vizRiver[key], pk = null, n, x;
+  for (n = 0; n <= 5; n++) { x = Q[vizAddDays(date, -n)]; if (x != null) pk = Math.max(pk == null ? 0 : pk, x); }
+  if (pk == null || (!VIZ_DEMO && pk < v.cut)) return "";
+  return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. '
+    + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + v.name + ' running high (' + pk.toFixed(1) + ' m³/s)'
     + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
 }
 var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, vizDrv = null;
@@ -743,7 +762,6 @@ var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, vizDrv = null;
 var VIZ_DEMO = /[?&]vizdemo=1(&|#|$)/.test(location.search);
 function vizAddDays(d, n){ var t = new Date(d + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
 function vizChip(name, date){
-  if (VIZ_OUT[name] && VIZ_OUT[name].rowOnly) return "";
   var D = vizDrv && vizDrv[name];
   if (!D) return VIZ_DEMO && VIZ_OUT[name] ? ' <span class="vizchip"><b>Viz may be reduced</b> · preview, no data yet</span>' : "";
   // Either driver alone is evidence, so a missing one only switches off its own test:
@@ -794,6 +812,20 @@ function loadVizOutlook(){
     vizDrv = out;
     if (DAYS && DAYS.length) render();
   });
+  // River flow for VIZ_RIVER_SITE, on its own so a slow flood host never holds the rain/swell chip.
+  var rk = Object.keys(VIZ_RIVER_SITE);
+  get("https://flood-api.open-meteo.com/v1/flood?latitude=" + rk.map(function(k){ return VIZ_RIVER_SITE[k].at[0]; }).join(",")
+    + "&longitude=" + rk.map(function(k){ return VIZ_RIVER_SITE[k].at[1]; }).join(",")
+    + "&daily=river_discharge&past_days=7&forecast_days=16").then(function(J){
+    if (!J) return;
+    var out = {};
+    rk.forEach(function(k, i){
+      if (!J[i] || !J[i].daily) return;
+      var o = {}; J[i].daily.time.forEach(function(d, j){ o[d] = J[i].daily.river_discharge[j]; }); out[k] = o;
+    });
+    vizRiver = out;
+    if (DAYS && DAYS.length) render();
+  });
 }
 
 function render(){
@@ -829,7 +861,7 @@ function render(){
           }).join("") + '</span><span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day) + vizRainRow(key, day.date);
+          }).join("") + '</span>' + vizTideRow(key, day) + vizSeasonRow(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
