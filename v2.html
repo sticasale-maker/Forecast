@@ -864,7 +864,11 @@ function loadOcean(){
       oceanData = j; if (DAYS && DAYS.length) render();
     }, function(){ clearTimeout(t); });
 }
-var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, vizDrv = null;
+/* BIG-SWELL RECOVERY (owner, 18 Nov 2026, tools/viz_storm_temp.mjs): after a 3.5 m+ day viz stays poor
+   longer. McFadyen 1990-2026: 41% poor on days 0-1, 30% on days 2-4 (26% with the 2.5 m chip already
+   off, against 20% usual), 15% from day 5; the VIZ posts agree. Ordinary 2.5-3.5 m days are back to
+   normal by day 2, so they keep the day-or-day-before window. */
+var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, VIZ_BIG_M = 3.5, VIZ_BIG_DAYS = 4, vizDrv = null;
 /* PREVIEW SWITCH: v2.html?vizdemo=1 shows the chip on every eligible heading whatever the
    thresholds say, with the real rain/swell figures and a "preview" tag, so the chip can be
    seen on a quiet week. Never linked; the tag keeps a shared demo link from misleading. */
@@ -878,13 +882,20 @@ function vizChip(name, date){
   var r7 = 0, h = 0, n, x, rainOk = !!D.rain, hsOk = !!D.hs;
   for (n = 1; n <= 7 && rainOk; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) rainOk = false; else r7 += x; }
   for (n = 0; n <= VIZ_SWELL_DAYS && hsOk; n++) { x = D.hs[vizAddDays(date, -n)]; if (x == null) hsOk = false; else h = Math.max(h, x); }
+  // a 3.5 m+ day 2-4 days back still counts (BIG-SWELL RECOVERY); a missing day only ends the look-back
+  var bigAgo = null, bigH = 0;
+  if (D.hs) for (n = 0; n <= VIZ_BIG_DAYS; n++) { x = D.hs[vizAddDays(date, -n)]; if (x == null) break;
+    if (x >= VIZ_BIG_M && bigAgo == null) { bigAgo = n; bigH = x; } }
   var wet = rainOk && (VIZ_DEMO || r7 >= VIZ_RAIN_MM), big = hsOk && (VIZ_DEMO || h >= VIZ_SWELL_M);
-  if (!wet && !big) return VIZ_DEMO ? ' <span class="vizchip"><b>Viz may be reduced</b> · preview, no data</span>' : "";
-  var why = wet && big ? Math.round(r7) + " mm rain + " + h.toFixed(1) + " m swell"
-          : wet ? Math.round(r7) + " mm rain this week" : h.toFixed(1) + " m swell today or yesterday";
+  var late = !big && bigAgo != null && bigAgo >= 2;          // the chip lives on for a big swell 2-4 days back
+  if (!wet && !big && !late) return VIZ_DEMO ? ' <span class="vizchip"><b>Viz may be reduced</b> · preview, no data</span>' : "";
+  var sw = late ? bigH.toFixed(1) + " m swell " + bigAgo + " days ago" : h.toFixed(1) + " m swell";
+  var why = wet && (big || late) ? Math.round(r7) + " mm rain + " + sw
+          : wet ? Math.round(r7) + " mm rain this week" : late ? sw : sw + " today or yesterday";
   return ' <span class="vizchip" title="Viz outlook, not part of the safety score. After a week with '
     + VIZ_RAIN_MM + ' mm+ of rain, or on or just after a day of ' + VIZ_SWELL_M + ' m+ swell, divers reported poor viz about twice as often '
-    + '(still only about 1 day in 3). Based on 936 VIZ group reports, 2020-2025. '
+    + '(still only about 1 day in 3). After a ' + VIZ_BIG_M + ' m+ swell it takes longer to clear: viz stays below usual for about 4 days. '
+    + 'Based on 936 VIZ group reports, 2020-2025, and 30 years of one diver\'s logbook. '
     + 'Rain hits the top few metres hardest: Michael McFadyen\'s dive reports often find it clearer deeper.">'
     + '<b>Viz may be reduced</b> · ' + why + (VIZ_DEMO ? ' · preview' : '') + '</span>';
 }
