@@ -850,8 +850,11 @@ function vizSatRow(key, date){
 function oceanTempLine(key, date){
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][date];
   if (!T || T.t15 == null) return null;
-  var txt = "About <b>" + Math.round(T.t15) + " °C at 15 m</b>" + (T.t0 != null ? ", " + Math.round(T.t0) + " °C at the surface" : "") + ".";
-  if (T.layer != null && T.layer >= 1.5) txt += " <b>Cold layer:</b> about " + Math.round(T.layer) + " °C colder at 15 m than on top.";
+  /* 15 m only: it is the figure corrected against divers' own logs at this site. The surface figure's
+     correction is pooled across sites, so showing both side by side could imply a gap the model does
+     not have (review, 18 Nov). The cold layer comes from the model's own surface-to-15 m difference. */
+  var txt = "About <b>" + Math.round(T.t15) + " °C at 15 m</b>.";
+  if (T.layer != null && T.layer >= 1.5) txt += " <b>Cold layer:</b> the model has it about " + Math.round(T.layer) + " °C warmer on top than at 15 m.";
   return txt + " Copernicus ocean model, corrected to divers&#39; logs here: a guide to within 1–2 °C.";
 }
 function loadOcean(){
@@ -860,7 +863,9 @@ function loadOcean(){
     .then(function(j){
       clearTimeout(t);
       // stale guard: the Worker refreshes a few points every hour; two days without an update = something broke
-      if (!j || !j.updated || Date.now() - Date.parse(j.updated) > 48 * 3600 * 1000) return;
+      // ok.temp = when Copernicus last answered (the cron's own `updated` keeps ticking even if a layer died)
+      var fresh = (j && j.ok && j.ok.temp) || (j && j.updated);
+      if (!fresh || Date.now() - Date.parse(fresh) > 48 * 3600 * 1000) return;
       oceanData = j; if (DAYS && DAYS.length) render();
     }, function(){ clearTimeout(t); });
 }
@@ -881,7 +886,10 @@ function vizChip(name, date){
   // a big swell still raises the chip when the rain feed is down, and vice versa.
   var r7 = 0, h = 0, n, x, rainOk = !!D.rain, hsOk = !!D.hs;
   for (n = 1; n <= 7 && rainOk; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) rainOk = false; else r7 += x; }
-  for (n = 0; n <= VIZ_SWELL_DAYS && hsOk; n++) { x = D.hs[vizAddDays(date, -n)]; if (x == null) hsOk = false; else h = Math.max(h, x); }
+  // lenient, as the Worker's daily record: the biggest swell of whichever of the two days is present
+  var hsAny = false;
+  for (n = 0; n <= VIZ_SWELL_DAYS && hsOk; n++) { x = D.hs[vizAddDays(date, -n)]; if (x != null) { hsAny = true; h = Math.max(h, x); } }
+  hsOk = hsOk && hsAny;
   // a 3.5 m+ day 2-4 days back still counts (BIG-SWELL RECOVERY); a missing day only ends the look-back
   var bigAgo = null, bigH = 0;
   if (D.hs) for (n = 0; n <= VIZ_BIG_DAYS; n++) { x = D.hs[vizAddDays(date, -n)]; if (x == null) break;
@@ -919,7 +927,7 @@ function loadVizOutlook(){
     get("https://api.open-meteo.com/v1/forecast?latitude=" + lat("rain") + "&longitude=" + lon("rain")
       + "&daily=precipitation_sum&past_days=8&forecast_days=14&timezone=Australia%2FSydney"),
     get("https://marine-api.open-meteo.com/v1/marine?latitude=" + lat("sea") + "&longitude=" + lon("sea")
-      + "&daily=wave_height_max&past_days=4&forecast_days=10&timezone=Australia%2FSydney")
+      + "&daily=wave_height_max&past_days=5&forecast_days=10&timezone=Australia%2FSydney")
   ]).then(function(res){
     var R = res[0], M = res[1], out = {};
     var col = function(J, i, f){
@@ -1267,8 +1275,9 @@ function vizBadge(key, day){
   // water temperature at 15 m (the Worker's /ocean, Copernicus model corrected per site), on the same line
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][d];
   var temp = T && T.t15 != null ? Math.round(T.t15) + " °C at 15 m" + (T.layer != null && T.layer >= 1.5 ? ", cold layer" : "") : "";
-  var tempTitle = temp ? "Water about " + Math.round(T.t15) + " °C at 15 m" + (T.t0 != null ? " and " + Math.round(T.t0) + " °C at the surface" : "")
-    + ": Copernicus ocean model, corrected to divers' logs here, a guide to within 1–2 °C." : "";
+  var tempTitle = temp ? "Water about " + Math.round(T.t15) + " °C at 15 m"
+    + (T.layer != null && T.layer >= 1.5 ? ", with a cold layer: the model has it about " + Math.round(T.layer) + " °C warmer on top" : "")
+    + ". Copernicus ocean model, corrected to divers' logs here, a guide to within 1–2 °C." : "";
   if (!rng && !w && !reduced) return temp
     ? '<span class="vbadge usual" title="' + tempTitle.replace(/"/g, "&quot;") + '"><span>🌡 ' + temp + '</span></span>' : "";
   var state = reduced ? "reduced" : better ? "better" : "usual";
@@ -1313,10 +1322,17 @@ function tideGuide(key, day, pick){
     var okc = cur && cur.rising != null ? (cur.rising === (flow === "incoming")) : null;
     var txt = "Clearest water on the <b>" + flow + " tide</b>"
       + (runs ? " — today it runs " + (flow === "incoming" ? "in " : "out ") + runs : "") + ".";
+    /* Where high water is the tested signal (VIZ_TIDE high:true), judge the picked hour by the SAME
+       window the row's stripe paints (within 2 h of high), so the stripe and this line never disagree. */
+    var vw = VIZ_TIDE[key] && VIZ_TIDE[key].high ? vizWindow(key, day) : null;
+    if (vw) {
+      okc = cur ? !!vw.good[pick.h] : null;
+      txt = "Clearest water <b>around high tide</b>" + (vw.txt ? " — today " + vw.txt : "") + ".";
+    }
     if (BOTANY[key]) txt += (td && td.highs.length ? " Be in before the high at <b>" + hoursList(td.highs).replace(/about /g, "") + "</b>." : "")
       + " Once it turns and runs out, murkier water draining from Botany Bay passes by and drops the visibility.";
     if (VIZ_TIDE[key]) txt += " " + VIZ_TIDE[key].ev;
-    txt += okc === true ? ' <span class="tg-state">Running that way' + at + '.</span>'
+    txt += okc === true ? ' <span class="tg-state">' + (vw ? "Inside the window" : "Running that way") + at + '.</span>'
          : okc === false ? ' <span class="tg-state">Not' + at + '.</span>' : "";
     line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
   }
