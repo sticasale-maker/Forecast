@@ -107,7 +107,7 @@
   body{
     background:var(--bg);color:var(--ink);
     font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased;padding-bottom:48px;
+    -webkit-font-smoothing:antialiased;padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px));
   }
   .wrap{max-width:860px;margin:0 auto;padding:0 16px}
 
@@ -149,6 +149,24 @@
   h1 .upd{font-style:normal;font-size:12px;font-weight:500;letter-spacing:0;color:var(--ink-3);white-space:nowrap}
   .sub b{color:var(--ink-2);font-weight:600}
 
+  /* BOTTOM BAR (owner, 21 Nov 2026: "move the day selectors at the bottom of the page, easier to reach, add new
+     tabs so the main page is shorter"): the day picker, then the tabs, fixed to the bottom edge. */
+  .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg);border-top:1px solid var(--line);
+             padding-bottom:env(safe-area-inset-bottom, 0px)}
+  .bottombar .inner{max-width:860px;margin:0 auto}
+  .bottombar .days{margin:0;padding:8px 16px 2px}
+  .bottombar .days[hidden]{display:none}
+  .tabs{display:flex;padding:0 8px 4px}
+  .tab{flex:1;border:0;background:none;font:inherit;font-size:11px;color:var(--ink-3);padding:6px 2px 4px;
+       display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer}
+  .tab span{font-size:19px;line-height:1.1}
+  .tab[aria-selected="true"]{color:var(--accent);font-weight:700}
+  .page[hidden]{display:none}
+  .wt{width:100%;border-collapse:collapse;font-size:14px}
+  .wt th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 6px 6px 0}
+  .wt td{padding:7px 6px 7px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .wt td:first-child{font-weight:600}
+  .wt-day{font-size:12.5px;color:var(--ink-3);margin:0 0 10px}
   /* day picker */
   .days{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;margin:0 -16px;
         padding-left:16px;padding-right:16px;scrollbar-width:none}
@@ -378,8 +396,8 @@
       </div>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch light or dark"></button>
     </div>
-    <div class="days" id="days"></div>
   </header>
+  <div class="page" id="pgForecast">
   <section class="ov" id="ov" hidden>
     <div class="ov-head"><h2>Sydney <span id="ovWhen"></span></h2>
       <button class="exp" id="ovToggle" type="button" aria-expanded="true">Hide ▴</button></div>
@@ -407,6 +425,8 @@
   })();
   </script>
   <div class="legend" id="legend"></div>
+  </div>
+  <div class="page" id="pgMore" hidden>
   <div class="more">
     <section>
       <button class="about-btn" id="aboutBtn" type="button" aria-expanded="false">ⓘ About this app</button>
@@ -468,6 +488,18 @@
       </div>
     </section>
 
+  </div>
+  <div class="coffee">
+    <p>This app is free, non-profit and built in spare time. If it saved you a bad dive, a coffee
+      goes a long way and makes running costs more sustainable without adding ads or subscriptions 😊</p>
+    <a href="https://www.buymeacoffee.com/vizforecast" target="_blank" rel="noopener">
+      <span style="font-size:24px;line-height:1">☕</span> Offer me a coffee
+      <span style="font-size:20px;line-height:1" aria-hidden="true">🥱</span></a>
+  </div>
+  <footer id="foot"></footer>
+  </div>
+  <div class="page" id="pgWeekend" hidden>
+  <div class="more">
     <section id="wkSec" hidden>
       <h2>Weekend outlook for the VIZ group</h2>
       <div class="card wk">
@@ -480,14 +512,24 @@
       </div>
     </section>
   </div>
-  <div class="coffee">
-    <p>This app is free, non-profit and built in spare time. If it saved you a bad dive, a coffee
-      goes a long way and makes running costs more sustainable without adding ads or subscriptions 😊</p>
-    <a href="https://www.buymeacoffee.com/vizforecast" target="_blank" rel="noopener">
-      <span style="font-size:24px;line-height:1">☕</span> Offer me a coffee
-      <span style="font-size:20px;line-height:1" aria-hidden="true">🥱</span></a>
   </div>
-  <footer id="foot"></footer>
+  <div class="page" id="pgWetsuit" hidden>
+  <div class="more">
+    <section>
+      <h2>Wetsuit</h2>
+      <div class="card" id="wetsuitBody"></div>
+    </section>
+  </div>
+  </div>
+  <nav class="bottombar" aria-label="Days and sections"><div class="inner">
+    <div class="days" id="days"></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="Forecast" aria-selected="true" type="button"><span>🌊</span>Forecast</button>
+      <button class="tab" role="tab" data-tab="Weekend" aria-selected="false" type="button"><span>📅</span>Weekend</button>
+      <button class="tab" role="tab" data-tab="Wetsuit" aria-selected="false" type="button"><span>🤿</span>Wetsuit</button>
+      <button class="tab" role="tab" data-tab="More" aria-selected="false" type="button"><span>☰</span>More</button>
+    </div>
+  </div></nav>
 </div>
 
 <script>
@@ -1015,7 +1057,7 @@ function loadOcean(){
       // ok.temp = when Copernicus last answered (the cron's own `updated` keeps ticking even if a layer died)
       var fresh = (j && j.ok && j.ok.temp) || (j && j.updated);
       if (!fresh || Date.now() - Date.parse(fresh) > 48 * 3600 * 1000) return;
-      oceanData = j; if (DAYS && DAYS.length) { render(); renderOverview(); }
+      oceanData = j; if (DAYS && DAYS.length) { render(); renderOverview(); if (TAB === "Wetsuit") renderWetsuit(); }
     }, function(){ clearTimeout(t); });
 }
 /* BIG-SWELL RECOVERY (owner, 18 Nov 2026, tools/viz_storm_temp.mjs): after a 3.5 m+ day viz stays poor
@@ -1577,8 +1619,7 @@ function tideGuide(key, day, pick){
   if (cr) line(cr.now ? "good" : "", "🐟 Visitors", cr.txt);
   var ot = oceanTempLine(key, day.date);
   if (ot) line("", "🌡 Water", ot);
-  var ws = wetsuitLine(key, day.date);
-  if (ws) line("", "🤿 Suit", ws);
+  /* the wetsuit moved to its own tab (owner, 21 Nov 2026) */
   var buoy = SITE_BUOY[key];
   if (buoy) line("", "🌊 Buoy", '<a href="' + BUOY_URL + '" target="vizcam" rel="noopener" onclick="return camPopup(this.href)">'
     + buoy.name + ' wave buoy, ' + buoy.m + ' m away: live wave height (Port Authority of NSW) ↗</a>');
@@ -2062,6 +2103,37 @@ function renderDays(){
   });
 }
 
+/* TABS (owner, 21 Nov 2026). One page shows at a time; the day picker belongs to the Forecast tab only. */
+var TAB = "Forecast";
+function setTab(t){
+  TAB = t;
+  ["Forecast", "Weekend", "Wetsuit", "More"].forEach(function(n){
+    var pg = document.getElementById("pg" + n); if (pg) pg.hidden = n !== t; });
+  [].forEach.call(document.querySelectorAll(".tab"), function(b){ b.setAttribute("aria-selected", b.dataset.tab === t); });
+  document.getElementById("days").hidden = t !== "Forecast";
+  if (t === "Wetsuit") renderWetsuit();
+  window.scrollTo(0, 0);
+}
+function tabsSetup(){
+  [].forEach.call(document.querySelectorAll(".tab"), function(b){ b.onclick = function(){ setTab(b.dataset.tab); }; });
+}
+/* Every site's suit for the selected day, north to south, from its 15 m water temperature. */
+function renderWetsuit(){
+  var el = document.getElementById("wetsuitBody"); if (!el || !DAYS.length) return;
+  var day = DAYS[dayIx], rows = "";
+  SITES_ORDER().forEach(function(k){
+    var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][day.date];
+    if (!T || T.t15 == null) return;
+    var r = WETSUIT.filter(function(x){ return T.t15 >= x[0]; })[0];
+    rows += '<tr><td>' + LABEL[k] + '</td><td>' + Math.round(T.t15) + ' °C</td><td>' + r[1] + '</td><td>' + r[2]
+          + (/^[357] mm$/.test(r[2]) ? ' open-cell' : '') + '</td></tr>';
+  });
+  var dd = new Date(day.date + "T12:00:00+11:00").toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"short" });
+  el.innerHTML = rows ? '<p class="wt-day">' + dd + ' · water at 15 m</p><table class="wt"><thead><tr><th>Site</th><th>Water</th>'
+    + '<th>Scuba</th><th>Freedive</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    : '<p class="wt-day">Water temperatures are still loading.</p>';
+}
+function SITES_ORDER(){ return [].concat.apply([], REGIONS.map(function(g){ return [].concat.apply([], g[2].map(function(x){ return x[1]; })); })); }
 function boot(j){
   data = j;
   DAYS = buildDays(j.hours);
@@ -2107,7 +2179,7 @@ function boot(j){
     + "snorkelling are at your own risk: VIZ, its creators and the VIZ group accept no "
     + "responsibility or liability for any injury, loss or damage arising from use of this "
     + "forecast. If in doubt, don't go out.</p>";
-  renderDays(); render(); ovSetup(); renderOverview();
+  renderDays(); render(); ovSetup(); renderOverview(); tabsSetup();
   if (!vizDrv) loadVizOutlook();
   if (!oceanData) loadOcean();
   if (!vizSurge) loadVizSurge();
