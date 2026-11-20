@@ -241,6 +241,9 @@
   .askok{display:block;margin-top:7px;font-size:12px;color:var(--caution)}
   .askok[hidden]{display:none}
   .wk-lead{margin:0 0 10px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+  #wkImg{display:block;width:100%;max-width:420px;height:auto;border-radius:10px;border:1px solid var(--line);margin:0 0 10px}
+  #wkImg[hidden]{display:none}
+  #wkShare{margin-bottom:14px}
   #wkText{white-space:pre-wrap;word-break:break-word;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 10px;
     max-height:340px;overflow:auto}
@@ -431,9 +434,11 @@
     <section id="wkSec" hidden>
       <h2>Weekend outlook for the VIZ group</h2>
       <div class="card wk">
-        <p class="wk-lead">A ready-made post for the group: the best sites this weekend, their visibility forecast and water temperature, and a call for reports. Copy it and paste it into VIZ.</p>
+        <p class="wk-lead">A ready-made post for the group: the best sites this weekend, their visibility forecast and water temperature, and a call for reports. Share the picture, then paste the text under it.</p>
+        <img id="wkImg" alt="Weekend outlook picture" hidden>
+        <button type="button" class="askbtn wkbtn" id="wkShare">Share weekend picture</button>
         <pre id="wkText"></pre>
-        <button type="button" class="askbtn" id="wkCopy">Copy weekend outlook</button>
+        <button type="button" class="askbtn wkbtn" id="wkCopy">Copy weekend outlook</button>
         <span class="askok" id="wkOk" hidden>Copied — paste it into the VIZ group</span>
       </div>
     </section>
@@ -1059,9 +1064,9 @@ function render(){
   renderWeekend();
   /* The draft goes to the clipboard rather than anywhere of ours: the post belongs to the
      diver, in the group, under their name. Nothing is sent from here. */
-  // not #wkCopy: it shares the class but copies the weekend text (renderWeekend); this loop would
-  // overwrite its handler with one that copies b.dataset.draft = undefined
-  [].forEach.call(document.querySelectorAll(".askbtn:not(#wkCopy)"), function(b){
+  // not the weekend buttons (.wkbtn): they share the look but renderWeekend wires them; this loop
+  // would overwrite their handlers with one that copies b.dataset.draft = undefined
+  [].forEach.call(document.querySelectorAll(".askbtn:not(.wkbtn)"), function(b){
     b.onclick = function(ev){
       ev.stopPropagation();
       var ok = b.parentNode.querySelector(".askok");
@@ -1665,43 +1670,174 @@ function weekendDays(){
   }
   return [];
 }
-function weekendText(){
-  var W = weekendDays(); if (!W.length) return "";
-  var hr = function(h){ return (h % 12 || 12) + (h < 12 ? "am" : "pm"); };
-  var dl = function(d){ return new Date(d + "T12:00:00Z").toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"short", timeZone:"UTC" }); };
+var wkHr = function(h){ return (h % 12 || 12) + (h < 12 ? "am" : "pm"); };
+var wkDl = function(d, o){ return new Date(d + "T12:00:00Z").toLocaleDateString("en-AU", o || { weekday:"long", day:"numeric", month:"short", timeZone:"UTC" }); };
+/* One structure behind both the text post and the picture card, so they never disagree. */
+function weekendData(){
+  var W = weekendDays(); if (!W.length) return [];
   var strip = function(s){ return String(s || "").replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/g, " ").replace(/\s+/g, " ").trim(); };
-  var L = ["VIZ weekend outlook: " + W.map(function(d){ return dl(d.date); }).join(" & "), ""];
-  W.forEach(function(day){
+  return W.map(function(day){
+    var reducedAt = function(k){
+      var head = VIZ_HEAD[k];
+      return !!((head && vizChip(head, day.date)) || vizRainRow(k, day.date) || vizRiverRow(k, day.date) || vizSatRow(k, day.date));
+    };
     var rows = Object.keys(data.sites || {}).map(function(k){
       var cells = cellsFor(k, day).filter(function(c){ return c.h >= 6 && c.h <= 16 && c.v != null; });
       if (!cells.length) return null;
       var best = cells.reduce(function(a, c){ return c.v > a.v ? c : a; });
       return { k:k, best:best, sum:summarise(cellsFor(k, day)) };
     }).filter(Boolean).sort(function(a, b){ return b.best.v - a.best.v; });
-    L.push(dl(day.date).toUpperCase());
     var pick = rows.filter(function(r){ return r.best.b === "easy"; }).slice(0, 5);
     if (!pick.length) pick = rows.filter(function(r){ return r.best.b === "caution"; }).slice(0, 3);
-    if (!pick.length) L.push("Nothing looks diveable in daylight. Good day to service the reg.");
+    var mo = +day.date.slice(5, 7);
     pick.forEach(function(r){
-      var b = strip(vizBadge(r.k, day).replace(/<svg[\s\S]*?<\/svg>/, "").replace("</b><span>", "</b> · <span>")).replace(/^Viz: /, "viz ").replace(/^Viz /, "viz ");
-      L.push("• " + LABEL[r.k] + ": " + r.sum.t + ", best around " + hr(r.best.h) + (b ? ". " + b.charAt(0).toUpperCase() + b.slice(1) : ""));
+      r.badge = strip(vizBadge(r.k, day).replace(/<svg[\s\S]*?<\/svg>/, "").replace("</b><span>", "</b> · <span>"));
+      var sea = VIZ_SEASON[r.k], rng = VIZ_RANGE[r.k];
+      var T = oceanData && oceanData.temp && oceanData.temp[r.k] && oceanData.temp[r.k][day.date];
+      r.state = reducedAt(r.k) ? "reduced" : (sea && sea.best.indexOf(mo) >= 0) ? "better" : "usual";
+      r.range = rng ? rng.lo + "–" + rng.hi + " m" : "";
+      r.t15 = T && T.t15 != null ? Math.round(T.t15) : null;
     });
-    var warn = Object.keys(data.sites || {}).filter(function(k){
-      var head = VIZ_HEAD[k];
-      return (head && vizChip(head, day.date)) || vizRainRow(k, day.date) || vizRiverRow(k, day.date) || vizSatRow(k, day.date);
-    }).map(function(k){ return LABEL[k]; });
-    if (warn.length) L.push("Viz may be reduced at: " + warn.join(", ") + ".");
+    var warn = Object.keys(data.sites || {}).filter(reducedAt).map(function(k){ return LABEL[k]; });
+    return { day:day, pick:pick, warn:warn };
+  });
+}
+function weekendText(){
+  var D = weekendData(); if (!D.length) return "";
+  var L = ["VIZ weekend outlook: " + D.map(function(d){ return wkDl(d.day.date); }).join(" & "), ""];
+  D.forEach(function(d){
+    L.push(wkDl(d.day.date).toUpperCase());
+    if (!d.pick.length) L.push("Nothing looks diveable in daylight. Good day to service the reg.");
+    d.pick.forEach(function(r){
+      var b = r.badge.replace(/^Viz: /, "viz ").replace(/^Viz /, "viz ");
+      L.push("• " + LABEL[r.k] + ": " + r.sum.t + ", best around " + wkHr(r.best.h) + (b ? ". " + b.charAt(0).toUpperCase() + b.slice(1) : ""));
+    });
+    if (d.warn.length) L.push("Viz may be reduced at: " + d.warn.join(", ") + ".");
     L.push("");
   });
   L.push("Diving this weekend? Post the viz in metres, the site and the time you were in. Every report makes the next forecast better.");
   L.push("Full forecast: app.viz.net.au/Forecast/v2.html");
   return L.join("\n");
 }
+/* WEEKEND CARD (owner, 20 Nov 2026: "people don't read otherwise"). The same weekend data drawn as a
+   1080x1350 portrait picture (the size Facebook and Instagram show best in a feed): days side by side,
+   each pick with its score band, best hour, visibility and water temperature, then the visibility
+   warnings and the call for reports. Fixed light palette: it is a picture for other people's feeds,
+   not part of the app's theme. Shared with the system share sheet where the phone supports files
+   (straight into the Facebook app), downloaded otherwise. */
+var wkLogo = null;
+function weekendCard(cb){
+  var D = weekendData(); if (!D.length) return cb(null);
+  if (wkLogo === null) {
+    wkLogo = new Image(); wkLogo.onload = function(){ weekendCard(cb); };
+    wkLogo.onerror = function(){ wkLogo = false; weekendCard(cb); };
+    wkLogo.src = "image_2.png"; return;
+  }
+  if (wkLogo && !wkLogo.complete) return;   // onload above will call back
+  var W = 1080, H = 1350, P = 56, cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  var x = cv.getContext("2d"), F = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  var C = { ink:"#14212b", ink2:"#4b5b66", sea1:"#0c5c8a", sea2:"#073a58", card:"#ffffff", page:"#eef3f6",
+            easy:"#1b8a4b", easyBg:"#d8f0e1", caution:"#b07503", cautionBg:"#fbeecd", avoid:"#bf3024", avoidBg:"#fbddd9",
+            warnBg:"#fbeecd", warn:"#7a5200", better:"#0c5c8a" };
+  function rr(x0, y0, w, h, r){ x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r);
+    x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); }
+  function fit(s, max){ if (x.measureText(s).width <= max) return s;
+    while (s.length > 1 && x.measureText(s + "…").width > max) s = s.slice(0, -1); return s + "…"; }
+  function wrap(s, x0, y0, max, lh){ var words = s.split(" "), line = "", y = y0;
+    words.forEach(function(w){ var t = line ? line + " " + w : w;
+      if (x.measureText(t).width > max && line) { x.fillText(line, x0, y); line = w; y += lh; } else line = t; });
+    if (line) x.fillText(line, x0, y); return y + lh; }
+  // page + header band
+  x.fillStyle = C.page; x.fillRect(0, 0, W, H);
+  var g = x.createLinearGradient(0, 0, 0, 250); g.addColorStop(0, C.sea1); g.addColorStop(1, C.sea2);
+  x.fillStyle = g; x.fillRect(0, 0, W, 250);
+  var tx = P;
+  if (wkLogo) { var lh0 = 110, lw0 = lh0 * (wkLogo.naturalWidth / wkLogo.naturalHeight || 1);
+    x.save(); rr(P, 70, lw0, lh0, 18); x.clip(); x.drawImage(wkLogo, P, 70, lw0, lh0); x.restore(); tx = P + lw0 + 30; }
+  x.fillStyle = "#fff"; x.textBaseline = "alphabetic";
+  x.font = "800 66px " + F; x.fillText("Weekend dive outlook", tx, 136);
+  x.font = "500 34px " + F; x.fillStyle = "rgba(255,255,255,.85)";
+  x.fillText(D.map(function(d){ return wkDl(d.day.date, { weekday:"short", day:"numeric", month:"short", timeZone:"UTC" }); }).join("  &  ") + "  ·  Sydney", tx, 186);
+  // day columns
+  var n = D.length, gap = 28, cw = (W - 2 * P - gap * (n - 1)) / n, top = 290, rowH = 138;
+  D.forEach(function(d, i){
+    var cx = P + i * (cw + gap), y = top;
+    x.fillStyle = C.ink; x.font = "800 40px " + F;
+    x.fillText(wkDl(d.day.date, { weekday:"long", timeZone:"UTC" }), cx, y); y += 26;
+    if (!d.pick.length) {
+      x.fillStyle = C.card; rr(cx, y, cw, rowH, 18); x.fill();
+      x.fillStyle = C.ink2; x.font = "500 28px " + F; wrap("Nothing looks diveable in daylight. Good day to service the reg.", cx + 24, y + 56, cw - 48, 36);
+      y += rowH + 14;
+    }
+    d.pick.forEach(function(r){
+      x.fillStyle = C.card; rr(cx, y, cw, rowH - 14, 18); x.fill();
+      var band = r.best.b, bc = C[band] || C.ink2, bb = C[band + "Bg"] || C.page;
+      x.fillStyle = bc; rr(cx, y, 12, rowH - 14, 6); x.fill();
+      // band tag, top right
+      var tag = bandName(band).toUpperCase(); x.font = "800 22px " + F;
+      var tw = x.measureText(tag).width + 28; x.fillStyle = bb; rr(cx + cw - tw - 18, y + 18, tw, 38, 19); x.fill();
+      x.fillStyle = bc; x.fillText(tag, cx + cw - tw - 4, y + 45);
+      var fs = 34, room = cw - tw - 64;   // shrink a long name before cutting it
+      do { x.font = "700 " + fs + "px " + F; } while (x.measureText(LABEL[r.k]).width > room && --fs > 25);
+      x.fillStyle = C.ink; x.fillText(fit(LABEL[r.k], room), cx + 32, y + 50);
+      var bits = ["best " + wkHr(r.best.h)];
+      if (r.range) bits.push("viz " + r.range);
+      if (r.t15 != null) bits.push(r.t15 + "°C");
+      x.font = "500 26px " + F; x.fillStyle = C.ink2; x.fillText(fit(bits.join("  ·  "), cw - 56), cx + 32, y + 88);
+      if (r.state !== "usual") {
+        x.font = "700 22px " + F; x.fillStyle = r.state === "reduced" ? C.caution : C.better;
+        x.fillText(r.state === "reduced" ? "viz may be reduced" : "viz: better odds than usual", cx + 32, y + 116);
+      }
+      y += rowH;
+    });
+    d.yEnd = y;
+  });
+  // visibility warnings
+  var y2 = Math.max.apply(null, D.map(function(d){ return d.yEnd; })) + 10;
+  var warns = D.filter(function(d){ return d.warn.length; });
+  if (warns.length) {
+    x.font = "500 27px " + F;
+    var lines = warns.map(function(d){ return (n > 1 ? wkDl(d.day.date, { weekday:"short", timeZone:"UTC" }) + ": " : "") + d.warn.join(", "); });
+    var bh = 70 + lines.length * 40;
+    x.fillStyle = C.warnBg; rr(P, y2, W - 2 * P, bh, 18); x.fill();
+    x.fillStyle = C.warn; x.font = "800 28px " + F; x.fillText("Viz may be reduced at", P + 28, y2 + 46);
+    x.font = "500 27px " + F; var yy = y2 + 88;
+    lines.forEach(function(s){ yy = wrap(s, P + 28, yy, W - 2 * P - 56, 36); });
+  }
+  // footer: the ask
+  x.fillStyle = C.sea2; x.fillRect(0, H - 170, W, 170);
+  x.fillStyle = "#fff"; x.font = "800 38px " + F; x.fillText(fit("Dived this weekend? Post your viz in the VIZ group", W - 2 * P), P, H - 110);
+  x.font = "500 26px " + F; x.fillStyle = "rgba(255,255,255,.85)";
+  x.fillText("Full forecast: app.viz.net.au/Forecast/v2.html", P, H - 66);
+  x.fillStyle = "rgba(255,255,255,.6)"; x.font = "500 22px " + F;
+  x.fillText("Viz ranges come from past VIZ reports: a guide, not a promise.", P, H - 32);
+  cb(cv);
+}
 function renderWeekend(){
   var sec = document.getElementById("wkSec"), t = weekendText();
   if (!sec) return;
   sec.hidden = !t;
   document.getElementById("wkText").textContent = t;
+  var sh = document.getElementById("wkShare"), im = document.getElementById("wkImg");
+  if (t && sh && im) weekendCard(function(cv){
+    if (!cv) return;
+    im.src = cv.toDataURL("image/png"); im.hidden = false;
+    sh.onclick = function(){
+      cv.toBlob(function(blob){
+        var name = "viz-weekend-" + weekendDays()[0].date + ".png";
+        var file = typeof File === "function" ? new File([blob], name, { type:"image/png" }) : null;
+        if (file && navigator.canShare && navigator.canShare({ files:[file] })) {
+          navigator.share({ files:[file], title:"VIZ weekend outlook" }).catch(function(){});
+        } else {
+          var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+          sh.textContent = "Saved. Add it to your VIZ post";
+        }
+      }, "image/png");
+    };
+  });
   var b = document.getElementById("wkCopy"), ok = document.getElementById("wkOk");
   b.onclick = function(){
     var done = function(){ ok.hidden = false; b.textContent = "Copied. Spread the viz"; };
