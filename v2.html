@@ -1200,6 +1200,19 @@ var MCF_BASE = "https://dive.michaelmcfadyenscuba.info/";
    closest cam to Bare Island (about 1 km, same shore of the bay); Malabar, Mahon Pool and
    Maroubra have no app site. */
 var CAM_BASE = "https://www.randwick.nsw.gov.au/facilities-and-recreation/explore-randwick-city/beach-cams";
+/* LIVE WAVE BUOYS (owner, 20 Nov 2026). The Port Authority of NSW's buoys sit right beside these
+   entries; on 20 Nov 22:40 F2's entry sea state matched them within 0.03-0.08 m. LINKED ONLY: their
+   terms forbid reproducing or storing the readings without written permission, so the app neither
+   shows nor records the numbers. Their site has no per-buoy address; the page lists Botany Bay first. */
+var BUOY_URL = "http://wavewindtide.portauthoritynsw.com.au/";
+var SITE_BUOY = {
+  Monument:   { name: "Captain Cook", m: 370 },
+  Steps:      { name: "Captain Cook", m: 570 },
+  BIW:        { name: "Bombora", m: 510 },
+  BIE:        { name: "Bombora", m: 620 },
+  BIWestmost: { name: "Bombora", m: 630 },
+  CampCove:   { name: "Sydney Entrance", m: 950 }
+};
 function camPopup(url){
   var w = Math.min(560, screen.availWidth - 40), h = Math.min(520, screen.availHeight - 80);
   var win = null;
@@ -1502,6 +1515,9 @@ function tideGuide(key, day, pick){
   if (cr) line(cr.now ? "good" : "", "🐟 Visitors", cr.txt);
   var ot = oceanTempLine(key, day.date);
   if (ot) line("", "🌡 Water", ot);
+  var buoy = SITE_BUOY[key];
+  if (buoy) line("", "🌊 Buoy", '<a href="' + BUOY_URL + '" target="vizcam" rel="noopener" onclick="return camPopup(this.href)">'
+    + buoy.name + ' wave buoy, ' + buoy.m + ' m away: live wave height (Port Authority of NSW) ↗</a>');
   var cam = SITE_CAM[key];
   /* Opens the council page in a small pop-up window (its own window, so their player and reCAPTCHA
      run as on their site; it cannot be framed: X-Frame-Options SAMEORIGIN). Phones open a tab. */
