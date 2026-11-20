@@ -403,15 +403,16 @@
       <div class="card about" id="about" hidden>
         <p class="lead">Why we built VIZ FORECAST</p>
         <p>Let's be honest: nothing beats a great day underwater—but only if the conditions are right. We got tired of the guesswork, so we built this tool to help our community determine if a site is "diveable" before packing the gear. Our data is powered by a proprietary wave transformation model, patiently tuned over years of real-world use by thousands of local divers, geekie details <a href="https://www.viz.net.au/divesite-forecast-explained" target="_blank" rel="noopener">here</a>.</p>
+        <p>The app holds two forecasts: the <b>Entry &amp; exit forecast</b>, the coloured hour bars for getting in and out of the water, and the <b>Visibility forecast</b>: each site's usual range, warnings and best hours.</p>
         <p>This project is entirely non-profit and run by volunteers who love diving as much as you do.</p>
-        <p class="lead">How good is the viz outlook? Our own scorecard</p>
-        <p>Every viz line in this app was checked against real dives: 1,100+ VIZ group reports from 2020 to 2026. Each rule was tested on years it had not seen.</p>
+        <p class="lead">How good is the Visibility forecast? Our own scorecard</p>
+        <p>Every visibility line in this app was checked against real dives: 1,100+ VIZ group reports from 2020 to 2026. Each rule was tested on years it had not seen.</p>
         <ul class="hit">
-          <li><b>Usual viz range</b> (in Details): about 6 reports in 10 fall inside it. It describes the site, not the day.</li>
+          <li><b>Usual visibility range</b> (in Details): about 6 reports in 10 fall inside it. It describes the site, not the day.</li>
           <li><b>"Viz may be reduced"</b>: on those days divers reported poor viz about 1 day in 3, against about 1 in 5 otherwise. So 2 days in 3 with the chip are still fine.</li>
           <li><b>Port Hacking running high</b> (Oak Park): poor viz 32% of the time against 24%.</li>
           <li><b>Tide and season lines</b>: tested per site; shown only where they held up.</li>
-          <li><b>What we can't do</b>: forecast the metres for a given day. We tested it, and it did not beat the site's usual viz. Treat any app that gives you an exact figure a week out with care.</li>
+          <li><b>What we can't do</b>: forecast the metres for a given day. We tested it, and it did not beat the site's usual visibility. Treat any app that gives you an exact figure a week out with care.</li>
         </ul>
         <p>Every line says what it rests on. Your VIZ posts are what keep these numbers honest.</p>
         <p>A quick reminder: Always use your own judgment before entering the water. If the actual conditions differ from the forecast, please let us know via the Feedback form below—that feedback is exactly how we continue to improve for everyone.</p>
@@ -792,7 +793,7 @@ function vizRainRow(key, date){
   var r7 = 0, n, x;
   for (n = 1; n <= 7; n++) { x = D.rain[vizAddDays(date, -n)]; if (x == null) return ""; r7 += x; }
   if (!VIZ_DEMO && (r7 < VIZ_RAIN_SITE_MM || r7 >= VIZ_RAIN_MM)) return "";
-  return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. '
+  return '<span class="vizt"><span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. '
     + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + Math.round(r7) + ' mm rain this week'
     + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
 }
@@ -812,7 +813,7 @@ function vizRiverRow(key, date){
   var Q = vizRiver[key], pk = null, n, x;
   for (n = 0; n <= 5; n++) { x = Q[vizAddDays(date, -n)]; if (x != null) pk = Math.max(pk == null ? 0 : pk, x); }
   if (pk == null || (!VIZ_DEMO && pk < v.cut)) return "";
-  return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. '
+  return '<span class="vizt"><span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. '
     + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + v.name + ' running high (' + pk.toFixed(1) + ' m³/s)'
     + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
 }
@@ -838,7 +839,7 @@ function vizSatRow(key, date){
   if (!s || !s.img || date < s.img || date > vizAddDays(TODAY, 1) || vizAddDays(s.img, 3) < date) return "";
   if (!VIZ_DEMO && !s.murky) return "";
   var when = new Date(s.img + "T12:00:00Z").toLocaleDateString("en-AU", { weekday:"short", day:"numeric", month:"short", timeZone:"UTC" });
-  return '<span class="vizt"><span class="vizchip" title="Viz outlook, not part of the safety score. On days the satellite '
+  return '<span class="vizt"><span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. On days the satellite '
     + 'showed this site&#39;s murkiest third of water for the month, VIZ posts reported poor viz 30% of the time against 19% on its '
     + 'clearest third (2020-2026), and the 2026 posts agreed. The satellite sees only the top few metres, from a 4 km pixel '
     + 'just offshore. Data: E.U. Copernicus Marine Service."><b>Viz may be reduced</b> · satellite shows murkier water ('
@@ -852,7 +853,7 @@ function oceanTempLine(key, date){
      not have (review, 18 Nov). The cold layer comes from the model's own surface-to-15 m difference. */
   var txt = "About <b>" + Math.round(T.t15) + " °C at 15 m</b>.";
   if (T.layer != null && T.layer >= 1.5) txt += " <b>Cold layer:</b> the model has it about " + Math.round(T.layer) + " °C warmer on top than at 15 m.";
-  return txt + " Copernicus ocean model, corrected to divers&#39; logs here: a guide to within 1–2 °C.";
+  return txt + " Copernicus ocean model, corrected per site: a guide to within 1–2 °C.";
 }
 function loadOcean(){
   var ac = window.AbortController ? new AbortController() : null, t = ac ? setTimeout(function(){ ac.abort(); }, 8000) : 0;
@@ -896,7 +897,7 @@ function vizChip(name, date){
   var sw = late ? bigH.toFixed(1) + " m swell " + bigAgo + " days ago" : h.toFixed(1) + " m swell";
   var why = wet && (big || late) ? Math.round(r7) + " mm rain + " + sw
           : wet ? Math.round(r7) + " mm rain this week" : late ? sw : sw + " today or yesterday";
-  return ' <span class="vizchip" title="Viz outlook, not part of the safety score. After a week with '
+  return ' <span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. After a week with '
     + VIZ_RAIN_MM + ' mm+ of rain, or on or just after a day of ' + VIZ_SWELL_M + ' m+ swell, divers reported poor viz about twice as often '
     + '(still only about 1 day in 3). After a ' + VIZ_BIG_M + ' m+ swell it takes longer to clear: viz stays below usual for about 4 days. '
     + 'Based on 936 VIZ group reports, 2020-2025. '
@@ -1256,7 +1257,7 @@ function vizWindow(key, day){
 }
 function vizStripe(key, day, cells){
   var w = vizWindow(key, day); if (!w) return "";
-  return '<span class="vstripe" title="Best viz window: ' + (w.txt || "none in daylight") + ' (' + w.why + ')">'
+  return '<span class="vstripe" title="Best visibility window: ' + (w.txt || "none in daylight") + ' (' + w.why + ')">'
     + cells.map(function(c){ return '<i' + (w.good[c.h] ? ' class="on"' : '') + '></i>'; }).join("") + '</span>';
 }
 function vizBadge(key, day){
@@ -1270,7 +1271,7 @@ function vizBadge(key, day){
   var temp = T && T.t15 != null ? Math.round(T.t15) + " °C at 15 m" + (T.layer != null && T.layer >= 1.5 ? ", cold layer" : "") : "";
   var tempTitle = temp ? "Water about " + Math.round(T.t15) + " °C at 15 m"
     + (T.layer != null && T.layer >= 1.5 ? ", with a cold layer: the model has it about " + Math.round(T.layer) + " °C warmer on top" : "")
-    + ". Copernicus ocean model, corrected to divers' logs here, a guide to within 1–2 °C." : "";
+    + ". Copernicus ocean model, corrected per site, a guide to within 1–2 °C." : "";
   if (!rng && !w && !reduced) return temp
     ? '<span class="vbadge usual" title="' + tempTitle.replace(/"/g, "&quot;") + '"><span>🌡 ' + temp + '</span></span>' : "";
   var state = reduced ? "reduced" : better ? "better" : "usual";
@@ -1281,9 +1282,9 @@ function vizBadge(key, day){
   else if (murkyMonth && !reduced) bits.push("murkier time of year");
   if (w && w.txt) bits.push('<i class="vkey" aria-hidden="true"></i>best viz ' + w.txt);
   if (temp) bits.push("🌡 " + temp);
-  var title = (reduced ? "A viz warning is out for this day: see the chip beside this line. " : "")
+  var title = (reduced ? "A visibility warning is out for this day: see the chip beside this line. " : "")
     + (better ? sea.ev + " " : murkyMonth ? sea.ev + " " : "")
-    + (w ? "Best viz window " + (w.txt || "none in daylight today") + ", " + w.why + ". " + w.ev + " " : "")
+    + (w ? "Best visibility window " + (w.txt || "none in daylight today") + ", " + w.why + ". " + w.ev + " " : "")
     + (rng ? "Usual range " + rng.lo + "–" + rng.hi + " m: about " + rng.in10 + " reports in 10 fall inside it. " : "")
     + "A guide from past reports, not a forecast of the metres." + (tempTitle ? " " + tempTitle : "");
   return '<span class="vbadge ' + state + '" title="' + title.replace(/"/g, "&quot;") + '">'
@@ -1338,7 +1339,7 @@ function tideGuide(key, day, pick){
   if (VIZ_SEASON[key]) {
     var vs = VIZ_SEASON[key], mo = +day.date.slice(5, 7);
     line(vs.best.indexOf(mo) >= 0 ? "good" : vs.worst.indexOf(mo) >= 0 ? "bad" : "", "🗓 Season",
-      "Viz is usually best <b>" + vs.bestTxt + "</b> and murkiest " + vs.worstTxt + ". " + vs.ev);
+      "Visibility is usually best <b>" + vs.bestTxt + "</b> and murkiest " + vs.worstTxt + ". " + vs.ev);
   }
   var ot = oceanTempLine(key, day.date);
   if (ot) line("", "🌡 Water", ot);
