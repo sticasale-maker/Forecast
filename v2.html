@@ -240,6 +240,10 @@
     background:var(--surface);color:var(--caution);border-radius:7px;cursor:pointer}
   .askok{display:block;margin-top:7px;font-size:12px;color:var(--caution)}
   .askok[hidden]{display:none}
+  .wk-lead{margin:0 0 10px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+  #wkText{white-space:pre-wrap;word-break:break-word;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 10px;
+    max-height:340px;overflow:auto}
 
   /* detail */
   .detail{border-top:1px solid var(--rule);padding:12px 13px 14px;background:var(--rule)}
@@ -421,6 +425,16 @@
         <p class="meta">Creative Commons License: BY NC ND</p>
         <p><a href="mailto:vizgroupsydney@gmail.com">vizgroupsydney@gmail.com</a></p>
         <p>Join the <a href="https://www.facebook.com/groups/sydviz" target="_blank" rel="noopener">VIZ Facebook group</a> for fresh underwater visibility reports.</p>
+      </div>
+    </section>
+
+    <section id="wkSec" hidden>
+      <h2>Weekend outlook for the VIZ group</h2>
+      <div class="card wk">
+        <p class="wk-lead">A ready-made post for the group: the best sites this weekend, their visibility forecast and water temperature, and a call for reports. Copy it and paste it into VIZ.</p>
+        <pre id="wkText"></pre>
+        <button type="button" class="askbtn" id="wkCopy">Copy weekend outlook</button>
+        <span class="askok" id="wkOk" hidden>Copied — paste it into the VIZ group</span>
       </div>
     </section>
 
@@ -1042,6 +1056,7 @@ function render(){
       renderOverview();
     };
   });
+  renderWeekend();
   /* The draft goes to the clipboard rather than anywhere of ours: the post belongs to the
      diver, in the group, under their name. Nothing is sent from here. */
   [].forEach.call(document.querySelectorAll(".askbtn"), function(b){
@@ -1321,6 +1336,38 @@ function vizBadge(key, day){
     + '<b>' + head1 + '</b>' + (bits.length ? '<span>' + bits.join(" · ") + '</span>' : "") + '</span>';
 }
 
+/* SEASONAL VISITORS (owner, 20 Nov 2026). From the VIZ group posts only (2020-2026): species named
+   in a site's reports far more often in one 3-month stretch than the rest of the year (at least 1.8x,
+   z >= 2.5, 6+ sightings, 15%+ of that stretch's reports). pk / rest = % of reports naming it in the
+   stretch / the other months. Counts undercount: many posts say only "the usual suspects".
+   Display only; nothing here touches a score or the visibility lines. */
+var VIZ_MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var VIZ_CRITTERS = {
+  BassPoint: [{sp:"whale", m:[8,9,10], pk:29, rest:5}, {sp:"anglerfish and frogfish", m:[12,1,2], pk:24, rest:5}, {sp:"octopus", m:[8,9,10], pk:26, rest:8}],
+  BIW: [{sp:"eastern blue devil", m:[6,7,8], pk:19, rest:3}, {sp:"Port Jackson shark", m:[7,8,9], pk:45, rest:9}, {sp:"moray eel", m:[6,7,8], pk:15, rest:4}],
+  Steps: [{sp:"Port Jackson shark", m:[7,8,9], pk:40, rest:3}, {sp:"cuttlefish", m:[8,9,10], pk:24, rest:7}, {sp:"pot-bellied seahorse", m:[6,7,8], pk:34, rest:13}],
+  Bushranger: [{sp:"whale", m:[8,9,10], pk:32, rest:1}],
+  Oak: [{sp:"Port Jackson shark", m:[8,9,10], pk:30, rest:2}, {sp:"grey nurse shark", m:[8,9,10], pk:24, rest:4}, {sp:"turtle", m:[7,8,9], pk:20, rest:4}],
+  LittleBay: [{sp:"fiddler ray", m:[1,2,3], pk:20, rest:1}, {sp:"wobbegong", m:[11,12,1], pk:79, rest:19}, {sp:"octopus", m:[4,5,6], pk:53, rest:15}],
+  CTB: [{sp:"Port Jackson shark", m:[8,9,10], pk:52, rest:4}, {sp:"jellyfish and bluebottles", m:[1,2,3], pk:19, rest:3}, {sp:"giant cuttlefish", m:[4,5,6], pk:25, rest:4}],
+  Monument: [{sp:"Port Jackson shark", m:[7,8,9], pk:38, rest:3}],
+  Freshwater: [{sp:"eagle ray", m:[1,2,3], pk:25, rest:6}],
+  Fairlight: [{sp:"Port Jackson shark", m:[8,9,10], pk:71, rest:5}],
+  SharkPoint: [{sp:"Port Jackson shark", m:[7,8,9], pk:52, rest:11}],
+  Chowder: [{sp:"squid", m:[10,11,12], pk:33, rest:2}, {sp:"cuttlefish", m:[6,7,8], pk:71, rest:31}]
+};
+function crittersLine(key, mo){
+  var L = VIZ_CRITTERS[key]; if (!L) return null;
+  var now = false;
+  var parts = L.map(function(c){
+    var on = c.m.indexOf(mo) >= 0; if (on) now = true;
+    var s = c.sp + ", " + VIZ_MON[c.m[0] - 1] + "–" + VIZ_MON[c.m[c.m.length - 1] - 1]
+      + " (in " + c.pk + "% of VIZ reports then, " + c.rest + "% otherwise)";
+    return on ? "<b>" + s + " — in season now</b>" : s;
+  });
+  return { now: now, txt: "Seen most often in season: " + parts.join("; ") + "." };
+}
+
 function tideGuide(key, day, pick){
   var td = tideDay(key, day), m = MCF[key], lines = [];
   var cur = td ? td.hrs.filter(function(x){ return x.h === pick.h; })[0] : null;
@@ -1370,6 +1417,8 @@ function tideGuide(key, day, pick){
     line(vs.best.indexOf(mo) >= 0 ? "good" : vs.worst.indexOf(mo) >= 0 ? "bad" : "", "🗓 Season",
       "Visibility is usually best <b>" + vs.bestTxt + "</b> and murkiest " + vs.worstTxt + ". " + vs.ev);
   }
+  var cr = crittersLine(key, +day.date.slice(5, 7));
+  if (cr) line(cr.now ? "good" : "", "🐟 Visitors", cr.txt);
   var ot = oceanTempLine(key, day.date);
   if (ot) line("", "🌡 Water", ot);
   var cam = SITE_CAM[key];
@@ -1598,6 +1647,65 @@ function detailFor(key, cells, nowI){
     + tideGuide(key, day, pick)
     + '<div class="ten"><b>Next ' + DAYS.length + ' days</b><span class="strip">' + ten + '</span></div>'
     + '</div>';
+}
+
+/* WEEKEND OUTLOOK (owner, 18 Nov 2026). A plain-text post for the VIZ group for the coming weekend
+   (Saturday and Sunday; on a Sunday, just today): per day the best-scoring sites in daylight with
+   their score summary, best hour, viz outlook (badge state, usual range, best viz window), water
+   temperature, the sites under a viz warning, and the ask for reports. Built only from what the app
+   already shows; the group gets the content, the app gets the reports back. */
+function weekendDays(){
+  for (var i = 0; i < DAYS.length; i++) {
+    if (DAYS[i].date < TODAY) continue;
+    var wd = new Date(DAYS[i].date + "T12:00:00Z").getUTCDay();
+    if (wd === 6) return DAYS[i + 1] ? [DAYS[i], DAYS[i + 1]] : [DAYS[i]];
+    if (wd === 0) return [DAYS[i]];
+  }
+  return [];
+}
+function weekendText(){
+  var W = weekendDays(); if (!W.length) return "";
+  var hr = function(h){ return (h % 12 || 12) + (h < 12 ? "am" : "pm"); };
+  var dl = function(d){ return new Date(d + "T12:00:00Z").toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"short", timeZone:"UTC" }); };
+  var strip = function(s){ return String(s || "").replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/g, " ").replace(/\s+/g, " ").trim(); };
+  var L = ["VIZ weekend outlook: " + W.map(function(d){ return dl(d.date); }).join(" & "), ""];
+  W.forEach(function(day){
+    var rows = Object.keys(data.sites || {}).map(function(k){
+      var cells = cellsFor(k, day).filter(function(c){ return c.h >= 6 && c.h <= 16 && c.v != null; });
+      if (!cells.length) return null;
+      var best = cells.reduce(function(a, c){ return c.v > a.v ? c : a; });
+      return { k:k, best:best, sum:summarise(cellsFor(k, day)) };
+    }).filter(Boolean).sort(function(a, b){ return b.best.v - a.best.v; });
+    L.push(dl(day.date).toUpperCase());
+    var pick = rows.filter(function(r){ return r.best.b === "easy"; }).slice(0, 5);
+    if (!pick.length) pick = rows.filter(function(r){ return r.best.b === "caution"; }).slice(0, 3);
+    if (!pick.length) L.push("Nothing looks diveable in daylight. Good day to service the reg.");
+    pick.forEach(function(r){
+      var b = strip(vizBadge(r.k, day).replace(/<svg[\s\S]*?<\/svg>/, "").replace("</b><span>", "</b> · <span>")).replace(/^Viz: /, "viz ").replace(/^Viz /, "viz ");
+      L.push("• " + LABEL[r.k] + ": " + r.sum.t + ", best around " + hr(r.best.h) + (b ? ". " + b.charAt(0).toUpperCase() + b.slice(1) : ""));
+    });
+    var warn = Object.keys(data.sites || {}).filter(function(k){
+      var head = VIZ_HEAD[k];
+      return (head && vizChip(head, day.date)) || vizRainRow(k, day.date) || vizRiverRow(k, day.date) || vizSatRow(k, day.date);
+    }).map(function(k){ return LABEL[k]; });
+    if (warn.length) L.push("Viz may be reduced at: " + warn.join(", ") + ".");
+    L.push("");
+  });
+  L.push("Diving this weekend? Post the viz in metres, the site and the time you were in. Every report makes the next forecast better.");
+  L.push("Full forecast: app.viz.net.au/Forecast/v2.html");
+  return L.join("\n");
+}
+function renderWeekend(){
+  var sec = document.getElementById("wkSec"), t = weekendText();
+  if (!sec) return;
+  sec.hidden = !t;
+  document.getElementById("wkText").textContent = t;
+  var b = document.getElementById("wkCopy"), ok = document.getElementById("wkOk");
+  b.onclick = function(){
+    var done = function(){ ok.hidden = false; b.textContent = "Copied. Spread the viz"; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function(){ b.textContent = "Press and hold the text to copy"; });
+    else b.textContent = "Press and hold the text to copy";
+  };
 }
 
 var DAYS = [];
