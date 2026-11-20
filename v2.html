@@ -1059,7 +1059,9 @@ function render(){
   renderWeekend();
   /* The draft goes to the clipboard rather than anywhere of ours: the post belongs to the
      diver, in the group, under their name. Nothing is sent from here. */
-  [].forEach.call(document.querySelectorAll(".askbtn"), function(b){
+  // not #wkCopy: it shares the class but copies the weekend text (renderWeekend); this loop would
+  // overwrite its handler with one that copies b.dataset.draft = undefined
+  [].forEach.call(document.querySelectorAll(".askbtn:not(#wkCopy)"), function(b){
     b.onclick = function(ev){
       ev.stopPropagation();
       var ok = b.parentNode.querySelector(".askok");
