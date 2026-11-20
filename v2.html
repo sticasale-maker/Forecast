@@ -414,12 +414,13 @@
         <p>The app holds two forecasts: the <b>Entry &amp; exit forecast</b>, the coloured hour bars for getting in and out of the water, and the <b>Visibility forecast</b>: each site's usual range, warnings and best hours.</p>
         <p>This project is entirely non-profit and run by volunteers who love diving as much as you do.</p>
         <p class="lead">How good is the Visibility forecast? Our own scorecard</p>
-        <p>Every visibility line in this app was checked against real dives: 1,100+ VIZ group reports from 2020 to 2026. Each rule was tested on years it had not seen.</p>
+        <p>The visibility lines in this app were checked against real dives: 1,100+ VIZ group reports from 2020 to 2026. Each rule was tested on years it had not seen; the one exception is marked below.</p>
         <ul class="hit">
           <li><b>Usual visibility range</b> (in Details): about 6 reports in 10 fall inside it. It describes the site, not the day.</li>
           <li><b>"Viz may be reduced"</b>: on those days divers reported poor viz about 1 day in 3, against about 1 in 5 otherwise. So 2 days in 3 with the chip are still fine.</li>
           <li><b>Port Hacking running high</b> (Oak Park): poor viz 32% of the time against 24%.</li>
           <li><b>Tide and season lines</b>: tested per site; shown only where they held up.</li>
+          <li><b>Cabbage Tree Bay</b>: swell surging into the bay, and big swell outside it in the past week. From local experience; the second is partly backed by reports, the first not yet tested. The app is recording both so they can be.</li>
           <li><b>What we can't do</b>: forecast the metres for a given day. We tested it, and it did not beat the site's usual visibility. Treat any app that gives you an exact figure a week out with care.</li>
         </ul>
         <p>Every line says what it rests on. Your VIZ posts are what keep these numbers honest.</p>
@@ -838,6 +839,73 @@ function vizRiverRow(key, date){
     + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · ' + v.name + ' running high (' + pk.toFixed(1) + ' m³/s)'
     + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
 }
+/* CTB SURGE -> VISIBILITY (owner, 20 Nov 2026): "when the swell is entering the bay and smashing
+   against the wall and shallow rocks (represented by high surge in the Swim Manly app) the
+   visibility is always bad". OWNER'S EXPERIENCE, NOT YET TESTED: the CTB node has no wave hindcast
+   (our own archive starts Oct 2026), so unlike the other warnings there is no report test behind it;
+   the Worker's daily /vizlog records it so it can be checked against VIZ posts as they come in.
+   Source: the Swim app's own Bower Lane surge (/bower-surge, the same model the Entry & exit score
+   mirrors for CTB). Shown when any daylight hour (6 am-6 pm) reads Surgy or Washy (raw > 35, the Swim
+   app's band edge): the owner's choice, 20 Nov, knowing it showed on 10 of 11 days that week (Washy
+   only would have been 5).
+   SECOND MECHANISM, same owner note: big southerly swell does not enter the bay, but the water it
+   stirs outside circulates in. Shown when the offshore swell off Manly reached 3 m+ on any day in the
+   past 7 (VIZ_CTB_SWELL). Partly backed by reports: at CTB, the biggest swell of the past 14 days
+   ranks against site-relative viz at -0.33 (47 posts, tools/viz_metrics.mjs); the region-style
+   'day or day before 2.5 m' rule shows nothing there (-0.08). KEEP IN STEP with swim-worker src/vizlog.js (SURGE_EDGE). */
+var VIZ_SURGE_SITE = { CTB: { edge: 35, from: 6, to: 18,
+  ev: "From local experience: when swell surges into Cabbage Tree Bay and smashes against the wall and the shallow rocks (Surgy or Washy in the Manly Swim app), the visibility is always bad. Not yet checked against VIZ reports; the app is recording it to check." } };
+var VIZ_CTB_SWELL = { CTB: { at: [-33.80, 151.35], m: 3.0, days: 7,
+  ev: "From local experience, partly backed by VIZ reports: big swell does not enter Cabbage Tree Bay, but the water it stirs outside circulates in. In past VIZ posts here, the bigger the swell over the previous two weeks, the worse the visibility (47 posts)." } };
+var vizCtbHs = null;
+function vizCtbSwell(key, date){
+  var v = VIZ_CTB_SWELL[key]; if (!v || !vizCtbHs) return null;
+  var pk = null, n, x;
+  for (n = 0; n < v.days; n++) { x = vizCtbHs[vizAddDays(date, -n)]; if (x != null) pk = Math.max(pk == null ? 0 : pk, x); }
+  return pk != null && pk >= v.m ? pk : null;
+}
+var vizSurge = null;
+function loadVizSurge(){
+  var v = VIZ_CTB_SWELL.CTB;
+  fetch("https://marine-api.open-meteo.com/v1/marine?latitude=" + v.at[0] + "&longitude=" + v.at[1]
+    + "&daily=wave_height_max&past_days=8&forecast_days=10&timezone=Australia%2FSydney")
+    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){
+      var o = {}; (j.daily && j.daily.time || []).forEach(function(d, k){ o[d] = j.daily.wave_height_max[k]; });
+      vizCtbHs = o; if (DAYS && DAYS.length) render();
+    }, function(){});
+  var ac = window.AbortController ? new AbortController() : null, t = ac ? setTimeout(function(){ ac.abort(); }, 8000) : 0;
+  fetch("https://bold-rain-6ded.sticasale.workers.dev/bower-surge", ac ? { signal: ac.signal } : undefined)
+    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){
+      clearTimeout(t);
+      var by = {};
+      (j && j.hours || []).forEach(function(x){
+        if (!x || !x.t || x.raw == null) return;
+        var d = x.t.slice(0, 10), h = +x.t.slice(11, 13);
+        (by[d] = by[d] || []).push({ h: h, raw: x.raw, label: x.label });
+      });
+      vizSurge = { CTB: by };
+      if (DAYS && DAYS.length) render();
+    }, function(){ clearTimeout(t); });
+}
+function vizSurgeHours(key, date){
+  var v = VIZ_SURGE_SITE[key]; if (!v || !vizSurge || !vizSurge[key] || !vizSurge[key][date]) return null;
+  var hs = vizSurge[key][date].filter(function(x){ return x.h >= v.from && x.h < v.to && x.raw > v.edge; });
+  return hs.length ? hs : null;
+}
+function vizSurgeRow(key, date){
+  var out = "", pk = vizCtbSwell(key, date);
+  if (pk != null) out = '<span class="vizt"><span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. '
+    + VIZ_CTB_SWELL[key].ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · big swell outside this week (' + pk.toFixed(1) + ' m)</span></span>';
+  var hs = vizSurgeHours(key, date); if (!hs && !VIZ_DEMO) return out;
+  var v = VIZ_SURGE_SITE[key]; if (!v) return out;
+  var when = hs ? (hs.length === (v.to - v.from) ? "all day" : fmtHour(hs[0].h) + "–" + fmtHour(hs[hs.length - 1].h + 1)) : "";
+  var worst = hs ? hs.reduce(function(a, x){ return x.raw > a.raw ? x : a; }).label : "";
+  return '<span class="vizt"><span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. '
+    + v.ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · swell surging into the bay' + (worst ? ' (' + worst + ', ' + when + ')' : '')
+    + (VIZ_DEMO ? ' · preview' : '') + '</span></span>' + out;
+}
 /* COPERNICUS (owner, 18 Nov 2026). The Worker's /ocean route (swim-worker src/ocean.js) reads
    Copernicus Marine through its public map-tile service a few points an hour and serves:
    - sat[site]: the latest clear satellite image's Secchi depth and whether it is in the site's
@@ -1008,7 +1076,7 @@ function render(){
           }).join("") + '</span>' + vizStripe(key, day, cells) + '<span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizBadge(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSatRow(key, day.date);
+          }).join("") + '</span>' + vizBadge(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSurgeRow(key, day.date) + vizSatRow(key, day.date);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -1316,7 +1384,7 @@ function vizStripe(key, day, cells){
 function vizBadge(key, day){
   var d = day.date, m = +d.slice(5, 7), rng = VIZ_RANGE[key], sea = VIZ_SEASON[key], w = vizWindow(key, day);
   var head = VIZ_HEAD[key];
-  var reduced = !!((head && vizChip(head, d)) || vizRainRow(key, d) || vizRiverRow(key, d) || vizSatRow(key, d));
+  var reduced = !!((head && vizChip(head, d)) || vizRainRow(key, d) || vizRiverRow(key, d) || vizSurgeHours(key, d) || vizCtbSwell(key, d) != null || vizSatRow(key, d));
   var better = !reduced && sea && sea.best.indexOf(m) >= 0;
   var murkyMonth = sea && sea.worst.indexOf(m) >= 0;
   // water temperature at 15 m (the Worker's /ocean, Copernicus model corrected per site), on the same line
@@ -1689,7 +1757,7 @@ function weekendData(){
     var mo = +day.date.slice(5, 7);
     var reducedAt = function(k){
       var head = VIZ_HEAD[k];
-      return !!((head && vizChip(head, day.date)) || vizRainRow(k, day.date) || vizRiverRow(k, day.date) || vizSatRow(k, day.date));
+      return !!((head && vizChip(head, day.date)) || vizRainRow(k, day.date) || vizRiverRow(k, day.date) || vizSurgeHours(k, day.date) || vizCtbSwell(k, day.date) != null || vizSatRow(k, day.date));
     };
     var site = {};
     keys.forEach(function(k){
@@ -1943,6 +2011,7 @@ function boot(j){
   renderDays(); render(); ovSetup(); renderOverview();
   if (!vizDrv) loadVizOutlook();
   if (!oceanData) loadOcean();
+  if (!vizSurge) loadVizSurge();
 }
 
 /* The Worker sends max-age=900 and only rebuilds every 30 min, so let the browser reuse a
