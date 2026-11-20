@@ -1103,6 +1103,20 @@ var BOTANY = { Steps:1, Monument:1, BIE:1, BIW:1, BIWestmost:1 };
    BI Westmost, Bass Point and Bushrangers matched by position (123-176 m). Freshwater,
    South Coogee and Seal Rocks have no page near the entry, so they get no link. */
 var MCF_BASE = "https://dive.michaelmcfadyenscuba.info/";
+/* RANDWICK COUNCIL BEACH CAMS (owner, 20 Nov 2026). LINKED, never embedded: the council blocks
+   restreaming. Each link opens the council page at that cam's own section. Yarra Bay is the
+   closest cam to Bare Island (about 1 km, same shore of the bay); Malabar, Mahon Pool and
+   Maroubra have no app site. */
+var CAM_BASE = "https://www.randwick.nsw.gov.au/facilities-and-recreation/explore-randwick-city/beach-cams";
+var SITE_CAM = {
+  SharkPoint:  { a:"clovelly", name:"Clovelly" },
+  Gordons:     { a:"gordons",  name:"Gordons Bay" },
+  SouthCoogee: { a:"coogee",   name:"Coogee" },
+  LittleBay:   { a:"littlebay", name:"Little Bay" },
+  BIE:         { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" },
+  BIW:         { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" },
+  BIWestmost:  { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" }
+};
 var MCF = {
   CTB:{id:"fairy-bower",tide:"any"},
   BIE:{id:"bare-island-left-eastern-side",tide:"any"},
@@ -1343,6 +1357,9 @@ function tideGuide(key, day, pick){
   }
   var ot = oceanTempLine(key, day.date);
   if (ot) line("", "🌡 Water", ot);
+  var cam = SITE_CAM[key];
+  if (cam) line("", "📷 Cam", '<a href="' + CAM_BASE + '#' + cam.a + '" target="_blank" rel="noopener">'
+    + cam.name + ' live cam' + (cam.near ? ', ' + cam.near : '') + ' (Randwick Council) ↗</a>');
   if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
     + '<a href="' + MCF_BASE + m.id + '/" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
   return lines.length ? '<div class="tg">' + lines.join("") + '</div>' : "";
