@@ -995,7 +995,7 @@ function loadOcean(){
       // ok.temp = when Copernicus last answered (the cron's own `updated` keeps ticking even if a layer died)
       var fresh = (j && j.ok && j.ok.temp) || (j && j.updated);
       if (!fresh || Date.now() - Date.parse(fresh) > 48 * 3600 * 1000) return;
-      oceanData = j; if (DAYS && DAYS.length) render();
+      oceanData = j; if (DAYS && DAYS.length) { render(); renderOverview(); }
     }, function(){ clearTimeout(t); });
 }
 /* BIG-SWELL RECOVERY (owner, 18 Nov 2026, tools/viz_storm_temp.mjs): after a 3.5 m+ day viz stays poor
@@ -1679,6 +1679,12 @@ function ovHour(){
 }
 function median(a){ a = a.filter(function(x){ return x != null; }).sort(function(x, y){ return x - y; });
   return a.length ? a[Math.floor(a.length / 2)] : null; }
+/* Water temperature at 15 m beside each site's name on the map (owner, 21 Nov 2026: "add temperatures
+   on the map"), the same /ocean figure as the row, for the day shown. Empty when there is none. */
+function ovTemp(k, date){
+  var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][date];
+  return T && T.t15 != null ? " " + Math.round(T.t15) + "°" : "";
+}
 function renderOverview(){
   var sec = document.getElementById("ov");
   if (typeof VizSiteMap === "undefined" || !SITE_COAST.Sydney) return;
@@ -1709,7 +1715,7 @@ function renderOverview(){
     .map(function(k){
       var S = data.sites[k], v = S && S.score ? S.score[i] : null, b = band(v), L = OV_LABEL[k] || {};
       return { key:k, u:SYDNEY_DOTS[k][0], v:SYDNEY_DOTS[k][1], color:(color[b] || color.none).trim(),
-               label:L.t || LABEL[k], left:!!L.left, dy:L.dy || 0 };
+               label:(L.t || LABEL[k]) + ovTemp(k, day.date), left:!!L.left, dy:L.dy || 0 };
     });
   var wk = wxAt("Freshwater", "windKmh", i);
   if (!_ov) _ov = VizSiteMap.create(document.getElementById("ovCanvas"));
