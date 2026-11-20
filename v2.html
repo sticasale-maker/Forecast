@@ -217,6 +217,7 @@
   .cell.now{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
   /* the hour the map and stats are showing */
   .cell.sel{outline:2.5px solid var(--accent);outline-offset:1px;z-index:2}
+  .tm{text-transform:none}   /* times stay "10 am" inside capitalised labels */
   .maphint{font-size:11.5px;color:var(--ink-3);font-weight:400;text-transform:none;letter-spacing:0}
   .ticks{display:flex;gap:2px;margin-top:3px}
   .ticks span{flex:1;font-size:11.5px;font-weight:500;color:var(--ink-2);text-align:center;
@@ -619,7 +620,8 @@ var TOMORROW = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }
 
 function hourOf(s){ return parseInt(String(s).slice(11,13),10); }
 function dateOf(s){ return String(s).slice(0,10); }
-function fmtHour(h){ return h === 12 ? "12p" : h > 12 ? (h-12)+"p" : h+"a"; }
+/* "10 am", never "10a"/"10A" (owner, 20 Nov 2026). Non-breaking space keeps it on one line. */
+function fmtHour(h){ h = ((h % 24) + 24) % 24; return (h % 12 || 12) + " " + (h < 12 ? "am" : "pm"); }
 
 /* Index the payload's flat hour array into days, once. */
 function buildDays(hours){
@@ -752,7 +754,7 @@ function askEl(key, sum, day, cells, nowI){
   var draft = [LABEL[key] + ", " + when + ", ITW " + itw,
                "Viz ___ m · surge: none / light / strong · particles: clear / some / lots · water ___ C",
                "App said " + bandName(pick && pick.b && pick.b !== "none" ? pick.b : sum.b) + ". I would call it ___"]
-    .concat(cond.length ? ["Forecast at " + ((pick.h % 12) || 12) + (pick.h < 12 ? "am" : "pm") + " (VIZ Forecast): " + cond.join(", ")] : [])
+    .concat(cond.length ? ["Forecast at " + fmtHour(pick.h) + " (VIZ Forecast): " + cond.join(", ")] : [])
     .join(NL);
   var lead = appeal
     ? '<p class="askh">Diving ' + LABEL[key] + '? Tell the group how it went.</p>'
@@ -1101,7 +1103,7 @@ function mapSlot(key, pick, wind){
     chop: Math.max(0, Math.min(1, (k - 5) / 30)), windOnly: windOnly } };
   var dd = new Date(DAYS[dayIx].date + "T12:00:00+11:00")
     .toLocaleDateString("en-AU", { weekday:"short", day:"numeric", month:"short" });
-  return '<div class="mapcard"><b class="lbl">Map · ' + dd + ', ' + fmtHour(pick.h)
+  return '<div class="mapcard"><b class="lbl">Map · ' + dd + ', <span class="tm">' + fmtHour(pick.h) + '</span>'
     + ' <span class="maphint">— tap an hour on the bar to move it</span></b>'
     + '<div id="mapSlot"></div></div>';
 }
@@ -1300,7 +1302,7 @@ function vizWindow(key, day){
     if (good[h]) { if (!run) run = { a:h, z:h }; else run.z = h; }
     if ((!good[h] || h === 19) && run) { runs.push(run); run = null; }
   }
-  var hr = function(h){ return (h % 12 || 12) + (h < 12 ? "am" : "pm"); };
+  var hr = fmtHour;
   var txt = runs.map(function(r){ return hr(r.a) + "–" + hr(r.z + 1); }).join(" and ");
   var why = v ? (v.high ? "the 2 hours either side of high tide" : "while the tide is " + (flow === "incoming" ? "coming in" : "going out"))
               : "while the tide is coming in, before Botany Bay drains out";
@@ -1643,7 +1645,7 @@ function detailFor(key, cells, nowI){
     + mapSlot(key, pick, wind)
     + dayVerdict(key, cells)
     + '<div class="grid">'
-    + stat("At " + fmtHour(pick.h), bandName(pick.b))
+    + stat('At <span class="tm">' + fmtHour(pick.h) + '</span>', bandName(pick.b))
     + stat("Sea at entry", combined != null ? combined.toFixed(2) + " m" : "–")
     + stat("Swell", (sea != null ? sea.toFixed(2) + " m " : "") + dirTxt(at(S.swellDir))
         + (at(S.swellP) != null ? " · " + at(S.swellP).toFixed(0) + "s" : ""))
@@ -1670,48 +1672,58 @@ function weekendDays(){
   }
   return [];
 }
-var wkHr = function(h){ return (h % 12 || 12) + (h < 12 ? "am" : "pm"); };
+var wkHr = fmtHour;   // "10 am", as everywhere in the app
 var wkDl = function(d, o){ return new Date(d + "T12:00:00Z").toLocaleDateString("en-AU", o || { weekday:"long", day:"numeric", month:"short", timeZone:"UTC" }); };
-/* One structure behind both the text post and the picture card, so they never disagree. */
+/* One structure behind both the text post and the picture card, so they never disagree.
+   EVERY site, every day (owner, 20 Nov 2026: the first version kept the top 5 Easy sites and dropped
+   the rest; on a good weekend that was 11 of 16 Easy sites missing). */
+var WK_ORDER = [].concat.apply([], REGIONS.map(function(g){
+  return [].concat.apply([], g[2].map(function(s){ return s[1]; }));
+}));
 function weekendData(){
   var W = weekendDays(); if (!W.length) return [];
   var strip = function(s){ return String(s || "").replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/g, " ").replace(/\s+/g, " ").trim(); };
+  var keys = WK_ORDER.filter(function(k){ return data.sites && data.sites[k]; })
+    .concat(Object.keys(data.sites || {}).filter(function(k){ return WK_ORDER.indexOf(k) < 0; }));
   return W.map(function(day){
+    var mo = +day.date.slice(5, 7);
     var reducedAt = function(k){
       var head = VIZ_HEAD[k];
       return !!((head && vizChip(head, day.date)) || vizRainRow(k, day.date) || vizRiverRow(k, day.date) || vizSatRow(k, day.date));
     };
-    var rows = Object.keys(data.sites || {}).map(function(k){
+    var site = {};
+    keys.forEach(function(k){
       var cells = cellsFor(k, day).filter(function(c){ return c.h >= 6 && c.h <= 16 && c.v != null; });
-      if (!cells.length) return null;
+      if (!cells.length) return;
       var best = cells.reduce(function(a, c){ return c.v > a.v ? c : a; });
-      return { k:k, best:best, sum:summarise(cellsFor(k, day)) };
-    }).filter(Boolean).sort(function(a, b){ return b.best.v - a.best.v; });
-    var pick = rows.filter(function(r){ return r.best.b === "easy"; }).slice(0, 5);
-    if (!pick.length) pick = rows.filter(function(r){ return r.best.b === "caution"; }).slice(0, 3);
-    var mo = +day.date.slice(5, 7);
-    pick.forEach(function(r){
-      r.badge = strip(vizBadge(r.k, day).replace(/<svg[\s\S]*?<\/svg>/, "").replace("</b><span>", "</b> · <span>"));
-      var sea = VIZ_SEASON[r.k], rng = VIZ_RANGE[r.k];
-      var T = oceanData && oceanData.temp && oceanData.temp[r.k] && oceanData.temp[r.k][day.date];
-      r.state = reducedAt(r.k) ? "reduced" : (sea && sea.best.indexOf(mo) >= 0) ? "better" : "usual";
-      r.range = rng ? rng.lo + "–" + rng.hi + " m" : "";
-      r.t15 = T && T.t15 != null ? Math.round(T.t15) : null;
+      var sea = VIZ_SEASON[k], rng = VIZ_RANGE[k];
+      var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][day.date];
+      site[k] = { k:k, best:best, sum:summarise(cellsFor(k, day)),
+        badge: strip(vizBadge(k, day).replace(/<svg[\s\S]*?<\/svg>/, "").replace("</b><span>", "</b> · <span>")),
+        state: reducedAt(k) ? "reduced" : (sea && sea.best.indexOf(mo) >= 0) ? "better" : "usual",
+        range: rng ? rng.lo + "–" + rng.hi + " m" : "",
+        t15: T && T.t15 != null ? Math.round(T.t15) : null };
     });
-    var warn = Object.keys(data.sites || {}).filter(reducedAt).map(function(k){ return LABEL[k]; });
-    return { day:day, pick:pick, warn:warn };
+    var ranked = Object.keys(site).map(function(k){ return site[k]; }).sort(function(a, b){ return b.best.v - a.best.v; });
+    var by = function(b){ return ranked.filter(function(r){ return r.best.b === b; }); };
+    var warn = keys.filter(reducedAt).map(function(k){ return LABEL[k]; });
+    return { day:day, site:site, easy:by("easy"), caution:by("caution"), avoid:by("avoid"), warn:warn };
   });
 }
 function weekendText(){
   var D = weekendData(); if (!D.length) return "";
   var L = ["VIZ weekend outlook: " + D.map(function(d){ return wkDl(d.day.date); }).join(" & "), ""];
+  var names = function(a){ return a.map(function(r){ return LABEL[r.k]; }).join(", "); };
   D.forEach(function(d){
     L.push(wkDl(d.day.date).toUpperCase());
-    if (!d.pick.length) L.push("Nothing looks diveable in daylight. Good day to service the reg.");
-    d.pick.forEach(function(r){
+    var lead = d.easy.length ? d.easy : d.caution;
+    if (!lead.length) L.push("Nothing looks diveable in daylight. Good day to service the reg.");
+    lead.forEach(function(r){
       var b = r.badge.replace(/^Viz: /, "viz ").replace(/^Viz /, "viz ");
       L.push("• " + LABEL[r.k] + ": " + r.sum.t + ", best around " + wkHr(r.best.h) + (b ? ". " + b.charAt(0).toUpperCase() + b.slice(1) : ""));
     });
+    if (d.easy.length && d.caution.length) L.push("Caution: " + names(d.caution) + ".");
+    if (d.avoid.length) L.push("Avoid: " + names(d.avoid) + ".");
     if (d.warn.length) L.push("Viz may be reduced at: " + d.warn.join(", ") + ".");
     L.push("");
   });
@@ -1720,11 +1732,12 @@ function weekendText(){
   return L.join("\n");
 }
 /* WEEKEND CARD (owner, 20 Nov 2026: "people don't read otherwise"). The same weekend data drawn as a
-   1080x1350 portrait picture (the size Facebook and Instagram show best in a feed): days side by side,
-   each pick with its score band, best hour, visibility and water temperature, then the visibility
-   warnings and the call for reports. Fixed light palette: it is a picture for other people's feeds,
-   not part of the app's theme. Shared with the system share sheet where the phone supports files
-   (straight into the Facebook app), downloaded otherwise. */
+   1080x1350 portrait picture (the size Facebook and Instagram show best in a feed): every site in the
+   app's region order, one row each, a coloured Easy / Caution / Avoid tag per day with the best hour,
+   a marker where visibility may be reduced, the 15 m water temperature, and the call for reports.
+   Fixed light palette: it is a picture for other people's feeds, not part of the app's theme. Shared
+   with the system share sheet where the phone supports files (straight into the Facebook app),
+   downloaded otherwise. */
 var wkLogo = null;
 function weekendCard(cb){
   var D = weekendData(); if (!D.length) return cb(null);
@@ -1734,84 +1747,97 @@ function weekendCard(cb){
     wkLogo.src = "image_2.png"; return;
   }
   if (wkLogo && !wkLogo.complete) return;   // onload above will call back
-  var W = 1080, H = 1350, P = 56, cv = document.createElement("canvas");
+  var W = 1080, H = 1350, P = 48, cv = document.createElement("canvas");
   cv.width = W; cv.height = H;
   var x = cv.getContext("2d"), F = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
-  var C = { ink:"#14212b", ink2:"#4b5b66", sea1:"#0c5c8a", sea2:"#073a58", card:"#ffffff", page:"#eef3f6",
-            easy:"#1b8a4b", easyBg:"#d8f0e1", caution:"#b07503", cautionBg:"#fbeecd", avoid:"#bf3024", avoidBg:"#fbddd9",
-            warnBg:"#fbeecd", warn:"#7a5200", better:"#0c5c8a" };
+  var C = { ink:"#14212b", ink2:"#4b5b66", ink3:"#7b8a94", sea1:"#0c5c8a", sea2:"#073a58", page:"#eef3f6", zebra:"#ffffff",
+            easy:"#1b8a4b", easyBg:"#d8f0e1", caution:"#9a6600", cautionBg:"#fbeecd", avoid:"#bf3024", avoidBg:"#fbddd9",
+            warn:"#c77d00" };
   function rr(x0, y0, w, h, r){ x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r);
     x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); }
   function fit(s, max){ if (x.measureText(s).width <= max) return s;
     while (s.length > 1 && x.measureText(s + "…").width > max) s = s.slice(0, -1); return s + "…"; }
-  function wrap(s, x0, y0, max, lh){ var words = s.split(" "), line = "", y = y0;
-    words.forEach(function(w){ var t = line ? line + " " + w : w;
-      if (x.measureText(t).width > max && line) { x.fillText(line, x0, y); line = w; y += lh; } else line = t; });
-    if (line) x.fillText(line, x0, y); return y + lh; }
+  function drop(cx, cy, r, col){   // the "visibility may be reduced" marker: a small filled triangle
+    x.fillStyle = col; x.beginPath(); x.moveTo(cx - r, cy - r * .8); x.lineTo(cx + r, cy - r * .8); x.lineTo(cx, cy + r * .9); x.closePath(); x.fill(); }
   // page + header band
   x.fillStyle = C.page; x.fillRect(0, 0, W, H);
-  var g = x.createLinearGradient(0, 0, 0, 250); g.addColorStop(0, C.sea1); g.addColorStop(1, C.sea2);
-  x.fillStyle = g; x.fillRect(0, 0, W, 250);
+  var g = x.createLinearGradient(0, 0, 0, 200); g.addColorStop(0, C.sea1); g.addColorStop(1, C.sea2);
+  x.fillStyle = g; x.fillRect(0, 0, W, 200);
   var tx = P;
-  if (wkLogo) { var lh0 = 110, lw0 = lh0 * (wkLogo.naturalWidth / wkLogo.naturalHeight || 1);
-    x.save(); rr(P, 70, lw0, lh0, 18); x.clip(); x.drawImage(wkLogo, P, 70, lw0, lh0); x.restore(); tx = P + lw0 + 30; }
+  if (wkLogo) { var lh0 = 104, lw0 = lh0 * (wkLogo.naturalWidth / wkLogo.naturalHeight || 1);
+    x.save(); rr(P, 48, lw0, lh0, 16); x.clip(); x.drawImage(wkLogo, P, 48, lw0, lh0); x.restore(); tx = P + lw0 + 28; }
   x.fillStyle = "#fff"; x.textBaseline = "alphabetic";
-  x.font = "800 66px " + F; x.fillText("Weekend dive outlook", tx, 136);
-  x.font = "500 34px " + F; x.fillStyle = "rgba(255,255,255,.85)";
-  x.fillText(D.map(function(d){ return wkDl(d.day.date, { weekday:"short", day:"numeric", month:"short", timeZone:"UTC" }); }).join("  &  ") + "  ·  Sydney", tx, 186);
-  // day columns
-  var n = D.length, gap = 28, cw = (W - 2 * P - gap * (n - 1)) / n, top = 290, rowH = 138;
+  x.font = "800 62px " + F; x.fillText("Weekend dive outlook", tx, 110);
+  x.font = "500 31px " + F; x.fillStyle = "rgba(255,255,255,.85)";
+  x.fillText("Every site, its best hour in daylight  ·  Sydney", tx, 156);
+  // table geometry: name column, then one column per day
+  var n = D.length, dayW = n > 1 ? 262 : 360, gap = 14, nameW = W - 2 * P - n * dayW - n * gap;
+  var dayX = function(i){ return P + nameW + gap + i * (dayW + gap); };
+  var keys = WK_ORDER.filter(function(k){ return D.some(function(d){ return d.site[k]; }); });
+  var groups = REGIONS.map(function(g){ return { name:g[0], keys:[].concat.apply([], g[2].map(function(s){ return s[1]; }))
+    .filter(function(k){ return keys.indexOf(k) >= 0; }) }; }).filter(function(g){ return g.keys.length; });
+  var top = 262, footH = 158, legendH = 54, avail = H - footH - legendH - top - 10;
+  var gH = 34, rowH = Math.min(48, Math.floor((avail - groups.length * gH) / keys.length));
+  // day headings
+  x.textAlign = "center";
   D.forEach(function(d, i){
-    var cx = P + i * (cw + gap), y = top;
-    x.fillStyle = C.ink; x.font = "800 40px " + F;
-    x.fillText(wkDl(d.day.date, { weekday:"long", timeZone:"UTC" }), cx, y); y += 26;
-    if (!d.pick.length) {
-      x.fillStyle = C.card; rr(cx, y, cw, rowH, 18); x.fill();
-      x.fillStyle = C.ink2; x.font = "500 28px " + F; wrap("Nothing looks diveable in daylight. Good day to service the reg.", cx + 24, y + 56, cw - 48, 36);
-      y += rowH + 14;
-    }
-    d.pick.forEach(function(r){
-      x.fillStyle = C.card; rr(cx, y, cw, rowH - 14, 18); x.fill();
-      var band = r.best.b, bc = C[band] || C.ink2, bb = C[band + "Bg"] || C.page;
-      x.fillStyle = bc; rr(cx, y, 12, rowH - 14, 6); x.fill();
-      // band tag, top right
-      var tag = bandName(band).toUpperCase(); x.font = "800 22px " + F;
-      var tw = x.measureText(tag).width + 28; x.fillStyle = bb; rr(cx + cw - tw - 18, y + 18, tw, 38, 19); x.fill();
-      x.fillStyle = bc; x.fillText(tag, cx + cw - tw - 4, y + 45);
-      var fs = 34, room = cw - tw - 64;   // shrink a long name before cutting it
-      do { x.font = "700 " + fs + "px " + F; } while (x.measureText(LABEL[r.k]).width > room && --fs > 25);
-      x.fillStyle = C.ink; x.fillText(fit(LABEL[r.k], room), cx + 32, y + 50);
-      var bits = ["best " + wkHr(r.best.h)];
-      if (r.range) bits.push("viz " + r.range);
-      if (r.t15 != null) bits.push(r.t15 + "°C");
-      x.font = "500 26px " + F; x.fillStyle = C.ink2; x.fillText(fit(bits.join("  ·  "), cw - 56), cx + 32, y + 88);
-      if (r.state !== "usual") {
-        x.font = "700 22px " + F; x.fillStyle = r.state === "reduced" ? C.caution : C.better;
-        x.fillText(r.state === "reduced" ? "viz may be reduced" : "viz: better odds than usual", cx + 32, y + 116);
-      }
+    x.fillStyle = C.ink; x.font = "800 34px " + F;
+    x.fillText(wkDl(d.day.date, { weekday:"long", timeZone:"UTC" }), dayX(i) + dayW / 2, top - 22);
+    x.fillStyle = C.ink3; x.font = "500 22px " + F;
+    x.fillText(wkDl(d.day.date, { day:"numeric", month:"short", timeZone:"UTC" }), dayX(i) + dayW / 2, top + 2);
+  });
+  x.textAlign = "left";
+  var y = top + 16, zebra = 0;
+  groups.forEach(function(g){
+    x.fillStyle = C.sea1; x.font = "800 20px " + F;
+    x.fillText(g.name.toUpperCase(), P + 4, y + 24); y += gH;
+    g.keys.forEach(function(k){
+      if (zebra++ % 2 === 0) { x.fillStyle = C.zebra; rr(P, y, W - 2 * P, rowH, 10); x.fill(); }
+      var mid = y + rowH / 2;
+      // name (shrunk before it is cut), water temperature after it
+      var t15 = null; D.forEach(function(d){ if (t15 == null && d.site[k] && d.site[k].t15 != null) t15 = d.site[k].t15; });
+      var tTxt = t15 != null ? t15 + "°C" : "";
+      x.font = "500 22px " + F; var tW = tTxt ? x.measureText(tTxt).width + 16 : 0;
+      var fs = 28, room = nameW - 24 - tW;
+      do { x.font = "700 " + fs + "px " + F; } while (x.measureText(LABEL[k]).width > room && --fs > 21);
+      x.fillStyle = C.ink; var nm = fit(LABEL[k], room); x.fillText(nm, P + 16, mid + fs * .36);
+      if (tTxt) { var nx = P + 16 + x.measureText(nm).width + 14; x.font = "500 22px " + F; x.fillStyle = C.ink3; x.fillText(tTxt, nx, mid + 8); }
+      // one tag per day
+      D.forEach(function(d, i){
+        var r = d.site[k], cx = dayX(i);
+        if (!r) { x.fillStyle = C.ink3; x.font = "500 20px " + F; x.textAlign = "center"; x.fillText("no forecast", cx + dayW / 2, mid + 7); x.textAlign = "left"; return; }
+        var b = r.best.b, ph = Math.min(36, rowH - 8), py = mid - ph / 2;
+        x.fillStyle = C[b + "Bg"] || C.page; rr(cx, py, dayW - 34, ph, ph / 2); x.fill();
+        x.fillStyle = C[b] || C.ink2; x.font = "800 21px " + F;
+        var lbl = bandName(b), hr = wkHr(r.best.h);
+        x.fillText(lbl, cx + 16, mid + 7);
+        // the day also holds an Avoid stretch (summarise names it): red dot, so a best-hour "Easy" can't hide it
+        var worse = r.best.b !== "avoid" && /, Avoid (after|earlier)$/.test(r.sum.t);
+        x.font = "600 21px " + F; x.textAlign = "right"; x.fillText(hr, cx + dayW - (worse ? 70 : 50), mid + 7); x.textAlign = "left";
+        if (worse) { x.fillStyle = C.avoid; x.beginPath(); x.arc(cx + dayW - 55, mid, 7, 0, 7); x.fill(); }
+        if (r.state === "reduced") drop(cx + dayW - 14, mid, 9, C.warn);
+      });
       y += rowH;
     });
-    d.yEnd = y;
   });
-  // visibility warnings
-  var y2 = Math.max.apply(null, D.map(function(d){ return d.yEnd; })) + 10;
-  var warns = D.filter(function(d){ return d.warn.length; });
-  if (warns.length) {
-    x.font = "500 27px " + F;
-    var lines = warns.map(function(d){ return (n > 1 ? wkDl(d.day.date, { weekday:"short", timeZone:"UTC" }) + ": " : "") + d.warn.join(", "); });
-    var bh = 70 + lines.length * 40;
-    x.fillStyle = C.warnBg; rr(P, y2, W - 2 * P, bh, 18); x.fill();
-    x.fillStyle = C.warn; x.font = "800 28px " + F; x.fillText("Viz may be reduced at", P + 28, y2 + 46);
-    x.font = "500 27px " + F; var yy = y2 + 88;
-    lines.forEach(function(s){ yy = wrap(s, P + 28, yy, W - 2 * P - 56, 36); });
-  }
+  // legend
+  var ly = H - footH - 22;
+  x.font = "500 22px " + F; x.fillStyle = C.ink2;
+  var lx = P + 4;
+  [["easy", "Easy"], ["caution", "Caution"], ["avoid", "Avoid"]].forEach(function(p){
+    x.fillStyle = C[p[0] + "Bg"]; rr(lx, ly - 22, 26, 28, 8); x.fill(); x.fillStyle = C[p[0]]; rr(lx + 6, ly - 15, 14, 14, 4); x.fill();
+    x.fillStyle = C.ink2; x.fillText(p[1], lx + 34, ly); lx += 34 + x.measureText(p[1]).width + 26; });
+  drop(lx + 10, ly - 8, 9, C.warn); x.fillStyle = C.ink2; x.fillText("viz may be reduced", lx + 28, ly);
+  lx += 28 + x.measureText("viz may be reduced").width + 24;
+  x.fillStyle = C.avoid; x.beginPath(); x.arc(lx + 8, ly - 8, 7, 0, 7); x.fill();
+  x.fillStyle = C.ink2; x.fillText("Avoid later or earlier", lx + 22, ly);
   // footer: the ask
-  x.fillStyle = C.sea2; x.fillRect(0, H - 170, W, 170);
-  x.fillStyle = "#fff"; x.font = "800 38px " + F; x.fillText(fit("Dived this weekend? Post your viz in the VIZ group", W - 2 * P), P, H - 110);
+  x.fillStyle = C.sea2; x.fillRect(0, H - footH, W, footH);
+  x.fillStyle = "#fff"; x.font = "800 38px " + F; x.fillText(fit("Dived this weekend? Post your viz in the VIZ group", W - 2 * P), P, H - footH + 58);
   x.font = "500 26px " + F; x.fillStyle = "rgba(255,255,255,.85)";
-  x.fillText("Full forecast: app.viz.net.au/Forecast/v2.html", P, H - 66);
+  x.fillText("Full forecast: app.viz.net.au/Forecast/v2.html", P, H - footH + 100);
   x.fillStyle = "rgba(255,255,255,.6)"; x.font = "500 22px " + F;
-  x.fillText("Viz ranges come from past VIZ reports: a guide, not a promise.", P, H - 32);
+  x.fillText("A guide from forecasts and past VIZ reports, not a promise. Check the water yourself.", P, H - footH + 134);
   cb(cv);
 }
 function renderWeekend(){
