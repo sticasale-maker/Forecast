@@ -405,7 +405,7 @@
         <p>Let's be honest: nothing beats a great day underwater—but only if the conditions are right. We got tired of the guesswork, so we built this tool to help our community determine if a site is "diveable" before packing the gear. Our data is powered by a proprietary wave transformation model, patiently tuned over years of real-world use by thousands of local divers, geekie details <a href="https://www.viz.net.au/divesite-forecast-explained" target="_blank" rel="noopener">here</a>.</p>
         <p>This project is entirely non-profit and run by volunteers who love diving as much as you do.</p>
         <p class="lead">How good is the viz outlook? Our own scorecard</p>
-        <p>Every viz line in this app was checked against real dives: 1,100+ VIZ group reports from 2020 to 2026, and Michael McFadyen's 30-year dive log. Each rule was tested on years it had not seen.</p>
+        <p>Every viz line in this app was checked against real dives: 1,100+ VIZ group reports from 2020 to 2026. Each rule was tested on years it had not seen.</p>
         <ul class="hit">
           <li><b>Usual viz range</b> (in Details): about 6 reports in 10 fall inside it. It describes the site, not the day.</li>
           <li><b>"Viz may be reduced"</b>: on those days divers reported poor viz about 1 day in 3, against about 1 in 5 otherwise. So 2 days in 3 with the chip are still fine.</li>
@@ -765,7 +765,7 @@ function askEl(key, sum, day, cells, nowI){
    variables the analysis used (it used their ERA5 archive; live values come from their
    forecast models). Fetched once per load, after the forecast; no chip if it fails.
    SWELL WINDOW narrowed 15 Nov 2026 (owner) from "the 3 days up to the day" to "the day or the
-   day before": tools/viz_metrics.mjs (season removed, VIZ posts AND McFadyen's log) puts the
+   day before": tools/viz_metrics.mjs (season removed) puts the
    swell effect in the first 1-2 days. Same strength on 2020-25 (34% vs 22% poor, was 33% vs
    21%) on 40% fewer chip days; 2026 30% vs 21% (10 flagged posts, too few to prove it). */
 var VIZ_OUT = {
@@ -775,16 +775,15 @@ var VIZ_OUT = {
 };
 /* PER-SITE RAIN CHIP (owner, 15 Nov 2026). tools/viz_persite.mjs, season removed: at these three
    sites viz drops after much less rain than the heading chip's 40 mm. Pooled 2020-25 rank corr
-   -0.23 (161 posts), 2026 -0.37 (22), and McFadyen's own Monument dives -0.45 (26). Shown on the
+   -0.23 (161 posts), 2026 -0.37 (22). Shown on the
    site's row from 20 mm in the 7 days before; above 40 mm the heading chip already says it.
-   OAK MOVED TO THE RIVER CHIP (17 Nov 2026, tools/viz_mcf_full.mjs): on Michael McFadyen's
-   Oak Park dives, nearly all before 2020 and so blind to the rule, 7-day rain did nothing
-   (rank corr -0.01, 60 dives) while the Hacking River's flow did (-0.37, 39). See VIZ_RIVER_SITE.
-   GORDONS DROPPED, MONUMENT KEPT (owner, 17 Nov 2026; tools/viz_mcf_rain.mjs): re-run with BOM rain
+   OAK MOVED TO THE RIVER CHIP (17 Nov 2026): at Oak Park the Hacking River's flow tracks viz
+   better than 7-day rain does. See VIZ_RIVER_SITE.
+   GORDONS DROPPED, MONUMENT KEPT (owner, 17 Nov 2026): re-run with BOM rain
    GAUGES instead of the model rain, Gordons' 20 mm effect vanished (20-40 mm weeks 10% poor vs 23%),
    while the Monument's held (about 40% vs 21%). */
 var VIZ_RAIN_SITE = {
-  Monument: { region: "Botany Bay and Kurnell", ev: "After 20 mm+ of rain in the week before, VIZ posts at the Monument reported poor viz 45% of the time against 19% (2020-2026), and Michael McFadyen's own dives there show the same." }
+  Monument: { region: "Botany Bay and Kurnell", ev: "After 20 mm+ of rain in the week before, VIZ posts at the Monument reported poor viz 45% of the time against 19% (2020-2026)." }
 };
 var VIZ_RAIN_SITE_MM = 20;
 function vizRainRow(key, date){
@@ -798,15 +797,14 @@ function vizRainRow(key, date){
     + (VIZ_DEMO ? ' · preview' : '') + '</span></span>';
 }
 /* RIVER CHIP (owner, 17 Nov 2026: "do 5"). Port Hacking's river, not the rain, tracks Oak Park's
-   viz: VIZ posts rank corr -0.33 (105, season removed; holds on weeks under 20 mm of rain), and
-   Michael McFadyen's Oak Park dives -0.37 (39, nearly all before 2020, so blind to the rule).
+   viz: VIZ posts rank corr -0.33 (105, season removed; holds on weeks under 20 mm of rain).
    Cut 3 m3/s peak over the day and the 5 before (about 3 days in 10): poor viz 32% vs 24% in the
-   posts, 25% vs 19% in 2026, 38% vs 22% on his 250 Shiprock dives inside Port Hacking. Below that
+   posts, 25% vs 19% in 2026. Below that
    the chip would show on half of all days. Flow: GloFAS via the Open-Meteo flood API, which also
-   forecasts it, so the chip reads ahead like the rain chip. tools/viz_mcf_full.mjs, viz_forecastable.mjs. */
+   forecasts it, so the chip reads ahead like the rain chip. tools/viz_forecastable.mjs. */
 var VIZ_RIVER_SITE = {
   Oak: { at: [-34.075, 151.075], name: "Port Hacking", cut: 3,
-    ev: "When the Hacking River has run above 3 m3/s on the day or in the 5 days before (about 3 days in 10), VIZ posts at Oak Park reported poor viz 32% of the time against 24%, and Michael McFadyen's dives inside Port Hacking 38% against 22%. Flow from the GloFAS river model, which also forecasts it." }
+    ev: "When the Hacking River has run above 3 m3/s on the day or in the 5 days before (about 3 days in 10), VIZ posts at Oak Park reported poor viz 32% of the time against 24%. Flow from the GloFAS river model, which also forecasts it." }
 };
 var vizRiver = null;
 function vizRiverRow(key, date){
@@ -826,8 +824,7 @@ function vizRiverRow(key, date){
      on calm days, so it is not the swell again. Shown at the open-coast sites (VIZ_SAT_SITES),
      and only when the image is at most 3 days older than the day shown (the tested window).
    - temp[site][date]: the global ocean model's temperature at 15 m and at the surface, corrected per
-     site by its median miss against divers' reports (tools/viz_cmems_temp_test.mjs: McFadyen 1.11 vs
-     1.28 C for "the usual for the month"). `layer` is the model's own surface-minus-15 m difference.
+     site by its median miss against divers' reports (tools/viz_cmems_temp_test.mjs). `layer` is the model's own surface-minus-15 m difference.
    Either part missing or stale -> nothing shown. Data credit: E.U. Copernicus Marine Service. */
 var OCEAN_API = "https://bold-rain-6ded.sticasale.workers.dev/ocean", oceanData = null;
 /* Widened 18 Nov 2026 (owner, "do 2") from the five sites where it held on its own to the whole open
@@ -870,8 +867,7 @@ function loadOcean(){
     }, function(){ clearTimeout(t); });
 }
 /* BIG-SWELL RECOVERY (owner, 18 Nov 2026, tools/viz_storm_temp.mjs): after a 3.5 m+ day viz stays poor
-   longer. McFadyen 1990-2026: 41% poor on days 0-1, 30% on days 2-4 (26% with the 2.5 m chip already
-   off, against 20% usual), 15% from day 5; the VIZ posts agree. Ordinary 2.5-3.5 m days are back to
+   longer in the VIZ posts than after ordinary swell. Ordinary 2.5-3.5 m days are back to
    normal by day 2, so they keep the day-or-day-before window. */
 var VIZ_RAIN_MM = 40, VIZ_SWELL_M = 2.5, VIZ_SWELL_DAYS = 1, VIZ_BIG_M = 3.5, VIZ_BIG_DAYS = 4, vizDrv = null;
 /* PREVIEW SWITCH: v2.html?vizdemo=1 shows the chip on every eligible heading whatever the
@@ -903,8 +899,8 @@ function vizChip(name, date){
   return ' <span class="vizchip" title="Viz outlook, not part of the safety score. After a week with '
     + VIZ_RAIN_MM + ' mm+ of rain, or on or just after a day of ' + VIZ_SWELL_M + ' m+ swell, divers reported poor viz about twice as often '
     + '(still only about 1 day in 3). After a ' + VIZ_BIG_M + ' m+ swell it takes longer to clear: viz stays below usual for about 4 days. '
-    + 'Based on 936 VIZ group reports, 2020-2025, and 30 years of one diver\'s logbook. '
-    + 'Rain hits the top few metres hardest: Michael McFadyen\'s dive reports often find it clearer deeper.">'
+    + 'Based on 936 VIZ group reports, 2020-2025. '
+    + 'Rain hits the top few metres hardest: it is often clearer deeper.">'
     + '<b>Viz may be reduced</b> · ' + why + (VIZ_DEMO ? ' · preview' : '') + '</span>';
 }
 function loadVizOutlook(){
@@ -1193,22 +1189,19 @@ var VIZ_TIDE = {
   Bushranger: { flow:"outgoing",
                 ev:"In 67 timed reports, viz was poor 21% of the time on the falling tide against 44% on the rising. The sheltered, shallow inner bay settles like a basin and drains out clear; the incoming tide brings in murkier outside water, about half the time whatever the swell." }
 };
-/* VIZ BY SEASON (owner, 15 Nov 2026). Two independent records agree that Sydney viz has a
-   calendar: Michael McFadyen's own log (tools/mcfadyen_viz.mjs, 1,235 dives at these sites
-   1988-2026, one observer, one 8-word scale) and the VIZ group posts (1,261, 2020-2026). Both
-   put winter clearest (57% / 42% of dives good or better, against 31-39% / 20-28% the rest of
-   the year) and October murkiest. Only sites where BOTH records show the same best and worst
-   stretch get a line; the Monument does not (the posts say winter, his few dives autumn).
+/* VIZ BY SEASON (owner, 15 Nov 2026). Sydney viz has a calendar: the VIZ group posts (1,261,
+   2020-2026) put winter clearest (42% of dives good or better, against 20-28% the rest of the
+   year) and October murkiest. Only sites with a clear, consistent best and worst stretch get a line.
    Months are 1-12; `ev` is what the line rests on. */
 var VIZ_SEASON = {
   BIW:       { best:[6,7,8], worst:[3,4,5], bestTxt:"June–August", worstTxt:"March–May",
-               ev:"Winter is the clearest stretch at Bare Island west: McFadyen logged 30% of his dives there good or better in winter against 12% in autumn; VIZ posts show 57% against 15%." },
+               ev:"Winter is the clearest stretch at Bare Island west: VIZ posts report viz good or better 57% of the time in winter against 15% in autumn." },
   Steps:     { best:[6,7,8], worst:[9,10,11], bestTxt:"June–August", worstTxt:"September–November",
-               ev:"Winter is the clearest stretch at the Steps and Inscription Point: 58% of McFadyen's dives good or better in winter against 25% in spring, July best and October worst; VIZ posts show 60% against 19%." },
+               ev:"Winter is the clearest stretch at the Steps and Inscription Point: VIZ posts report viz good or better 60% of the time in winter against 19% in spring." },
   Oak:       { best:[6,7,8], worst:[12,1,2,3,4,5], bestTxt:"June–August", worstTxt:"December–May",
-               ev:"Winter is the clearest stretch at Oak Park: 58% of McFadyen's dives good or better in winter against 26-29% from December to May; VIZ posts show 39% against 11-17%." },
+               ev:"Winter is the clearest stretch at Oak Park: VIZ posts report viz good or better 39% of the time in winter against 11-17% from December to May." },
   LittleBay: { best:[6,7,8], worst:[9,10,11,12,1,2], bestTxt:"June–August", worstTxt:"September–February",
-               ev:"Winter is the clearest stretch at Little Bay: in VIZ posts 64% good or better and none poor in winter, against 19-26% good and 35-44% poor from September to February. McFadyen's few dives there point the same way." }
+               ev:"Winter is the clearest stretch at Little Bay: in VIZ posts 64% good or better and none poor in winter, against 19-26% good and 35-44% poor from September to February." }
 };
 /* USUAL VIZ RANGE (owner, 15 Nov 2026). tools/viz_range.mjs: each site's middle 60% of VIZ
    reports (20th-80th percentile, whole metres) is an honest range when tested a year at a time;
