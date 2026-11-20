@@ -418,7 +418,7 @@
         <p class="lead">How good is the Visibility forecast? Our own scorecard</p>
         <p>The visibility lines in this app were checked against real dives: 1,100+ VIZ group reports from 2020 to 2026. Each rule was tested on years it had not seen; the exceptions are marked below.</p>
         <ul class="hit">
-          <li><b>Usual visibility range</b> (in Details): about 6 reports in 10 fall inside it. It describes the site, not the day.</li>
+          <li><b>Usual visibility range</b> (in Details): about 6 reports in 10 fall inside it.</li>
           <li><b>"Viz may be reduced"</b>: on those days divers reported poor viz about 1 day in 3, against about 1 in 5 otherwise. So 2 days in 3 with the chip are still fine.</li>
           <li><b>Port Hacking running high</b> (Oak Park): poor viz 32% of the time against 24%.</li>
           <li><b>Tide and season lines</b>: tested per site; shown only where they held up.</li>
@@ -1466,8 +1466,8 @@ function vizBadge(key, day){
     + (better ? sea.ev + " " : murkyMonth ? sea.ev + " " : "")
     + (w ? "Best visibility window " + (w.txt || "none in daylight today") + ", " + w.why + ". " + w.ev + " " : "")
     + (rng ? "Usual range " + rng.lo + "–" + rng.hi + " m: about " + rng.in10 + " reports in 10 fall inside it. " : "")
-    + "A guide from past reports, not a forecast of the metres." + (tempTitle ? " " + tempTitle : "");
-  return '<span class="vbadge ' + state + '" title="' + title.replace(/"/g, "&quot;") + '">'
+    + (tempTitle || "");
+  return '<span class="vbadge ' + state + '" title="' + title.trim().replace(/"/g, "&quot;") + '">'
     + '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" class="d0"/><path d="M6 6V.8A5.2 5.2 0 0 1 11.2 6Z" class="d1"/><path d="M6 6v5.2A5.2 5.2 0 0 1 .8 6Z" class="d1"/></svg>'
     + '<b>' + head1 + '</b>' + (bits.length ? '<span>' + bits.join(" · ") + '</span>' : "") + '</span>';
 }
@@ -1546,7 +1546,7 @@ function tideGuide(key, day, pick){
     var vr = VIZ_RANGE[key];
     line("", "🔭 Usual viz", "Usually <b>" + vr.lo + "–" + vr.hi + " m</b> here: about " + vr.in10
       + " VIZ reports in 10 fall in that range (" + vr.n + " reports, 2020–2026"
-      + (vr.who ? ", " + vr.who : "") + "). A guide to the site, not a forecast for the day.");
+      + (vr.who ? ", " + vr.who : "") + ").");
   }
   if (VIZ_SEASON[key]) {
     var vs = VIZ_SEASON[key], mo = +day.date.slice(5, 7);
