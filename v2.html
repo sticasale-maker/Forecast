@@ -1108,6 +1108,15 @@ var MCF_BASE = "https://dive.michaelmcfadyenscuba.info/";
    closest cam to Bare Island (about 1 km, same shore of the bay); Malabar, Mahon Pool and
    Maroubra have no app site. */
 var CAM_BASE = "https://www.randwick.nsw.gov.au/facilities-and-recreation/explore-randwick-city/beach-cams";
+function camPopup(url){
+  var w = Math.min(560, screen.availWidth - 40), h = Math.min(520, screen.availHeight - 80);
+  var win = null;
+  try { win = window.open(url, "vizcam", "popup=yes,width=" + w + ",height=" + h
+    + ",left=" + Math.max(0, screen.availWidth - w - 30) + ",top=60"); } catch (e) {}
+  if (!win) return true;            // pop-up blocked: let the link open normally (target vizcam)
+  try { win.opener = null; win.focus(); } catch (e) {}
+  return false;
+}
 var SITE_CAM = {
   SharkPoint:  { a:"clovelly", name:"Clovelly" },
   Gordons:     { a:"gordons",  name:"Gordons Bay" },
@@ -1358,7 +1367,10 @@ function tideGuide(key, day, pick){
   var ot = oceanTempLine(key, day.date);
   if (ot) line("", "🌡 Water", ot);
   var cam = SITE_CAM[key];
-  if (cam) line("", "📷 Cam", '<a href="' + CAM_BASE + '#' + cam.a + '" target="_blank" rel="noopener">'
+  /* Opens the council page in a small pop-up window (its own window, so their player and reCAPTCHA
+     run as on their site; it cannot be framed: X-Frame-Options SAMEORIGIN). Phones open a tab. */
+  if (cam) line("", "📷 Cam", '<a href="' + CAM_BASE + '#' + cam.a + '" target="vizcam" rel="noopener"'
+    + ' onclick="return camPopup(this.href)">'
     + cam.name + ' live cam' + (cam.near ? ', ' + cam.near : '') + ' (Randwick Council) ↗</a>');
   if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
     + '<a href="' + MCF_BASE + m.id + '/" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
