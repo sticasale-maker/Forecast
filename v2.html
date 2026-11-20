@@ -1396,9 +1396,13 @@ function vizBadge(key, day){
   if (!rng && !w && !reduced) return temp
     ? '<span class="vbadge usual" title="' + tempTitle.replace(/"/g, "&quot;") + '"><span>🌡 ' + temp + '</span></span>' : "";
   var state = reduced ? "reduced" : better ? "better" : "usual";
-  var head1 = reduced ? "Viz likely below usual" : better ? "Viz: better odds than usual" : "Viz: usual for here";
+  // the range goes INTO the headline when it is compared against (owner, 20 Nov 2026: "Viz likely below
+  // usual usually 3–8 m" is not clear; "Viz likely below the usual 3–8 m")
+  var rs = rng ? rng.lo + "–" + rng.hi + " m" : "";
+  var head1 = reduced ? "Viz likely below " + (rs ? "the usual " + rs : "usual")
+            : better ? "Viz: better odds than " + (rs ? "the usual " + rs : "usual") : "Viz: usual for here";
   var bits = [];
-  if (rng) bits.push((reduced || better ? "usually " : "") + rng.lo + "–" + rng.hi + " m");
+  if (rng && !reduced && !better) bits.push(rs);
   if (better) bits.push("clearest time of year");
   else if (murkyMonth && !reduced) bits.push("murkier time of year");
   if (w && w.txt) bits.push('<i class="vkey" aria-hidden="true"></i>best viz ' + w.txt);
