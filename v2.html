@@ -1124,7 +1124,13 @@ var SITE_CAM = {
   LittleBay:   { a:"littlebay", name:"Little Bay" },
   BIE:         { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" },
   BIW:         { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" },
-  BIWestmost:  { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" }
+  BIWestmost:  { a:"yarrabay", name:"Yarra Bay", near:"the nearest to Bare Island" },
+  /* Not Randwick (owner, 20 Nov 2026): Sutherland Shire's Shark Island cam (a Surfline embed locked to
+     the council's site, so linked, not framed) is about 1.5 km north of Oak Park; Windy's North Bondi
+     lifeguard-tower cam is linked until a Windy webcam API key allows its embed player. */
+  Oak:         { url:"https://www.sutherlandshire.nsw.gov.au/play-and-explore/beaches-and-waterways/beach-webcams",
+                 name:"Shark Island", near:"the nearest to Oak Park", by:"Sutherland Shire Council" },
+  NorthBondi:  { url:"https://www.windy.com/webcams/1721795690", name:"North Bondi lifeguard tower", by:"Windy" }
 };
 var MCF = {
   CTB:{id:"fairy-bower",tide:"any"},
@@ -1369,9 +1375,9 @@ function tideGuide(key, day, pick){
   var cam = SITE_CAM[key];
   /* Opens the council page in a small pop-up window (its own window, so their player and reCAPTCHA
      run as on their site; it cannot be framed: X-Frame-Options SAMEORIGIN). Phones open a tab. */
-  if (cam) line("", "📷 Cam", '<a href="' + CAM_BASE + '#' + cam.a + '" target="vizcam" rel="noopener"'
+  if (cam) line("", "📷 Cam", '<a href="' + (cam.url || CAM_BASE + '#' + cam.a) + '" target="vizcam" rel="noopener"'
     + ' onclick="return camPopup(this.href)">'
-    + cam.name + ' live cam' + (cam.near ? ', ' + cam.near : '') + ' (Randwick Council) ↗</a>');
+    + cam.name + ' live cam' + (cam.near ? ', ' + cam.near : '') + ' (' + (cam.by || 'Randwick Council') + ') ↗</a>');
   if (m && (m.note || m.id)) line("", "🗒️ Notes", (m.note ? m.note + " " : "")
     + '<a href="' + MCF_BASE + m.id + '/" target="_blank" rel="noopener">Michael McFadyen’s dive notes ↗</a>');
   return lines.length ? '<div class="tg">' + lines.join("") + '</div>' : "";
