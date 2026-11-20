@@ -159,7 +159,6 @@
   .day b{display:block;font-size:13px;color:var(--ink);font-weight:700}
   /* days scored on longer-range wind + calculated tide (Worker extendWeather, 20 Nov 2026) */
   .day.outlook{border-style:dashed}
-  .outlook-note{margin:0 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-2);border:1px dashed var(--line);border-radius:9px;padding:8px 11px}
   .day i{display:block;font-size:10.5px;font-style:normal;letter-spacing:.05em;
          text-transform:uppercase;color:var(--ink-3)}
   .day[aria-pressed="true"]{background:var(--ink);border-color:var(--ink)}
@@ -1048,12 +1047,6 @@ function loadVizOutlook(){
 
 function render(){
   var day = DAYS[dayIx], nowI = nowIndex(), html = "";
-  var OF = outlookFrom();
-  if (OF && day.date >= OF.slice(0, 10)) {
-    var ofH = +OF.slice(11, 13), ofTxt = day.date === OF.slice(0, 10) && ofH > 0 ? "From " + fmtHour(ofH) + ", the" : "The";
-    html += '<p class="outlook-note"><b>Outlook.</b> ' + ofTxt + ' wind here is a longer-range model forecast and the tide is calculated, '
-          + 'so these scores are rougher than the days before and will change as the day gets closer.</p>';
-  }
   REGIONS.forEach(function(reg){
     var subs = reg[2].map(function(sub){
       return [sub[0], sub[1].filter(function(k){
