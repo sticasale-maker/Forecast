@@ -157,6 +157,9 @@
        border-radius:9px;padding:6px 11px;cursor:pointer;text-align:center;
        font:inherit;color:var(--ink-2);min-width:58px}
   .day b{display:block;font-size:13px;color:var(--ink);font-weight:700}
+  /* days scored on longer-range wind + calculated tide (Worker extendWeather, 20 Nov 2026) */
+  .day.outlook{border-style:dashed}
+  .outlook-note{margin:0 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-2);border:1px dashed var(--line);border-radius:9px;padding:8px 11px}
   .day i{display:block;font-size:10.5px;font-style:normal;letter-spacing:.05em;
          text-transform:uppercase;color:var(--ink-3)}
   .day[aria-pressed="true"]{background:var(--ink);border-color:var(--ink)}
@@ -1045,6 +1048,12 @@ function loadVizOutlook(){
 
 function render(){
   var day = DAYS[dayIx], nowI = nowIndex(), html = "";
+  var OF = outlookFrom();
+  if (OF && day.date >= OF.slice(0, 10)) {
+    var ofH = +OF.slice(11, 13), ofTxt = day.date === OF.slice(0, 10) && ofH > 0 ? "From " + fmtHour(ofH) + ", the" : "The";
+    html += '<p class="outlook-note"><b>Outlook.</b> ' + ofTxt + ' wind here is a longer-range model forecast and the tide is calculated, '
+          + 'so these scores are rougher than the days before and will change as the day gets closer.</p>';
+  }
   REGIONS.forEach(function(reg){
     var subs = reg[2].map(function(sub){
       return [sub[0], sub[1].filter(function(k){
@@ -1961,6 +1970,13 @@ function renderWeekend(){
 }
 
 var DAYS = [];
+/* The first hour the Worker scored on Open-Meteo wind + harmonic tide, because WillyWeather's
+   forecast had run out (weather[*].filledFrom; earliest across locations), or null. */
+function outlookFrom(){
+  var w = (data && data.weather) || {}, best = null;
+  Object.keys(w).forEach(function(k){ var f = w[k] && w[k].filledFrom; if (f && (!best || f < best)) best = f; });
+  return best;
+}
 function renderDays(){
   var H = document.getElementById("days"), out = "";
   DAYS.forEach(function(d, n){
@@ -1972,7 +1988,9 @@ function renderDays(){
             : d.date === TOMORROW ? "Tmrw"
             : d.date < TODAY ? "Yest"
             : dt.toLocaleDateString("en-AU", { weekday:"short" });
-    out += '<button class="day' + (d.date < TODAY ? ' past' : '') + '" data-n="' + n
+    var OF = outlookFrom(), isOut = OF && d.date >= OF.slice(0, 10);
+    out += '<button class="day' + (d.date < TODAY ? ' past' : '') + (isOut ? ' outlook' : '') + '" data-n="' + n
+         + (isOut ? '" title="Outlook: longer-range wind forecast' : '')
          + '" aria-pressed="' + (n === dayIx) + '">'
          + '<i>' + lbl + '</i>'
          + '<b>' + dt.getDate() + '</b></button>';
