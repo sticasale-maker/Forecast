@@ -1024,14 +1024,13 @@ function vizSatRow(key, date){
    (15-21 C 5 mm, 10-15 C 7 mm); freediving: Molchanovs (1 h session: 24-28 C 3 mm, 18-24 C 5 mm,
    17 C and colder 7 mm) and a spearfishing chart (2-3 h: 15-22 C 5 mm, 7-15 C 7 mm). Freediving suits
    are open-cell. Owner, 21 Nov 2026: scuba 7 mm at 19 C and below (Sydney practice, colder than the charts), and a
-   freediver's suit is NEVER thicker than the scuba suit (more time on the surface, more movement). [lo C, scuba, freedive], warmest first. */
+   freediver's suit is one step THINNER than the scuba suit (more time on the surface, more movement). [lo C, scuba, freedive], warmest first. */
 var WETSUIT = [
   [28, "rash guard", "rash guard"],
-  [22, "3 mm", "3 mm"],
-  [20, "5 mm", "5 mm"],
-  [18, "7 mm", "5 mm"],
-  [15, "7 mm", "7 mm"],
-  [-9, "7 mm, hood, gloves", "7 mm open-cell, hood, gloves"]
+  [22, "3 mm", "1.5 mm"],
+  [20, "5 mm", "3 mm"],
+  [15, "7 mm", "5 mm"],
+  [-9, "7 mm, hood, gloves", "7 mm open-cell, hood"]
 ];
 /* Picked from the ROUNDED temperature, the one shown beside it, so "18 °C" never gets the 17 °C suit. */
 function suitFor(t){ var c = Math.round(t); return WETSUIT.filter(function(x){ return c >= x[0]; })[0]; }
