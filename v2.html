@@ -733,8 +733,12 @@ function nowIndex(){
   return bestD < 3*3600*1000 ? best : -1;
 }
 
+/* Owner, 21 Nov 2026: no evidence line at Chowder Bay. Its tier stays "none", so the
+   report appeal on non-Easy days still runs; only the visible marker goes. */
+var NO_CONF = { Chowder: 1 };
 function confidenceEl(key){
   var n = REPORTS[key], t = TIER[key];
+  if (NO_CONF[key])      return '<span class="conf"></span>';
   if (t === "borrowed")  return '<span class="conf">✓ mirrors the Manly Swim surge model</span>';
   if (t === "sheltered") return '<span class="conf">✓ wind chop only — no swell reaches here</span>';
   if (t === "hold")      return '<span class="conf thin">⚠ under review — known wrong in bigger seas</span>';
