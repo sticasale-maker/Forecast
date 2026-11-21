@@ -169,6 +169,8 @@
   .wg-suit{font-size:13px;color:var(--ink-2)}
   .wg-suit b{color:var(--ink);font-weight:600}
   .wg-sites{font-size:14px;line-height:1.55;color:var(--ink-2)}
+  .wg-src{font-size:12.5px;line-height:1.55;color:var(--ink-3);border-top:1px solid var(--line);padding-top:11px;margin:0}
+  .wg-src b{color:var(--ink-2)}
   /* day picker */
   .days{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;margin:0 -16px;
         padding-left:16px;padding-right:16px;scrollbar-width:none}
@@ -2166,7 +2168,14 @@ function renderWetsuit(){
       + '<div class="wg-sites">' + groups[c].join(' · ') + '</div></div>';
   }).join('');
   var dd = new Date(day.date + "T12:00:00+11:00").toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"short" });
-  el.innerHTML = html ? '<p class="wt-day">' + dd + ' · water at 15 m, warmest first</p>' + html
+  /* Source note (owner, 22 Nov 2026: "specify where these temperatures come from, and whether they are
+     meant to be at 15 m"). Same facts as oceanTempLine and the Worker's ocean.js header. */
+  var src = '<p class="wg-src">Water temperature at <b>15 m</b>, on purpose: it is the depth we could check '
+    + 'against divers’ own logs. From the Copernicus Marine global ocean forecast, '
+    + 'whose nearest point sits a few km offshore and runs warm, so each site is corrected by its usual miss '
+    + 'against VIZ divers’ reported temperatures. A guide to within 1–2 °C. The surface can be warmer: the '
+    + 'Forecast tab says when the model shows a cold layer.</p>';
+  el.innerHTML = html ? '<p class="wt-day">' + dd + ' · water at 15 m, warmest first</p>' + html + src
     : '<p class="wt-day">Water temperatures are still loading.</p>';
 }
 function SITES_ORDER(){ return [].concat.apply([], REGIONS.map(function(g){ return [].concat.apply([], g[2].map(function(x){ return x[1]; })); })); }
