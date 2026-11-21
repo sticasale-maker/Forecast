@@ -1025,17 +1025,18 @@ function vizSatRow(key, date){
    are open-cell, which is why they run thinner for the same water. [lo C, scuba, freedive], warmest first. */
 var WETSUIT = [
   [28, "rash guard", "1.5 mm"],
-  [25, "3 mm", "3 mm"],
   [22, "3 mm", "3 mm"],
   [18, "5 mm", "5 mm"],
   [17, "5 mm", "7 mm"],
   [15, "7 mm", "7 mm"],
   [-9, "7 mm, hood, gloves", "7 mm open-cell, hood, gloves"]
 ];
+/* Picked from the ROUNDED temperature, the one shown beside it, so "18 °C" never gets the 17 °C suit. */
+function suitFor(t){ var c = Math.round(t); return WETSUIT.filter(function(x){ return c >= x[0]; })[0]; }
 function wetsuitLine(key, date){
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][date];
   if (!T || T.t15 == null) return "";
-  var t = T.t15, r = WETSUIT.filter(function(x){ return t >= x[0]; })[0];
+  var r = suitFor(T.t15);
   return "scuba " + r[1] + " · freedive " + r[2] + (/^[357] mm$/.test(r[2]) ? " open-cell" : "");
 }
 function oceanTempLine(key, date){
@@ -2124,7 +2125,7 @@ function renderWetsuit(){
   SITES_ORDER().forEach(function(k){
     var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][day.date];
     if (!T || T.t15 == null) return;
-    var r = WETSUIT.filter(function(x){ return T.t15 >= x[0]; })[0];
+    var r = suitFor(T.t15);
     rows += '<tr><td>' + LABEL[k] + '</td><td>' + Math.round(T.t15) + ' °C</td><td>' + r[1] + '</td><td>' + r[2]
           + (/^[357] mm$/.test(r[2]) ? ' open-cell' : '') + '</td></tr>';
   });
