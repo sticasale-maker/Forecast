@@ -162,11 +162,13 @@
   .tab span{font-size:19px;line-height:1.1}
   .tab[aria-selected="true"]{color:var(--accent);font-weight:700}
   .page[hidden]{display:none}
-  .wt{width:100%;border-collapse:collapse;font-size:14px}
-  .wt th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:0 6px 6px 0}
-  .wt td{padding:7px 6px 7px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
-  .wt td:first-child{font-weight:600}
   .wt-day{font-size:12.5px;color:var(--ink-3);margin:0 0 10px}
+  .wg{padding:11px 0;border-top:1px solid var(--line)}
+  .wg-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-bottom:4px}
+  .wg-t{font-size:20px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-width:3.2em}
+  .wg-suit{font-size:13px;color:var(--ink-2)}
+  .wg-suit b{color:var(--ink);font-weight:600}
+  .wg-sites{font-size:14px;line-height:1.55;color:var(--ink-2)}
   /* day picker */
   .days{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;margin:0 -16px;
         padding-left:16px;padding-right:16px;scrollbar-width:none}
@@ -313,6 +315,13 @@
            color:var(--ink);margin-bottom:8px}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
         box-shadow:var(--shadow);padding:16px 18px}
+  .card.reads{padding:4px 18px}
+  .read{display:flex;align-items:center;gap:12px;padding:12px 0;text-decoration:none;color:inherit}
+  .read + .read{border-top:1px solid var(--line)}
+  .read span{flex:1;display:flex;flex-direction:column;gap:2px}
+  .read b{font-size:14.5px;font-weight:600;color:var(--ink)}
+  .read small{font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+  .read i{font-style:normal;font-size:20px;color:var(--accent)}
   .about-btn{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:14px;font-weight:600;
              color:var(--accent);background:none;border:1px solid var(--line);border-radius:9px;
              padding:9px 16px;cursor:pointer}
@@ -461,6 +470,20 @@
         <p class="meta">Creative Commons License: BY NC ND</p>
         <p><a href="mailto:vizgroupsydney@gmail.com">vizgroupsydney@gmail.com</a></p>
         <p>Join the <a href="https://www.facebook.com/groups/sydviz" target="_blank" rel="noopener">VIZ Facebook group</a> for fresh underwater visibility reports.</p>
+      </div>
+    </section>
+
+    <!-- Articles (owner, 22 Nov 2026): the same reference pages as Swim Manly's More > About. They
+         live in the Swim app; ?from=forecast turns their "Back" link into one that returns here. -->
+    <section>
+      <h2>Read</h2>
+      <div class="card reads">
+        <a class="read" href="../Manly-Swim/ocean/sea.html?from=forecast">
+          <span><b>How the sea works at Cabbage Tree Bay</b><small>Waves, wind, tides, sand and cold water, in plain words</small></span><i aria-hidden="true">&rsaquo;</i></a>
+        <a class="read" href="../Manly-Swim/enso.html?from=forecast">
+          <span><b>The big El Ni&ntilde;o</b><small>What it is, and what it might mean in the water</small></span><i aria-hidden="true">&rsaquo;</i></a>
+        <a class="read" href="../Manly-Swim/shark-hub.html?from=forecast">
+          <span><b>Sharks</b><small>White sharks, bull sharks, and what the trials say about deterrents</small></span><i aria-hidden="true">&rsaquo;</i></a>
       </div>
     </section>
 
@@ -2123,20 +2146,27 @@ function setTab(t){
 function tabsSetup(){
   [].forEach.call(document.querySelectorAll(".tab"), function(b){ b.onclick = function(){ setTab(b.dataset.tab); }; });
 }
-/* Every site's suit for the selected day, north to south, from its 15 m water temperature. */
+/* Every site's suit for the selected day, from its 15 m water temperature. Grouped by the rounded
+   temperature, warmest first (owner, 22 Nov 2026: "easier to read"): the suit follows from that number,
+   so each group states it once and lists its sites, north to south as before. */
 function renderWetsuit(){
   var el = document.getElementById("wetsuitBody"); if (!el || !DAYS.length) return;
-  var day = DAYS[dayIx], rows = "";
+  var day = DAYS[dayIx], groups = {};
   SITES_ORDER().forEach(function(k){
     var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][day.date];
     if (!T || T.t15 == null) return;
-    var r = suitFor(T.t15);
-    rows += '<tr><td>' + LABEL[k] + '</td><td>' + Math.round(T.t15) + ' °C</td><td>' + r[1] + '</td><td>' + r[2]
-          + (/^[357] mm$/.test(r[2]) ? ' open-cell' : '') + '</td></tr>';
+    var c = Math.round(T.t15);
+    (groups[c] = groups[c] || []).push(LABEL[k]);
   });
+  var temps = Object.keys(groups).map(Number).sort(function(a, b){ return b - a; });
+  var html = temps.map(function(c){
+    var r = suitFor(c), fd = r[2] + (/^[357] mm$/.test(r[2]) ? ' open-cell' : '');
+    return '<div class="wg"><div class="wg-head"><span class="wg-t">' + c + ' °C</span>'
+      + '<span class="wg-suit">Scuba <b>' + r[1] + '</b> · Freedive <b>' + fd + '</b></span></div>'
+      + '<div class="wg-sites">' + groups[c].join(' · ') + '</div></div>';
+  }).join('');
   var dd = new Date(day.date + "T12:00:00+11:00").toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"short" });
-  el.innerHTML = rows ? '<p class="wt-day">' + dd + ' · water at 15 m</p><table class="wt"><thead><tr><th>Site</th><th>Water</th>'
-    + '<th>Scuba</th><th>Freedive</th></tr></thead><tbody>' + rows + '</tbody></table>'
+  el.innerHTML = html ? '<p class="wt-day">' + dd + ' · water at 15 m, warmest first</p>' + html
     : '<p class="wt-day">Water temperatures are still loading.</p>';
 }
 function SITES_ORDER(){ return [].concat.apply([], REGIONS.map(function(g){ return [].concat.apply([], g[2].map(function(x){ return x[1]; })); })); }
@@ -3521,6 +3551,521 @@ var VizSiteMap = (function () {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+})();
+</script>
+
+<script>
+/* ==========================================================================
+   ANNOUNCEMENTS — one-off broadcasts (ported from the Swim app).
+   Public: popup on app open (once per device, keyed by id+updated_at) + a
+   persistent "What's new" pill to re-open while an announcement is live.
+   Admin: editor at ?announce=1&token=…  with a WYSIWYG toolbar.
+   Backend: shared Supabase project (announcements table + 4 RPCs + the public
+   announce-images Storage bucket). rpc() sends p_app:'viz' and falls back to
+   the un-scoped signature, so this is Forecast-only once the SQL patch is
+   applied and shared until then. Modal is a standalone white card, so colours
+   are hard-coded (the app's --text etc. are light-on-dark and unusable here).
+   ========================================================================== */
+(function () {
+  var SB   = 'https://gkspukabnfbzrvjoewpc.supabase.co';
+  var KEY  = 'sb_publishable_TkhnIKIYdRCNQ-DSVLqjLw_dTMcLIqW';
+  var RPC  = SB + '/rest/v1/rpc/';
+  var hdrs = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' };
+  var SEEN_KEY   = 'viz_ann_seen';     // mandatory posts: forced-popup guard
+  var SEEN_KEY_Q = 'viz_ann_seen_q';   // quiet posts: pill-dot guard, tracked apart
+  var ADMIN_MODE = /[?&]announce=1(\b|&|$)/.test(location.search);
+
+  var _active = [];     // the live announcements (may be several at once)
+  var _shownKind = null; // which set the popup is showing: 'loud' (forced) | 'all' (opened from the pill)
+  var _editId = null;   // admin: id being edited (null = new)
+  var _imgUrl = '';     // admin: image url currently in the form
+  var _rows   = [];     // admin: last loaded list (for edit)
+
+  function $(id){ return document.getElementById(id); }
+  function token(){
+    try { var u = new URLSearchParams(location.search).get('token'); if (u) return u; } catch (e) {}
+    try { return localStorage.getItem('viz_admin_token') || ''; } catch (e) { return ''; }
+  }
+  function escText(s){ return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+  /* ---- RPC helper: Forecast-scoped first, fall back to shared signature ----- */
+  async function rpc(fn, payload){
+    var withApp = Object.assign({ p_app: 'viz' }, payload || {});
+    var r = await fetch(RPC + fn, { method: 'POST', headers: hdrs, body: JSON.stringify(withApp) });
+    if (r.status === 404) {   // RPC signature has no p_app yet (pre-migration) → shared call
+      r = await fetch(RPC + fn, { method: 'POST', headers: hdrs, body: JSON.stringify(payload || {}) });
+    }
+    return r;
+  }
+
+  /* ---- rich-text sanitizer: rebuild a clean tree from an allowlist --------- */
+  var ALLOW = { B:1, STRONG:1, I:1, EM:1, U:1, UL:1, OL:1, LI:1, A:1, BR:1, P:1, DIV:1, SPAN:1,
+                H1:1, H2:1, H3:1, H4:1, H5:1, H6:1, BLOCKQUOTE:1, HR:1 };
+  // Pasted / editor markup is normalised to a small on-brand set: outsized headings
+  // collapse to our two steps so nothing towers over the popup.
+  var TAGMAP = { H1:'H2', H4:'H3', H5:'H3', H6:'H3' };
+  // Curated inline-style policy. Colours are inert so any valid hex/rgb is safe to
+  // keep (aids paste fidelity); every other property is snapped to a fixed set of
+  // safe values. Anything not listed here is dropped — no arbitrary CSS survives.
+  function isColor(v){
+    return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ||
+           /^rgba?\(\s*[\d.,\s%]+\)$/i.test(v);
+  }
+  function isSize(v){ var m = /^(\d+(?:\.\d+)?)px$/i.exec(v); return !!m && +m[1] >= 8 && +m[1] <= 72; }
+  var STYLE_OK = {
+    'color': isColor,
+    'background-color': isColor,
+    'text-align': /^(left|right|center|justify)$/i,
+    'font-weight': /^(bold|bolder|[5-9]00)$/i,
+    'font-style': /^italic$/i,
+    'text-decoration': /(underline|line-through)/i,
+    'font-size': isSize
+  };
+  function filterStyle(style){
+    var keep = [];
+    String(style || '').split(';').forEach(function (decl) {
+      var i = decl.indexOf(':'); if (i < 0) return;
+      var prop = decl.slice(0, i).trim().toLowerCase();
+      var val  = decl.slice(i + 1).trim();
+      if (!val) return;
+      var test = STYLE_OK[prop]; if (!test) return;
+      var ok = (typeof test === 'function') ? test(val) : test.test(val);
+      if (ok) keep.push(prop + ':' + val);
+    });
+    return keep.join(';');
+  }
+  function clean(src){
+    var tmp = document.createElement('div'); tmp.innerHTML = (src == null ? '' : String(src));
+    var out = document.createElement('div');
+    (function copy(node, dest){
+      Array.prototype.forEach.call(node.childNodes, function (ch) {
+        if (ch.nodeType === 3) { dest.appendChild(document.createTextNode(ch.nodeValue)); return; }
+        if (ch.nodeType !== 1) return;                       // drop comments / others
+        var tag = ch.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE') return;     // drop entirely
+        var mapped = TAGMAP[tag] || tag;
+        if (ALLOW[mapped]) {
+          var el = document.createElement(mapped.toLowerCase());
+          if (mapped === 'A') {
+            var href = ch.getAttribute('href') || '';
+            if (/^(https?:|mailto:)/i.test(href)) {
+              el.setAttribute('href', href);
+              el.setAttribute('target', '_blank');
+              el.setAttribute('rel', 'noopener noreferrer');
+            }
+          }
+          var sty = filterStyle(ch.getAttribute && ch.getAttribute('style'));
+          if (sty) el.setAttribute('style', sty);
+          if (mapped !== 'HR') copy(ch, el);                 // HR is void
+          dest.appendChild(el);
+        } else {
+          copy(ch, dest);                                    // unwrap: keep contents
+        }
+      });
+    })(tmp, out);
+    return out.innerHTML;
+  }
+
+  /* ---- seen tracking (signature spans ALL live announcements) --------------
+     Scoped to the DAY as well as the content. Previously the stored value was
+     the content signature alone, so one dismissal silenced the popup until a
+     post was edited or added — someone who dismissed it in the morning never
+     saw it again, however long it stayed live. Storing "<sydney-date>@<sig>"
+     re-arms it once per calendar day: at most one popup a day for unchanged
+     content, and still an immediate one whenever the content itself changes
+     (a new id, or an edit bumping updated_at). */
+  function annDay(){
+    try { return new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }); }
+    catch (e) { return new Date().toISOString().slice(0, 10); }
+  }
+  function seenSig(list){
+    return (list || []).map(function (a) { return a.id + '|' + (a.updated_at || ''); }).sort().join(';');
+  }
+  // Seen state is tracked per KEY so mandatory and quiet posts stay independent.
+  function _isSeen(key, list){
+    try {
+      var v = localStorage.getItem(key) || '';
+      var i = v.indexOf('@');                       // ids and ISO stamps carry no '@'
+      if (i < 0) return false;                      // pre-dated value → treat as unseen
+      return v.slice(0, i) === annDay() && v.slice(i + 1) === seenSig(list);
+    } catch (e) { return false; }
+  }
+  function _markSeen(key, list){ try { localStorage.setItem(key, annDay() + '@' + seenSig(list)); } catch (e) {} }
+  function loudOnes(){  return _active.filter(function (a) { return !a.quiet; }); }
+  function quietOnes(){ return _active.filter(function (a) { return  a.quiet; }); }
+
+  /* Show-once posts don't re-arm daily — once dismissed on a device they're gone
+     for good. We track their exact signature (id|updated_at) so an EDIT that bumps
+     updated_at counts as a new post and shows again. */
+  var SEEN_ONCE_KEY = 'viz_ann_once';
+  function sigOf(a){ return a.id + '|' + (a.updated_at || ''); }
+  function _onceList(){ try { return (localStorage.getItem(SEEN_ONCE_KEY) || '').split(';').filter(Boolean); } catch (e) { return []; } }
+  function onceDismissed(a){ return !!a.show_once && _onceList().indexOf(sigOf(a)) !== -1; }
+  function markOnceDismissed(list){
+    try {
+      var s = _onceList();
+      (list || []).forEach(function (a) { if (a.show_once && s.indexOf(sigOf(a)) === -1) s.push(sigOf(a)); });
+      localStorage.setItem(SEEN_ONCE_KEY, s.join(';'));
+    } catch (e) {}
+  }
+  // Loud posts that still need showing: drops show-once posts already dismissed here.
+  function loudPending(){ return loudOnes().filter(function (a) { return !onceDismissed(a); }); }
+
+  /* ---- popup + pill -------------------------------------------------------- */
+  // The picture, title and text scroll together as one card (30 Sep 2026, per owner, to match
+  // Swim Manly): the picture used to sit in a fixed slot up to 64dvh tall while only the text scrolled.
+  function buildPopup(){
+    if ($('annOverlay')) return;
+    var css = document.createElement('style');
+    css.textContent =
+      "#annOverlay{position:fixed;inset:0;z-index:99995;display:none;align-items:center;justify-content:center;padding:12px;background:rgba(6,16,32,0.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}" +
+      "#annOverlay.show{display:flex;}" +
+      "#annPopup{background:#fff;border-radius:14px;max-width:min(94vw,460px);width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-shadow:0 12px 34px rgba(6,16,32,0.4);max-height:92dvh;display:block;}" +
+      "#annScroll{}" +
+      ".ann-card + .ann-card{border-top:8px solid #eef2f4;}" +
+      ".ann-c-img{width:100%;height:auto;display:block;background:#eef2f4;}" +
+      "#annPopup.ann-imageonly{background:transparent;box-shadow:none;max-width:none;width:auto;max-height:none;overflow:visible;}" +
+      "#annPopup.ann-imageonly .ann-c-img{width:auto;height:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 56px);object-fit:contain;background:transparent;border-radius:12px;}" +
+      "#annPopup.ann-imageonly #annHint{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.7);}" +
+      "#annPopup .ann-c-body{padding:16px 18px 6px;}" +
+      "#annPopup .ann-c-title{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:26px;line-height:1.05;color:#0e2233;margin-bottom:9px;}" +
+      "#annPopup .ann-c-text{font-size:14px;line-height:1.55;color:#16303f;}" +
+      "#annPopup .ann-c-text a{color:#00857a;}" +
+      "#annPopup .ann-c-text ul,#annPopup .ann-c-text ol{margin:7px 0;padding-left:20px;}#annPopup .ann-c-text li{margin-bottom:3px;}" +
+      "#annPopup .ann-c-text p{margin:0 0 7px;}" +
+      "#annPopup .ann-c-text h2,#annPopup .ann-c-text h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.5px;line-height:1.1;margin:11px 0 6px;color:#0e2233;}" +
+      "#annPopup .ann-c-text h2:first-child,#annPopup .ann-c-text h3:first-child{margin-top:0;}" +
+      "#annPopup .ann-c-text h2{font-size:22px;}#annPopup .ann-c-text h3{font-size:18px;}" +
+      "#annPopup .ann-c-text blockquote{margin:9px 0;padding:6px 12px;border-left:3px solid #00857a;color:#5a7183;font-style:italic;}" +
+      "#annPopup .ann-c-text hr{border:none;border-top:1px solid rgba(0,133,122,.25);margin:12px 0;}" +
+      "#annHint{text-align:center;color:#5a7183;font-size:11px;padding:11px 0 14px;}" +
+      "#annWhatsNew{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom, 0px) + 76px);z-index:99990;display:none;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid #00857a;background:#fff;color:#00857a;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(6,16,32,.28);}" +
+      "#annWhatsNew.show{display:inline-flex;}" +
+      "#annWhatsNew .ann-dot{display:none;width:8px;height:8px;border-radius:50%;background:#e83d3d;}" +
+      "#annWhatsNew.unseen .ann-dot{display:inline-block;}" +
+      "#annClose{position:absolute;top:calc(env(safe-area-inset-top, 0px) + 10px);right:10px;z-index:2;width:40px;height:40px;padding:0;border:none;border-radius:50%;background:rgba(6,16,32,0.72);color:#fff;font-size:22px;line-height:40px;text-align:center;cursor:pointer;box-shadow:0 2px 10px rgba(6,16,32,.4);}" +
+      "#annClose:focus-visible{outline:2px solid #fff;outline-offset:2px;}";
+    document.head.appendChild(css);
+    var ov = document.createElement('div'); ov.id = 'annOverlay';
+    ov.innerHTML =
+      '<button id="annClose" type="button" aria-label="Close announcement">×</button>' +
+      '<div id="annPopup" role="dialog" aria-modal="true" aria-label="Announcement">' +
+        '<div id="annScroll"></div>' +
+      '</div>';
+    // ONLY the X closes it (2 Oct 2026, per owner, as in the Swim app): a tap on the
+    // card or the backdrop no longer dismisses a post someone is still reading.
+    ov.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('#annClose')) dismissPopup();
+    });
+    document.body.appendChild(ov);
+  }
+  // Every live post in one scrolling list, picture, title and text together, as the Swim app
+  // shows them (30 Sep 2026, per owner). Mandatory posts first; a lone picture-only post keeps
+  // its full-screen fit.
+  function showPopup(list){
+    if (!list) return;
+    if (!Array.isArray(list)) list = [list];
+    if (!list.length) return;
+    buildPopup();
+    list = list.slice().sort(function (x, y) { return (!!x.quiet) - (!!y.quiet); });
+    var cards = list.map(function (a) {
+      var ttl = (a.title || '').trim();
+      var bodyHtml = clean(a.body_html || '');
+      var hasBody = !!bodyHtml.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+      var img = a.image_url ? '<img class="ann-c-img" src="' + escText(a.image_url) + '" alt="" decoding="async">' : '';
+      var body = (ttl || hasBody)
+        ? '<div class="ann-c-body">' + (ttl ? '<div class="ann-c-title">' + escText(ttl) + '</div>' : '') +
+          (hasBody ? '<div class="ann-c-text">' + bodyHtml + '</div>' : '') + '</div>'
+        : '';
+      return { html: '<div class="ann-card">' + img + body + '</div>', picOnly: !!img && !body };
+    });
+    $('annScroll').innerHTML = cards.map(function (c) { return c.html; }).join('');
+    // A link to another page on this site (the Swim app's El Nino page, say) carries from=forecast,
+    // so that page's "Back to the app" returns here and not to the Swim app.
+    Array.prototype.forEach.call($('annScroll').querySelectorAll('a[href]'), function (el) {
+      try {
+        var u = new URL(el.getAttribute('href'), location.href);
+        if (u.hostname === location.hostname && u.pathname.indexOf('/Forecast/') !== 0) {
+          u.searchParams.set('from', 'forecast');
+          el.setAttribute('href', u.toString());
+        }
+      } catch (e) {}
+    });
+    var pop = $('annPopup');
+    if (pop) { pop.classList.toggle('ann-imageonly', cards.length === 1 && cards[0].picOnly); pop.scrollTop = 0; }
+    $('annOverlay').classList.add('show');
+  }
+  function dismissPopup(){
+    var ov = $('annOverlay'); if (ov) ov.classList.remove('show');
+    // Mark seen only what was shown: a forced popup (mandatory posts) leaves quiet posts
+    // untouched; opening from the pill showed everything, so both count.
+    _markSeen(SEEN_KEY, loudOnes());
+    markOnceDismissed(loudOnes());   // show-once posts: never surface again on this device
+    if (_shownKind !== 'loud') _markSeen(SEEN_KEY_Q, quietOnes());
+    _shownKind = null;
+    refreshPill();
+  }
+  function ensurePill(){
+    if ($('annWhatsNew')) return $('annWhatsNew');
+    buildPopup();   // ensures the pill CSS is present
+    var b = document.createElement('button'); b.id = 'annWhatsNew'; b.type = 'button';
+    b.setAttribute('aria-label', 'See the announcements');
+    b.innerHTML = '<span class="ann-dot" aria-hidden="true"></span><span>What’s new</span>';
+    b.addEventListener('click', function () { if (_active.length) { _shownKind = 'all'; showPopup(_active); } });
+    document.body.appendChild(b);
+    return b;
+  }
+  function refreshPill(){
+    var b = ensurePill();
+    if (!_active.length) { b.classList.remove('show', 'unseen'); return; }
+    b.classList.add('show');
+    var loud = loudPending(), quiet = quietOnes();
+    b.classList.toggle('unseen', !!((loud.length && !_isSeen(SEEN_KEY, loud)) || (quiet.length && !_isSeen(SEEN_KEY_Q, quiet))));
+  }
+  async function loadActive(){
+    try {
+      var r = await rpc('get_active_announcement', {});
+      if (!r.ok) return;
+      var rows = await r.json();
+      // Forecast-only: only show announcements tagged for this app (app === 'viz').
+      // Pre-migration rows are untagged, so a Swim-app announcement in the shared
+      // table never leaks into the dive app. Once the Supabase app-scope patch is
+      // applied, posts published here (p_app:'viz') carry app='viz' and appear.
+      _active = (Array.isArray(rows) ? rows : []).filter(function (a) { return a && a.app === 'viz'; });
+      // Only mandatory posts open the popup on their own, and that popup shows only them;
+      // quiet posts light the pill dot and appear when the pill is opened.
+      var loud = loudPending();
+      if (loud.length && !_isSeen(SEEN_KEY, loud) && !ADMIN_MODE) { _shownKind = 'loud'; showPopup(loud); }
+      refreshPill();
+    } catch (e) {}
+  }
+
+  /* ---- date helpers -------------------------------------------------------- */
+  function dtLocalToISO(v){ if (!v) return null; var d = new Date(v); return isNaN(d) ? null : d.toISOString(); }
+  function isoToDtLocal(iso){
+    if (!iso) return ''; var d = new Date(iso); if (isNaN(d)) return '';
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  /* ---- image upload (downscale to 1280px, JPEG) ---------------------------- */
+  async function uploadImage(file){
+    var blob = await new Promise(function (resolve, reject) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var MAX = 1280, sc = Math.min(1, MAX / Math.max(img.width, img.height));
+        var cw = Math.round(img.width * sc), chh = Math.round(img.height * sc);
+        var cv = document.createElement('canvas'); cv.width = cw; cv.height = chh;
+        cv.getContext('2d').drawImage(img, 0, 0, cw, chh);
+        URL.revokeObjectURL(url);
+        cv.toBlob(function (b) { b ? resolve(b) : reject(new Error('encode failed')); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+      img.src = url;
+    });
+    var nm = ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2))) + '.jpg';
+    var res = await fetch(SB + '/storage/v1/object/announce-images/' + nm, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'false' },
+      body: blob
+    });
+    if (!res.ok) throw new Error('image upload failed (' + res.status + ')');
+    return SB + '/storage/v1/object/public/announce-images/' + nm;
+  }
+
+  /* ---- admin overlay ------------------------------------------------------- */
+  function buildAdminOverlay(){
+    if ($('annAdminOverlay')) return;
+    try { document.execCommand('styleWithCSS', false, false); } catch (e) {}   // emit <b>/<i> tags, not inline styles
+    var css = document.createElement('style');
+    css.textContent =
+      "#annAdminOverlay{position:fixed;inset:0;z-index:99996;display:none;background:rgba(6,16,32,0.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);overflow-y:auto;padding:max(env(safe-area-inset-top),16px) 14px 30px;}" +
+      "#annAdminOverlay.show{display:block;}" +
+      "#annAdminCard{max-width:520px;margin:0 auto;background:#fff;border-radius:16px;padding:16px;}" +
+      ".aa-h{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:22px;color:#0e2233;}" +
+      ".aa-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#5a7183;margin:12px 0 5px;display:block;}" +
+      ".aa-in{width:100%;border:1px solid rgba(0,133,122,.3);border-radius:10px;padding:9px 10px;font-size:14px;color:#16303f;background:#fff;font-family:inherit;}" +
+      ".aa-tb{display:flex;gap:6px;}" +
+      ".aa-tbbtn{width:36px;height:34px;border:1px solid rgba(0,133,122,.3);background:#e7f3f1;border-radius:8px;color:#0e2233;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;}" +
+      ".aa-tbbtn:active{transform:scale(.95);}" +
+      "#annEdBody{border:1px solid rgba(0,133,122,.3);border-radius:0 0 10px 10px;border-top:none;min-height:90px;padding:10px 11px;font-size:14px;line-height:1.5;color:#16303f;outline:none;}" +
+      "#annEdBody:empty:before{content:attr(data-ph);color:#5a7183;}" +
+      ".aa-row{display:flex;gap:10px;}.aa-row>div{flex:1;}" +
+      ".aa-btn{border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;}" +
+      ".aa-pub{background:#00857a;color:#fff;width:100%;margin-top:14px;}" +
+      ".aa-sec{background:#eef6f9;color:#0e2233;width:100%;}" +
+      ".aa-listrow{display:flex;align-items:center;gap:9px;padding:9px 10px;background:#eef3f6;border-radius:9px;margin-bottom:6px;font-size:13px;}" +
+      ".aa-close{float:right;font-size:24px;color:#5a7183;background:none;border:none;cursor:pointer;line-height:1;}" +
+      ".aa-imgwrap{margin-top:8px;position:relative;display:none;}.aa-imgwrap img{width:100%;border-radius:10px;max-height:160px;object-fit:cover;display:block;}" +
+      ".aa-imgrm{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:999px;width:26px;height:26px;cursor:pointer;}";
+    document.head.appendChild(css);
+    var ov = document.createElement('div'); ov.id = 'annAdminOverlay';
+    ov.innerHTML =
+      '<div id="annAdminCard">' +
+        '<button class="aa-close" id="annAdminClose" aria-label="Close">×</button>' +
+        '<div class="aa-h" id="annFormTitle">Publish announcement</div>' +
+        '<label class="aa-lbl">Title (optional)</label>' +
+        '<input class="aa-in" id="annInTitle" placeholder="New tide view">' +
+        '<label class="aa-lbl">Message</label>' +
+        '<div class="aa-tb">' +
+          '<button type="button" class="aa-tbbtn" data-cmd="bold" aria-label="Bold"><b>B</b></button>' +
+          '<button type="button" class="aa-tbbtn" data-cmd="italic" aria-label="Italic"><i>I</i></button>' +
+          '<button type="button" class="aa-tbbtn" data-cmd="insertUnorderedList" aria-label="Bullet list">•</button>' +
+          '<button type="button" class="aa-tbbtn" data-cmd="createLink" aria-label="Link">\u{1F517}</button>' +
+        '</div>' +
+        '<div id="annEdBody" contenteditable="true" data-ph="Write the announcement…"></div>' +
+        '<label class="aa-lbl">Picture (optional)</label>' +
+        '<button type="button" class="aa-btn aa-sec" id="annImgBtn">Upload picture</button>' +
+        '<input type="file" id="annImgInput" accept="image/*" style="display:none;">' +
+        '<div class="aa-imgwrap" id="annImgWrap"><img id="annImgPrev" alt=""><button type="button" class="aa-imgrm" id="annImgRm" aria-label="Remove picture">×</button></div>' +
+        '<div class="aa-row">' +
+          '<div><label class="aa-lbl">Starts</label><input class="aa-in" id="annInStart" type="datetime-local"></div>' +
+          '<div><label class="aa-lbl">Ends</label><input class="aa-in" id="annInEnd" type="datetime-local"></div>' +
+        '</div>' +
+        '<button type="button" class="aa-btn aa-pub" id="annPubBtn">Publish</button>' +
+        '<div id="annPubMsg" style="font-size:12px;text-align:center;margin-top:8px;min-height:14px;color:#5a7183;"></div>' +
+        '<label class="aa-lbl" style="margin-top:16px;">Live &amp; scheduled</label>' +
+        '<div id="annAdminList"></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+
+    $('annAdminClose').addEventListener('click', closeAnnounceAdmin);
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeAnnounceAdmin(); });
+
+    Array.prototype.forEach.call(ov.querySelectorAll('.aa-tbbtn'), function (btn) {
+      btn.addEventListener('mousedown', function (e) { e.preventDefault(); });   // keep editor focus
+      btn.addEventListener('click', function () {
+        var cmd = btn.getAttribute('data-cmd');
+        $('annEdBody').focus();
+        if (cmd === 'createLink') { var u = window.prompt('Link URL', 'https://'); if (u) document.execCommand('createLink', false, u); }
+        else document.execCommand(cmd, false, null);
+      });
+    });
+    $('annImgBtn').addEventListener('click', function () { $('annImgInput').click(); });
+    $('annImgInput').addEventListener('change', async function () {
+      var f = $('annImgInput').files && $('annImgInput').files[0]; if (!f) return;
+      $('annPubMsg').textContent = 'Uploading picture…';
+      try { _imgUrl = await uploadImage(f); $('annImgPrev').src = _imgUrl; $('annImgWrap').style.display = 'block'; $('annPubMsg').textContent = ''; }
+      catch (e) { $('annPubMsg').textContent = 'Picture upload failed.'; }
+    });
+    $('annImgRm').addEventListener('click', function () { _imgUrl = ''; $('annImgWrap').style.display = 'none'; $('annImgPrev').removeAttribute('src'); });
+    $('annPubBtn').addEventListener('click', publish);
+  }
+
+  function resetForm(){
+    _editId = null; _imgUrl = '';
+    if ($('annInTitle')) $('annInTitle').value = '';
+    if ($('annEdBody'))  $('annEdBody').innerHTML = '';
+    if ($('annInStart')) $('annInStart').value = '';
+    if ($('annInEnd'))   $('annInEnd').value = '';
+    if ($('annImgWrap')) $('annImgWrap').style.display = 'none';
+    if ($('annFormTitle')) $('annFormTitle').textContent = 'Publish announcement';
+    if ($('annPubBtn')) $('annPubBtn').textContent = 'Publish';
+  }
+
+  async function publish(){
+    var tk = token(); if (!tk) { $('annPubMsg').textContent = 'No admin token.'; return; }
+    var title = ($('annInTitle').value || '').trim();
+    var bodyHtml = clean($('annEdBody').innerHTML || '');
+    var starts = dtLocalToISO($('annInStart').value);
+    var ends   = dtLocalToISO($('annInEnd').value);
+    var hasBodyText = !!bodyHtml && !!bodyHtml.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    if (!title && !_imgUrl && !hasBodyText) { $('annPubMsg').textContent = 'Add a picture, title, or message.'; return; }
+    if (!starts || !ends) { $('annPubMsg').textContent = 'Set start and end.'; return; }
+    if (new Date(ends) <= new Date(starts)) { $('annPubMsg').textContent = 'End must be after start.'; return; }
+    $('annPubMsg').textContent = 'Publishing…';
+    try {
+      var r = await rpc('admin_save_announcement', {
+        p_token: tk, p_id: _editId, p_title: title, p_body_html: bodyHtml, p_image_url: _imgUrl, p_starts: starts, p_ends: ends
+      });
+      if (!r.ok) { var et = await r.text().catch(function () { return ''; }); throw new Error(r.status + ' ' + et.slice(0, 180)); }
+      $('annPubMsg').textContent = _editId ? 'Updated.' : 'Published.';
+      resetForm();
+      loadAdminList();
+      loadActive();
+    } catch (e) { $('annPubMsg').textContent = 'Save failed: ' + ((e && e.message) ? e.message : 'unknown'); }
+  }
+
+  async function loadAdminList(){
+    var box = $('annAdminList'); if (!box) return;
+    var tk = token();
+    if (!tk) { box.innerHTML = '<div style="color:#5a7183;font-size:13px;">No admin token — add <code>?token=…</code> to the URL.</div>'; return; }
+    box.innerHTML = '<div style="color:#5a7183;font-size:13px;">Loading…</div>';
+    try {
+      var r = await rpc('admin_list_announcements', { p_token: tk });
+      if (!r.ok) { var lt = await r.text().catch(function () { return ''; }); throw new Error(r.status + ' ' + lt.slice(0, 180)); }
+      var rows = await r.json(); if (!Array.isArray(rows)) rows = [];
+      _rows = rows;
+      if (!rows.length) { box.innerHTML = '<div style="color:#5a7183;font-size:13px;">No announcements yet.</div>'; return; }
+      box.innerHTML = rows.map(function (x) {
+        var color = x.status === 'live' ? '#1c8f82' : (x.status === 'scheduled' ? '#d4900a' : '#5a7183');
+        var lab   = x.status === 'live' ? 'LIVE'    : (x.status === 'scheduled' ? 'SCHEDULED' : 'PAST');
+        return '<div class="aa-listrow">' +
+          '<span style="width:7px;height:7px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>' +
+          '<span style="flex:1;color:#16303f;">' + (escText(x.title || '') || (x.image_url ? '(picture)' : '(untitled)')) + '</span>' +
+          '<span style="font-size:11px;font-weight:700;letter-spacing:.4px;color:' + color + ';">' + lab + '</span>' +
+          '<button type="button" data-edit="' + escText(x.id) + '" aria-label="Edit" style="background:none;border:none;cursor:pointer;color:#5a7183;font-size:15px;">✎</button>' +
+          '<button type="button" data-del="' + escText(x.id) + '" aria-label="Delete" style="background:none;border:none;cursor:pointer;color:#e83d3d;font-size:15px;">✖</button>' +
+        '</div>';
+      }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('[data-edit]'), function (b) { b.addEventListener('click', function () { editRow(b.getAttribute('data-edit')); }); });
+      Array.prototype.forEach.call(box.querySelectorAll('[data-del]'),  function (b) { b.addEventListener('click', function () { delRow(b.getAttribute('data-del')); }); });
+    } catch (e) { box.innerHTML = '<div style="color:#5a7183;font-size:13px;">Couldn’t load: ' + escText((e && e.message) ? e.message : 'unknown') + '</div>'; }
+  }
+
+  function editRow(id){
+    var x = _rows.filter(function (r) { return r.id === id; })[0]; if (!x) return;
+    _editId = x.id; _imgUrl = x.image_url || '';
+    $('annInTitle').value = x.title || '';
+    $('annEdBody').innerHTML = clean(x.body_html || '');
+    $('annInStart').value = isoToDtLocal(x.starts_at);
+    $('annInEnd').value   = isoToDtLocal(x.ends_at);
+    if (_imgUrl) { $('annImgPrev').src = _imgUrl; $('annImgWrap').style.display = 'block'; } else { $('annImgWrap').style.display = 'none'; }
+    $('annFormTitle').textContent = 'Edit announcement';
+    $('annPubBtn').textContent = 'Save changes';
+    $('annPubMsg').textContent = '';
+    var ov = $('annAdminOverlay'); if (ov) ov.scrollTop = 0;
+  }
+
+  async function delRow(id){
+    var tk = token(); if (!tk) return;
+    if (!window.confirm('Delete this announcement?')) return;
+    try {
+      var r = await rpc('admin_delete_announcement', { p_token: tk, p_id: id });
+      if (r.ok) { if (_editId === id) resetForm(); loadAdminList(); loadActive(); }
+    } catch (e) {}
+  }
+
+  function openAnnounceAdmin(){ if (!token()) return; buildAdminOverlay(); var ov = $('annAdminOverlay'); if (ov) ov.classList.add('show'); loadAdminList(); }
+  function closeAnnounceAdmin(){ var ov = $('annAdminOverlay'); if (ov) ov.classList.remove('show'); }
+  window.openAnnounceAdmin = openAnnounceAdmin;
+
+  function init(){
+    loadActive();
+    if (ADMIN_MODE) openAnnounceAdmin();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+
+<script>
+/* V2 (owner, 22 Nov 2026): the announcement block above is v1's, copied verbatim so both pages
+   read the same posts. Only one thing differs here: v2 has a fixed bottom bar (day picker + tabs),
+   so the "What's new" pill sits just above whatever height that bar has, not at v1's fixed 76px. */
+(function () {
+  function place(){
+    var b = document.getElementById('annWhatsNew'), bar = document.querySelector('.bottombar');
+    if (!b || !bar) return;
+    b.style.bottom = (bar.getBoundingClientRect().height + 12) + 'px';
+  }
+  function watch(){
+    place();
+    var bar = document.querySelector('.bottombar');
+    if (window.ResizeObserver && bar) new ResizeObserver(place).observe(bar);
+    window.addEventListener('resize', place);
+    if (window.MutationObserver) new MutationObserver(place).observe(document.body, { childList: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch); else watch();
 })();
 </script>
 </body>
