@@ -733,9 +733,9 @@ function nowIndex(){
   return bestD < 3*3600*1000 ? best : -1;
 }
 
-/* Owner, 21 Nov 2026: no evidence line at Chowder Bay or Bare Island east. Their tier stays "none", so the
+/* Owner, 21 Nov 2026: no evidence line at Chowder Bay, Bare Island east or Fairlight. Their tier stays as it was, so the
    report appeal on non-Easy days still runs; only the visible marker goes. */
-var NO_CONF = { Chowder: 1, BIE: 1 };
+var NO_CONF = { Chowder: 1, BIE: 1, Fairlight: 1 };
 function confidenceEl(key){
   var n = REPORTS[key], t = TIER[key];
   if (NO_CONF[key])      return '<span class="conf"></span>';
