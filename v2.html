@@ -1302,6 +1302,7 @@ function mapSlot(key, pick, wind){
   var k = wind && wind.k != null ? wind.k : 0;
   _mapReq = { key: key, name: LABEL[key] || key, d: {
     swellDir: at(S.swellDir), swellH: at(S.swellH), swellP: at(S.swellP),
+    offH: offAt(key, "swellH", pick.i), offP: offAt(key, "swellP", pick.i), offDir: offAt(key, "swellDir", pick.i),
     windDir: wind ? wind.d : null, windKmh: k,
     chop: Math.max(0, Math.min(1, (k - 5) / 30)), windOnly: windOnly } };
   var dd = new Date(DAYS[dayIx].date + "T12:00:00+11:00")
@@ -1392,6 +1393,17 @@ var MCF = {
 };
 
 /* The weather group a site reads (wind, tide), and the Worker's own fallback to `main`. */
+/* OFFSHORE SWELL FOR THE SITE MAP (display only): WillyWeather's open-ocean swell at the site's own
+   weather location when the Worker sends it (Seal Rocks, Bass Point and Bushrangers), else Sydney's
+   (main) for the Sydney sites. Never Sydney's for a site 50-230 km away: those get none. */
+var OFF_FAR = { sealrocks: 1, shellharbour: 1 };
+function offAt(key, field, i){
+  var W = (data && data.weather) || {}, own = null;
+  for (var k in W) if (W[k] && W[k].sites && W[k].sites.indexOf(key) >= 0) own = k;
+  var src = own && W[own].swellH ? W[own] : (own && OFF_FAR[own] ? null : W.main);
+  var v = src && src[field] ? src[field][i] : null;
+  return v == null ? null : v;
+}
 function wxAt(key, field, i){
   var W = (data && data.weather) || {}, v = null;
   for (var k in W) if (W[k] && W[k].sites && W[k].sites.indexOf(key) >= 0 && W[k][field])
@@ -2425,7 +2437,7 @@ var VizSiteMap = (function () {
     };
     var S = null, ASP = 0.6, RINGS = [], SPAN = 800, SITEPT = [0.5, 0.5], BM = null;
     var _sw = 110, _sp = 10, _hgt = 1, _windDir = 90, _windLevel = 0;
-    var _eLit = 0, _eWrap = 0, _sitePct = null, _windOnly = false, _dots = null;
+    var _eLit = 0, _eWrap = 0, _sitePct = null, _windOnly = false, _dots = null, _off = null;
     var landPath = null, waterClip = null, coastStroke = null;
     var FW = 160, FH = 96, FWATER = null, FE = null;
     var FWX = null, FWY = null, waveCache = {}, waveOrder = [];
@@ -2930,6 +2942,39 @@ var VizSiteMap = (function () {
       ctx.restore();
     }
 
+    /* OFFSHORE SWELL (owner, 22 Nov 2026): the open-ocean height and period, out in the water on the
+       side the offshore swell comes from (Seal Rocks: the right-hand side for a NE swell), so the map
+       shows "out there" next to the node's "here". Searched far out first, kept clear of the site,
+       the node dot and the two direction discs; drawn only where it finds open water. */
+    function drawOffshoreSwell() {
+      if (!_off || _dots || compact) return;
+      var W = M._W, th = _off.dir * Math.PI / 180;
+      var sx = SITEPT[0], sy = SITEPT[1] * ASP, nd = S && S.node;
+      var nx = nd ? nd.u : -9, ny = nd ? nd.v * ASP : -9;
+      var dx = 0.42, dy = ((SITEPT[1] < 0.42 && SITEPT[0] < 0.62) ? 0.84 : 0.16) * ASP;
+      var fan = [0, -20, 20, -40, 40, -60, 60], mx = null, my = null;
+      for (var f = 0; f < fan.length && mx == null; f++) {
+        var a = th + fan[f] * Math.PI / 180, ux = Math.sin(a), uy = -Math.cos(a);
+        for (var t = 0.9; t >= 0.22; t -= 0.03) {
+          var cx = clamp(sx + ux * t, 0.13, 0.87), cy = clamp(sy + uy * t, ASP * 0.10, ASP * 0.90);
+          if (landM(cx, cy) || landM(cx - 0.08, cy) || landM(cx + 0.08, cy)) continue;
+          if (Math.hypot(cx - sx, cy - sy) < 0.2) continue;
+          if (Math.hypot(cx - nx, cy - ny) < 0.2) continue;
+          if (Math.hypot(cx - dx, cy - dy) < 0.17 || Math.hypot(cx - 0.20, cy - dy) < 0.17) continue;
+          if (Math.hypot(cx - 0.88, cy - 0.10 * ASP) < 0.12) continue;      // north arrow
+          mx = cx; my = cy; break;
+        }
+      }
+      if (mx == null) return;
+      var vf = Math.max(11, 0.034 * W), cf = Math.max(8, 0.019 * W);
+      ctx.save(); ctx.textBaseline = 'alphabetic';
+      halo(_off.h.toFixed(1) + ' m' + (_off.p ? ' · ' + Math.round(_off.p) + ' s' : ''), mx * W, my * W,
+           '600 ' + vf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
+      halo('offshore', mx * W, my * W + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif',
+           'rgba(228,240,246,0.92)');
+      ctx.restore();
+    }
+
     // Offshore height, pinned out in open water on the side the swell comes from.
     function drawOffshorePin() {
       var W = M._W;
@@ -3013,7 +3058,7 @@ var VizSiteMap = (function () {
       ctx.fillStyle = '#ddcfae'; ctx.fill(landPath, 'evenodd');
       ctx.strokeStyle = '#bfae86'; ctx.lineWidth = Math.max(1.2, 0.005 * W);
       ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(coastStroke);
-      if (!_windOnly) drawOffshorePin();
+      if (!_windOnly) { drawOffshorePin(); drawOffshoreSwell(); }
       if (_dots) drawDots(); else drawSiteMarker();
       // Both arrows point where the wave / wind is TRAVELLING TO, and both are
       // labelled: on one bay you can learn which colour is which, but a diver
@@ -3045,7 +3090,7 @@ var VizSiteMap = (function () {
       return true;
     };
 
-    /* d = { swellDir, swellH, swellP, windDir, windKmh, eLit, eWrap, sitePct, chop } */
+    /* d = { swellDir, swellH, swellP, windDir, windKmh, eLit, eWrap, sitePct, chop, offH, offP, offDir } */
     M.set = function (siteKey, name, d) {
       var C = (typeof SITE_COAST !== 'undefined') && SITE_COAST[siteKey];
       // No outline, or one that traced no land, means there is nothing to shelter
@@ -3061,6 +3106,8 @@ var VizSiteMap = (function () {
       if (typeof d.windDir === 'number' && isFinite(d.windDir)) _windDir = ((d.windDir % 360) + 360) % 360;
       _eLit = d.eLit || 0; _eWrap = d.eWrap || 0;
       _windOnly = !!d.windOnly;
+      _off = (typeof d.offH === 'number' && isFinite(d.offH) && typeof d.offDir === 'number' && isFinite(d.offDir))
+        ? { h: d.offH, p: d.offP, dir: ((d.offDir % 360) + 360) % 360 } : null;
       _sitePct = (typeof d.sitePct === 'number' && isFinite(d.sitePct)) ? d.sitePct : null;
       _windLevel = clamp(d.chop || 0, 0, 1);
       _dots = d.dots || null;
