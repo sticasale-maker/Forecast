@@ -156,23 +156,7 @@ That is why the app marks it as still being checked.</p>
 It starts on the current forecast hour. If the score doesn't match your experience, tell us.</p>
   <div class="grid">
     <div class="card">
-      <svg id="map" viewBox="0 0 1000 600" role="img" aria-label="Gordons Bay with swell and wind arrows">
-        <defs>
-          <linearGradient id="sea" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a3d4f"/><stop offset=".6" stop-color="#0e5f78"/><stop offset="1" stop-color="#1f86a3"/></linearGradient>
-          <marker id="hs" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4d9dff"/></marker>
-          <marker id="hw" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ffb35c"/></marker>
-        </defs>
-        <rect width="1000" height="600" fill="url(#sea)"/>
-        <polygon points="118.7,600 115.6,593.8 103.1,590.6 90.6,581.3 90.6,559.4 71.9,546.9 56.3,546.9 56.3,550.0 50.0,550.0 37.5,562.5 31.2,562.5 0,593.8 0,0 834.4,0 840.6,18.7 850.0,28.1 856.2,28.1 856.2,34.4 865.6,37.5 871.9,46.9 859.4,71.9 853.1,71.9 843.8,84.4 846.9,121.9 828.1,134.4 837.5,143.8 834.4,171.9 809.4,212.5 793.7,196.9 793.7,190.6 784.4,187.5 784.4,181.3 778.1,181.3 778.1,178.1 750.0,178.1 750.0,181.3 734.4,181.3 734.4,184.4 725.0,184.4 725.0,181.3 687.5,181.3 687.5,178.1 675.0,178.1 675.0,165.6 681.3,159.4 668.7,146.9 640.6,140.6 625.0,128.1 612.5,128.1 612.5,125.0 596.9,121.9 565.6,93.7 553.1,71.9 537.5,84.4 521.9,84.4 518.8,87.5 518.8,93.7 525.0,93.7 528.1,100.0 537.5,96.9 546.9,109.4 553.1,109.4 571.9,128.1 587.5,134.4 615.6,162.5 615.6,168.7 625.0,178.1 640.6,184.4 625.0,203.1 625.0,221.9 618.8,221.9 612.5,231.2 606.2,231.2 587.5,268.7 581.3,268.7 556.3,293.8 537.5,293.8 525.0,281.3 490.6,290.6 481.3,281.3 475.0,281.3 468.8,271.9 428.1,256.3 400.0,228.1 387.5,225.0 384.4,218.8 371.9,215.6 368.8,209.4 356.3,206.3 353.1,200.0 340.6,196.9 337.5,190.6 321.9,187.5 315.6,181.3 306.3,181.3 300.0,175.0 271.9,168.7 271.9,165.6 250.0,165.6 240.6,171.9 218.8,171.9 218.8,168.7 187.5,165.6 187.5,168.7 175.0,171.9 168.8,184.4 178.1,206.3 200.0,234.4 203.1,246.9 218.8,259.4 225.0,275.0 234.4,281.3 240.6,296.9 268.7,321.9 271.9,337.5 281.2,350.0 284.4,375.0 278.1,400.0 262.5,415.6 256.2,415.6 253.1,421.9 234.4,428.1 231.3,434.4 225.0,434.4 218.8,440.6 212.5,440.6 212.5,446.9 200.0,450.0 196.9,456.2 178.1,459.4 156.2,481.3 140.6,528.1 153.1,575.0 140.6,600" fill="#ddcfae" stroke="#bfae86" stroke-width="4" stroke-linejoin="round" fill-rule="evenodd"/>
-        <g id="swellArrow"><circle cx="640" cy="480" r="66" fill="rgba(6,28,38,.45)"/><line id="sl" x1="0" y1="0" x2="0" y2="0" stroke="#4d9dff" stroke-width="11" stroke-linecap="round" marker-end="url(#hs)"/>
-          <text x="640" y="574" text-anchor="middle" font-size="24" font-weight="700" fill="#4d9dff">SWELL</text></g>
-        <g id="windArrow"><circle cx="830" cy="480" r="66" fill="rgba(6,28,38,.45)"/><line id="wl" x1="0" y1="0" x2="0" y2="0" stroke="#ffb35c" stroke-width="11" stroke-linecap="round" marker-end="url(#hw)"/>
-          <text x="830" y="574" text-anchor="middle" font-size="24" font-weight="700" fill="#ffb35c">WIND</text></g>
-        <circle cx="379" cy="224" r="13" fill="#ffd166" stroke="rgba(6,28,38,.9)" stroke-width="4"/>
-        <text x="379" y="190" text-anchor="middle" font-size="28" font-weight="800" fill="#fff" stroke="rgba(6,28,38,.8)" stroke-width="6" paint-order="stroke">Gordons Bay</text>
-        <text x="379" y="266" text-anchor="middle" font-size="24" font-weight="700" fill="#fff" stroke="rgba(6,28,38,.8)" stroke-width="6" paint-order="stroke" id="entryLbl"></text>
-        <g transform="translate(950,48)"><text text-anchor="middle" y="34" font-size="24" font-weight="800" fill="#fff">N</text><path d="M0,-28 L0,12" stroke="#fff" stroke-width="5"/><path d="M-9,-16 L0,-30 L9,-16" fill="none" stroke="#fff" stroke-width="5"/></g>
-      </svg>
+      <canvas id="gmap" style="display:block;width:100%;border-radius:10px" aria-label="Gordons Bay with the swell and wind on the water"></canvas>
       <div class="score" aria-live="polite"><span class="pct" id="pct">–</span><span class="sband" id="band">…</span></div>
       <p class="entry" id="entry">Sea at the entry –</p>
       <div class="costs" id="costs"></div>
@@ -262,10 +246,905 @@ days, so the rough end is where the app knows least.</p>
 
 </div>
 <script>
+/* Gordons Bay coastline and NSW node position, copied from v2.html (SITE_COAST / SITE_NODES). */
+var SITE_COAST = { Gordons: {"aspect":0.6,"span":700,"site":[0.3793,0.373],"rings":[[[0.1187,1],[0.1156,0.9896],[0.1031,0.9844],[0.0906,0.9688],[0.0906,0.9323],[0.0719,0.9115],[0.0563,0.9115],[0.0563,0.9167],[0.05,0.9167],[0.0375,0.9375],[0.0312,0.9375],[0,0.9896],[0,0],[0.8344,0],[0.8406,0.0312],[0.85,0.0469],[0.8562,0.0469],[0.8562,0.0573],[0.8656,0.0625],[0.8719,0.0781],[0.8594,0.1198],[0.8531,0.1198],[0.8438,0.1406],[0.8469,0.2031],[0.8281,0.224],[0.8375,0.2396],[0.8344,0.2865],[0.8094,0.3542],[0.7937,0.3281],[0.7937,0.3177],[0.7844,0.3125],[0.7844,0.3021],[0.7781,0.3021],[0.7781,0.2969],[0.75,0.2969],[0.75,0.3021],[0.7344,0.3021],[0.7344,0.3073],[0.725,0.3073],[0.725,0.3021],[0.6875,0.3021],[0.6875,0.2969],[0.675,0.2969],[0.675,0.276],[0.6813,0.2656],[0.6687,0.2448],[0.6406,0.2344],[0.625,0.2135],[0.6125,0.2135],[0.6125,0.2083],[0.5969,0.2031],[0.5656,0.1562],[0.5531,0.1198],[0.5375,0.1406],[0.5219,0.1406],[0.5188,0.1458],[0.5188,0.1562],[0.525,0.1562],[0.5281,0.1667],[0.5375,0.1615],[0.5469,0.1823],[0.5531,0.1823],[0.5719,0.2135],[0.5875,0.224],[0.6156,0.2708],[0.6156,0.2812],[0.625,0.2969],[0.6406,0.3073],[0.625,0.3385],[0.625,0.3698],[0.6188,0.3698],[0.6125,0.3854],[0.6062,0.3854],[0.5875,0.4479],[0.5813,0.4479],[0.5563,0.4896],[0.5375,0.4896],[0.525,0.4688],[0.4906,0.4844],[0.4813,0.4688],[0.475,0.4688],[0.4688,0.4531],[0.4281,0.4271],[0.4,0.3802],[0.3875,0.375],[0.3844,0.3646],[0.3719,0.3594],[0.3688,0.349],[0.3563,0.3438],[0.3531,0.3333],[0.3406,0.3281],[0.3375,0.3177],[0.3219,0.3125],[0.3156,0.3021],[0.3063,0.3021],[0.3,0.2917],[0.2719,0.2812],[0.2719,0.276],[0.25,0.276],[0.2406,0.2865],[0.2188,0.2865],[0.2188,0.2812],[0.1875,0.276],[0.1875,0.2812],[0.175,0.2865],[0.1688,0.3073],[0.1781,0.3438],[0.2,0.3906],[0.2031,0.4115],[0.2188,0.4323],[0.225,0.4583],[0.2344,0.4688],[0.2406,0.4948],[0.2687,0.5365],[0.2719,0.5625],[0.2812,0.5833],[0.2844,0.625],[0.2781,0.6667],[0.2625,0.6927],[0.2562,0.6927],[0.2531,0.7031],[0.2344,0.7135],[0.2313,0.724],[0.225,0.724],[0.2188,0.7344],[0.2125,0.7344],[0.2125,0.7448],[0.2,0.75],[0.1969,0.7604],[0.1781,0.7656],[0.1562,0.8021],[0.1406,0.8802],[0.1531,0.9583],[0.1406,1]]],"far":"////////////////////PwAAAAAAAAAAAP///////////////////38AAAAAAAAAAAD///////////////////9/AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP/////////////3//////8AAAAAAAAAAAD/////////////////////AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP///////////////////38AAAAAAAAAAAD///////////////////9/AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP////////////////////8AAAAAAAAAAAD/////////////////////AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP///////////////////38AAAAAAAAAAAD///////////////////9/AAAAAAAAAAAA////////////////////fwAAAAAAAAAAAP////////////////////8AAAAAAAAAAAD/////////////////////AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP////////////////////8BAAAAAAAAAAD/////////////////////AQAAAAAAAAAA/////////////////////wEAAAAAAAAAAP////////////////////8BAAAAAAAAAAD/////////////////////AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP////////////////////8AAAAAAAAAAAD///////////////////9/AAAAAAAAAAAA////////////////////fwAAAAAAAAAAAP///////////////////38AAAAAAAAAAAD///////////////////8/AAAAAAAAAAAA////////////////////PwAAAAAAAAAAAP///////////////////z8AAAAAAAAAAAD///////////////////9/AAAAAAAAAAAA////////////////////fwAAAAAAAAAAAP////////////////////8AAAAAAAAAAAD/////////////////////AAAAAAAAAAAA/////////////////////wAAAAAAAAAAAP////////////////////8BAAAAAAAAAAD/////////////////////AQAAAAAAAAAA/////////////////////wEAAAAAAAAAAP////////////////////8BAAAAAAAAAAD/////////////////////AwAAAAAAAAAA/////////////////////wMAAAAAAAAAAP////////////////////8DAAAAAAAAAAD/////////////////////AwAAAAAAAAAA/////////////////////wcAAAAAAAAAAP////////////////////8HAAAAAAAAAAD/////////////////////BwAAAAAAAAAA/////////////////////wcAAAAAAAAAAP////////////////////8HAAAAAAAAAAD/////////////////////AwAAAAAAAAAA/////////////////////wMAAAAAAAAAAP////////////////////8DAAAAAAAAAAD////////////////////wAwAAAAAAAAAA//////////////////8/8AMAAAAAAAAAAP//////////////////D/ADAAAAAAAAAAD//////////////////wPwAwAAAAAAAAAA//////////////////8D4AEAAAAAAAAAAP//////////////////AeAAAAAAAAAAAAD//////////////////wEAAAAAAAAAAAAA//////////////////8BAAAAAAAAAAAAAP//////////////////AwAAAAAAAAAAAAD//////////////////wMAAAAAAAAAAAAA//////////////////8DAAAAAAAAAAAAAP//////////////////AwAAAAAAAAAAAAD//////////////////w8AAAAAAAAAAAAA//////////////////8PAAAAAAAAAAAAAP//////////////////DwAAAAAAAAAAAAD//////////////////wcAAAAAAAAAAAAA/////////////////z8AAAAAAAAAAAAAAP////////////////8/AAAAAAAAAAAAAAD/////////////////BwAAAAAAAAAAAAAA/////////////////wcAAAAAAAAAAAAAAP////////////////8HAAAAAAAAAAAAAAD/////////////////AQAAAAAAAAAAAAAA/////////////////wAAAAAAAAAAAAAAAP////////////////8AAAAAAAAAAAAAAAD/////////////////AAAAAAAAAAAAAAAA/////////////////wEAAAAAAAAAAAAAAP////////////////8DAAAAAAAAAAAAAAD/////////////////AwAAAAAAAAAAAAAA/////////////////wMAAAAAAAAAAAAAAP////////////////8DAAAAAAAAAAAAAAD/////////////////AwAAAAAAAAAAAAAA/////////////////wcAAAAAAAAAAAAAAP////////////////8HAAAAAAAAAAAAAAD/////////////////BwAAAAAAAAAAAAAA/////////////////wcAAAAAAAAAAAAAAP////////////////8HAAAAAAAAAAAAAAD/////////////////DwAAAAAAAAAAAAAA/////////////////w8AAAAAAAAAAAAAAP////////////////8PAAAAAAAAAAAAAAD/////////////////DwAAAAAAAAAAAAAA/////////////////w8AAAAAAAAAAAAAAP////////////////8PAAAAAAAAAAAAAAD////////////////fDwAAAAAAAAAAAAAA////////////////Pw8AAAAAAAAAAAAAAP//////////////D38IAAAAAAAAAAAAAAD//////////////x88AAAAAAAAAAAAAAAA//////////////8/OAAAAAAAAAAAAAAAAP//////////////fwAAAAAAAAAAAAAAAAD//////////////38AAAAAAAAAAAAAAAAA//////////////9/AAAAAAAAAAAAAAAAAP//////////////HwAAAAAAAAAAAAAAAAD//////////////w8AAAAAAAAAAAAAAAAA//////////////8PAAAAAAAAAAAAAAAAAP//////////////DQAAAAAAAAAAAAAAAAD//////////////wEAAAAAAAAAAAAAAAAA//////////////8AAAAAAAAAAAAAAAAAAP//////////////AAAAAAAAAAAAAAAAAAD//////////////wAAAAAAAAAAAAAAAAAA//////////////8AAAAAAAAAAAAAAAAAAP//////////////AAAAAAAAAAAAAAAAAAD//////////////wEAAAAAAAAAAAAAAAAA//////////////8BAAAAAAAAAAAAAAAAAP//////////////AwAAAAAAAAAAAAAAAAD//////////////wMAAAAAAAAAAAAAAAAA//////////////8HAAAAAAAAAAAAAAAAAP//////////////DwAAAAAAAAAAAAAAAAD//////////////x8AAAAAAAAAAAAAAAAA//////////////8fAAAAAAAAAAAAAAAAAP//////////////HwAAAAAAAAAAAAAAAAD//////////////wcAAAAAAAAAAAAAAAAA//////////////8HAAAAAAAAAAAAAAAAAP//////////////BwAAAAAAAAAAAAAAAAD//////////////wcAAAAAAAAAAAAAAAAA//////////////8HAAAAAAAAAAAAAAAAAP//////////////BwAAAAAAAAAAAAAAAAD//////////////w8AAAAAAAAAAAAAAAAA//////////////8/AAAAAAAAAAAAAAAAAP//////////////PwAAAAAAAAAAAAAAAAD//////////////z8AAAAAAAAAAAAAAAAA//////////////8/AAAAAAAAAAAAAAAAAP//////////////PwAAAAAAAAAAAAAAAAD//////////////z8AAAAAAAAAAAAAAAAA//////////////8fAAAAAAAAAAAAAAAAAP//////////////HwAAAAAAAAAAAAAAAAD//////////////w8AAAAAAAAAAAAAAAAA//////////////8DAAAAAAAAAAAAAAAAAP//////////////BwAAAAAAAAAAAAAAAAD//////////////x8AAAAAAAAAAAAAAAAA//////////////9/AAAAAAAAAAAAAAAAAP///////////////wAAAAAAAAAAAAAAAAD///////////////8BAAAAAAAAAAAAAAAA////////////////BwAAAAAAAAAAAAAAAP///////////////wcAAAAAAAAAAAAAAAD///////////////8HAAAAAAAAAAAAAAAA////////////////AwAAAAAAAAAAAAAAAP///////////////wEAAAAAAAAAAAAAAAD///////////////8AAAAAAAAAAAAAAAAA//////////////9/AAAAAAAAAAAAAAAAAP//////////////PwAAAAAAAAAAAAAAAAD//////////////z8AAAAAAAAAAAAAAAAA//////////////8PAAAAAAAAAAAAAAAAAP//////////////AAAAAAAAAAAAAAAAAAD/////////////fwAAAAAAAAAAAAAAAAAA/////////////38AAAAAAAAAAAAAAAAAAP////////////9/AAAAAAAAAAAAAAAAAAD/////////////fwAAAAAAAAAAAAAAAAAA/////////////38AAAAAAAAAAAAAAAAAAP////////////8/AAAAAAAAAAAAAAAAAAD/////////////PwAAAAAAAAAAAAAAAAAA/////////////z8AAAAAAAAAAAAAAAAAAP////////////8/AAAAAAAAAAAAAAAAAAD/////////////PwAAAAAAAAAAAAAAAAAA/////////////z8AAAAAAAAAAAAAAAAAAP////////////8/AAAAAAAAAAAAAAAAAAD/////////////fwAAAAAAAAAAAAAAAAAA//////////////8BAAAAAAAAAAAAAAAAAP//////////////BwAAAAAAAAAAAAAAAAD//////////////w8AAAAAAAAAAAAAAAAA//////////////8fAAAAAAAAAAAAAAAAAP//////////////PwAAAAAAAAAAAAAAAAD//////////////38AAAAAAAAAAAAAAAAA////////////////AAAAAAAAAAAAAAAAAP///////////////wMAAAAAAAAAAAAAAAD///////////////8HAAAAAAAAAAAAAAAA////////////////BwAAAAAAAAAAAAAAAP7//////////////wcAAAAAAAAAAAAAAAD5//////////////8HAAAAAAAAAAAAAAAA8///////////////AQAAAAAAAAAAAAAAAM///////////////wAAAAAAAAAAAAAAAAAf//////////////8AAAAAAAAAAAAAAAAAP///////////////AAAAAAAAAAAAAAAAAD/g/////////////wEAAAAAAAAAAAAAAAA/wP////////////8DAAAAAAAAAAAAAAAAf4D+////////////BwAAAAAAAAAAAAAAAH/g/////////////wcAAAAAAAAAAAAAAAB//P////////8//v8HAAAAAAAAAAAAAAAA////////////P/j/BwAAAAAAAAAAAAAAAP///////////3/g/wcAAAAAAAAAAAAAAAD/////////////gP8PAAAAAAAAAAAAAAAA/////////////wH/DwAAAAAAAAAAAAAAAP////////////8B/w8AAAAAAAAAAAAAAAD////g////////A/4PAAAAAAAAAAAAAAAA//8P4P///////wPADwAAAAAAAAAAAAAAAP//AeD///////8PAAAAAAAAAAAAAAAAAAD/PwD8////////DwAAAAAAAAAAAAAAAAAA/weA/////////x8AAAAAAAAAAAAAAAAAAH8AwP////////8fAAAAAAAAAAAAAAAAAAA=","farScale":8.5714,"farW":200,"farH":200,"node":{"u":0.4886,"v":0.6951,"d":311,"b":151}} };
+</script>
+<script>
+var VizSiteMap = (function () {
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function swPower(h, p) { return h * h * Math.pow(Math.max(p, 1), 1.1); }
+
+  var CUT = 3, DENS = 9, SIZEN = 0.085, THICK = 3.2, SPEED = 1.0;
+  // Furthest a wrap arrow may lean off the swell. 62° was enough to read as a
+  // different sea state from the swell arrow above it — the wrap filled a whole
+  // shadowed bay at 45-60° off and looked simply inconsistent. 35° still shows the
+  // bend around a headland, which is the point, without ever contradicting the
+  // headline direction.
+  var LEAN = 35 * Math.PI / 180;
+  var FAR_REACH_M = 2000;          // how far past the frame the far mask may shadow
+  // swellPower at which arrows hit full size. 35 ≈ 1.6 m at 11 s, an ordinary
+  // Sydney day — at the Swim app's 60 a typical swell drew arrows a few pixels
+  // long and the whole refraction pattern was invisible on a phone.
+  var SWELL_FULL = 35;
+
+  // ── shared land bitmaps (one per site, independent of canvas size) ────────
+  var BITS = {};
+  function bitsFor(key, S) {
+    var b = BITS[key];
+    if (b) return b;
+    var BW = 220, BH = Math.max(60, Math.round(BW * S.aspect));
+    var bits = new Uint8Array(BW * BH), inv = S.invert ? 1 : 0, R = S.rings;
+    for (var r = 0; r < BH; r++) for (var c = 0; c < BW; c++) {
+      var nx = (c + 0.5) / BW, ny = (r + 0.5) / BH, ins = false;
+      for (var p = 0; p < R.length; p++) {
+        var ring = R[p], n = ring.length;
+        for (var a = 0, z = n - 1; a < n; z = a++) {
+          var xi = ring[a][0], yi = ring[a][1], xj = ring[z][0], yj = ring[z][1];
+          if (((yi > ny) !== (yj > ny)) && (nx < (xj - xi) * (ny - yi) / (yj - yi) + xi)) ins = !ins;
+        }
+      }
+      bits[r * BW + c] = (inv ? !ins : ins) ? 1 : 0;
+    }
+    // The coarse land mask for everything OUTSIDE the frame, one cell per bit.
+    var far = null;
+    if (S.far) {
+      var raw = atob(S.far), fw = S.farW, fh = S.farH, fb = new Uint8Array(fw * fh);
+      for (var i = 0; i < fw * fh; i++) {
+        if (raw.charCodeAt(i >> 3) & (1 << (i & 7))) fb[i] = 1;
+      }
+      far = { w: fw, h: fh, bits: fb, scale: S.farScale || 3 };
+    }
+    b = BITS[key] = { BW: BW, BH: BH, bits: bits, aspect: S.aspect, far: far };
+    return b;
+  }
+
+  // ── shared ticker ─────────────────────────────────────────────────────────
+  var LIVE = [], PHASE = 0, lastTs = 0, started = false;
+  function tick(ts) {
+    requestAnimationFrame(tick);
+    if (document.hidden) { lastTs = ts; return; }
+    if (!lastTs) lastTs = ts;
+    PHASE = (PHASE + (ts - lastTs) * 0.0006 * SPEED) % 1;
+    lastTs = ts;
+    for (var i = 0; i < LIVE.length; i++) {
+      var m = LIVE[i];
+      if (m._on && m._vis && m._W) m._render();
+    }
+  }
+  function start() { if (!started) { started = true; requestAnimationFrame(tick); } }
+
+  function create(cv, opts) {
+    opts = opts || {};
+    var compact = !!opts.compact;
+    var ctx = cv.getContext('2d');
+    var M = {
+      _on: false, _vis: true, _W: 0, _H: 0,
+      el: cv, key: '', name: ''
+    };
+    var S = null, ASP = 0.6, RINGS = [], SPAN = 800, SITEPT = [0.5, 0.5], BM = null;
+    var _sw = 110, _sp = 10, _hgt = 1, _windDir = 90, _windLevel = 0;
+    var _eLit = 0, _eWrap = 0, _sitePct = null, _windOnly = false, _dots = null, _off = null, _nodeH = null, _entryH = null;
+    var landPath = null, waterClip = null, coastStroke = null;
+    var FW = 160, FH = 96, FWATER = null, FE = null;
+    var FWX = null, FWY = null, waveCache = {}, waveOrder = [];
+    var RP = null, _fieldKey = '', _pending = false;
+    var litCache = {}, litOrder = [];
+    var CGW = compact ? 56 : 80, CGH = 34, _cfield = null, _chopKey = '';
+    var chopCache = {}, chopOrder = [];
+
+    function landM(mx, my) {
+      var nx = mx, ny = my / ASP;
+      if (nx < 0 || nx >= 1 || ny < 0 || ny >= 1) return 0;
+      return BM.bits[((ny * BM.BH) | 0) * BM.BW + ((nx * BM.BW) | 0)];
+    }
+    // Same test, valid outside the frame too: the fine bitmap inside the map, the
+    // coarse far mask beyond it, -1 once even that runs out. Only line of sight
+    // needs this — nothing is ever DRAWN outside the frame.
+    function landFar(mx, my) {
+      var nx = mx, ny = my / ASP;
+      if (nx >= 0 && nx < 1 && ny >= 0 && ny < 1) {
+        return BM.bits[((ny * BM.BH) | 0) * BM.BW + ((nx * BM.BW) | 0)];
+      }
+      var F = BM.far;
+      if (!F) return -1;
+      // The mask is square in METRES. Both metric box axes run 2*SPAN m per unit,
+      // so y scales by ASP here. This used to divide (ny - 0.5) directly, which
+      // made the mask 12000 m wide but only 7200 m TALL — and a swell with any
+      // southerly component marches down that short axis, off the end of the
+      // data, where this returns -1 and the solver reads it as open sea.
+      var fx = 0.5 + (nx - 0.5) / F.scale, fy = 0.5 + (ny - 0.5) * ASP / F.scale;
+      if (fx < 0 || fx >= 1 || fy < 0 || fy >= 1) return -1;
+      return F.bits[((fy * F.h) | 0) * F.w + ((fx * F.w) | 0)];
+    }
+
+    function borderPt(p) { var e = 0.004; return p[0] < e || p[0] > 1 - e || p[1] < e || p[1] > 1 - e; }
+    function buildPaths() {
+      var W = M._W, H = M._H;
+      landPath = new Path2D(); coastStroke = new Path2D();
+      waterClip = new Path2D(); waterClip.rect(-4, -4, W + 8, H + 8);
+      for (var p = 0; p < RINGS.length; p++) {
+        var R = RINGS[p], n = R.length;
+        landPath.moveTo(R[0][0] * W, R[0][1] * H);
+        waterClip.moveTo(R[0][0] * W, R[0][1] * H);
+        for (var i = 1; i < n; i++) {
+          landPath.lineTo(R[i][0] * W, R[i][1] * H);
+          waterClip.lineTo(R[i][0] * W, R[i][1] * H);
+        }
+        landPath.closePath(); waterClip.closePath();
+        // Only stroke real shoreline — segments running along the crop box are an
+        // artefact of the clip, not a coast, and a line there reads as a sea wall.
+        for (var j = 0; j < n; j++) {
+          var a = R[j], b = R[(j + 1) % n];
+          if (!(borderPt(a) && borderPt(b))) {
+            coastStroke.moveTo(a[0] * W, a[1] * H); coastStroke.lineTo(b[0] * W, b[1] * H);
+          }
+        }
+      }
+    }
+
+    /* ── WAVE FIELD ─────────────────────────────────────────────────────────
+       A parabolic (forward-marching) approximation of the mild-slope equation —
+       the standard nearshore engineering model, in the same family as REF/DIF.
+
+       This REPLACES the binary lit/shadow ray test and everything that was bolted
+       onto it: the tip search, the angular decay, the site normalisation, the 95°
+       cutoff, the lean clamp, the visibility culls. Those were independent knobs,
+       which is why fixing one kept breaking another.
+
+       The model is one statement: energy marches in the swell direction and
+       spreads sideways as it goes, at a rate set by the wavelength. Land is a zero
+       boundary. Everything previously enforced by rules now falls out of it:
+
+         · a cone of shadow behind EVERY landmass, headland or island alike
+         · shadows that FILL IN with distance instead of being all-or-nothing —
+           which is what the ray test could never do, and why open sea kept
+           coming out blank
+         · long period wrapping further than short, because the spreading rate is
+           proportional to wavelength
+         · no energy out of land, because land is a zero boundary
+         · a direction that can never oppose the swell, because it is the energy
+           flux vector and its along-swell component is positive by construction
+
+       Bathymetry slots in here later: depth sets the local wavelength (hence the
+       spreading), the celerity gradient adds true refraction, and H/d gives
+       breaking. None of that changes the shape of this code.
+       ───────────────────────────────────────────────────────────────────────── */
+    var WAVE = null;          // { E, DX, DY } on the render grid
+    var _upOverrideM = 0;     // >0 forces the upwave reach, for table generation
+
+    function solveWave(dir, per) {
+      var th = (dir + 180) * Math.PI / 180;
+      var ux = Math.sin(th), uy = -Math.cos(th);     // travel, box metric units
+      var vx = -uy, vy = ux;                         // transverse
+
+      // Domain reaches upwave far enough to include the land doing the sheltering
+      // — Botany Bay is shadowed by ground several km outside the frame.
+      // The domain must be wide enough that its edges sit in undisturbed sea. Too
+      // narrow and a site inside a bay starts its march on land — at Bare Island the
+      // whole inflow row was La Perouse, so the field came out uniformly zero.
+      // Domain floors expressed in METRES against the frame's own geometry, not as
+      // box fractions. The old 0.8/1.6 floors ballooned with span: a 4.6 km frame
+      // demanded a 7.4 km march and a 14.7 km lateral half-width, far outside any
+      // land data, while a 700 m frame asked for 3 km / 4 km. Small sites keep
+      // their exact old values (3000 m / 4000 m); only big frames are reined in.
+      // Keep in step with domain_reach() in tools/coastline/build_coast.py, which
+      // sizes the far mask to cover precisely this.
+      var SY = SPAN * ASP;
+      // UPWAVE REACH OVERRIDE, used only when generating a site's dispersion table.
+      // Normally the march starts 3 km upwave so distant land can shelter the site;
+      // a table only has to carry swell the last few hundred metres from its NSW
+      // nearshore node to the entry. Defaults to 0 = unchanged behaviour.
+      var UPm = _upOverrideM > 0 ? _upOverrideM : Math.max(3000, SY + 1500);
+      var HALFm = _upOverrideM > 0 ? Math.max(Math.hypot(SPAN, SY) + 400, _upOverrideM)
+                                   : Math.max(4000, Math.hypot(SPAN, SY) + 1500);
+      // DOWN was left as a box fraction when UP and HALF moved to metres, so on a
+      // 4.6 km frame it still reached 11 km downwave — straight out of the mask.
+      // Downwave only has to cover the frame's far corner: the march is forward,
+      // so nothing beyond the frame can influence anything drawn inside it.
+      var DOWNm = Math.min(1.2 * 2 * SPAN, Math.hypot(SPAN, SY) + 900);
+      var UP = UPm / (2 * SPAN), DOWN = DOWNm / (2 * SPAN), HALF = HALFm / (2 * SPAN);
+      var NX = 150, NH = 260;
+      var dXi = (UP + DOWN) / NX, dEta = (2 * HALF) / NH;
+      var cx = 0.5, cy = ASP * 0.5;
+
+      // Deep-water wavelength, in box units. Spreading follows the Fresnel scale
+      // sigma^2 = lambda*xi/(2*pi), so the diffusion constant is lambda/(4*pi).
+      var lam = (1.56 * per * per) / (2 * SPAN);
+      var D = lam / (4 * Math.PI);
+      var r = D * dXi / (dEta * dEta);
+
+      var E = new Float32Array(NH + 1), En = new Float32Array(NH + 1);
+      var land = new Uint8Array(NH + 1);
+      var rows = new Float32Array((NX + 1) * (NH + 1));
+
+      var landHits = 0, inflowWater = 0, nanHits = 0, prof = [], outside = 0, sampled = 0;
+      var bxMin = 9, bxMax = -9, byMin = 9, byMax = -9;   // sampled extent, box units
+      var offData = 0, offRead = 0;                       // landFar samples past the mask
+      function sampleLand(i, j) {
+        var xi = -UP + i * dXi, eta = -HALF + j * dEta;
+        var bx = cx + ux * xi + vx * eta, by = cy + uy * xi + vy * eta;
+        if (bx < bxMin) bxMin = bx; if (bx > bxMax) bxMax = bx;
+        if (by < byMin) byMin = by; if (by > byMax) byMax = by;
+        var f = landFar(bx, by);
+        // -1 means the march ran off the end of the land data. It reads as sea, which
+        // is the dangerous default: phantom ocean pours full swell in over ground that
+        // is really land. Counted so a check can assert it never happens.
+        // NOT `outside` — that counter already exists further down with a different
+        // meaning (render cells outside the SOLVED DOMAIN). Overloading it made this
+        // read 1.4% when the true figure was 0, and sampled+outside came out constant,
+        // which is what gave the collision away.
+        offRead++; if (f < 0) offData++;
+        var v = f > 0 ? 1 : 0;
+        if (v) landHits++;
+        return v;
+      }
+      for (var j = 0; j <= NH; j++) {
+        land[j] = sampleLand(0, j);
+        E[j] = land[j] ? 0 : 1;                       // full swell arrives upwave
+        if (!land[j]) inflowWater++;
+        rows[j] = E[j];
+      }
+
+      // Backward-Euler diffusion, solved with Thomas. Implicit so the step size is
+      // free of a stability limit — an explicit march needed ~10x the steps.
+      var a = new Float32Array(NH + 1), b = new Float32Array(NH + 1),
+          c = new Float32Array(NH + 1), d2 = new Float32Array(NH + 1),
+          cp = new Float32Array(NH + 1), dp = new Float32Array(NH + 1);
+
+      for (var i = 1; i <= NX; i++) {
+        for (var j2 = 0; j2 <= NH; j2++) land[j2] = sampleLand(i, j2);
+        for (var k = 0; k <= NH; k++) {
+          if (land[k]) { a[k] = 0; b[k] = 1; c[k] = 0; d2[k] = 0; continue; }
+          // The transverse edges are held at the undisturbed wave: swell keeps
+          // arriving from outside the domain rather than draining away at its sides.
+          if (k === 0 || k === NH) { a[k] = 0; b[k] = 1; c[k] = 0; d2[k] = 1; continue; }
+          // Land is a no-flux wall. Coupling to a land cell is simply dropped and
+          // the diagonal drops with it — leaving the diagonal at 1+2r turned every
+          // shoreline into a sink and bled the whole field to nothing over the march.
+          var cnt = 0;
+          a[k] = land[k - 1] ? 0 : (cnt++, -r);
+          c[k] = land[k + 1] ? 0 : (cnt++, -r);
+          b[k] = 1 + r * cnt;
+          d2[k] = E[k];
+        }
+        cp[0] = c[0] / b[0]; dp[0] = d2[0] / b[0];
+        for (var m = 1; m <= NH; m++) {
+          var den = b[m] - a[m] * cp[m - 1];
+          if (Math.abs(den) < 1e-9) den = 1e-9;
+          cp[m] = c[m] / den;
+          dp[m] = (d2[m] - a[m] * dp[m - 1]) / den;
+        }
+        En[NH] = dp[NH];
+        for (var n = NH - 1; n >= 0; n--) En[n] = dp[n] - cp[n] * En[n + 1];
+        for (var q = 0; q <= NH; q++) {
+          var val = land[q] ? 0 : En[q];
+          if (!(val >= 0)) { val = 0; nanHits++; }      // NaN guard, and count it
+          E[q] = clamp(val, 0, 1);
+          rows[i * (NH + 1) + q] = E[q];
+        }
+        if (i === 1 || i === (NX >> 2) || i === (NX >> 1) || i === NX) {
+          var mx2 = 0; for (var z = 0; z <= NH; z++) if (E[z] > mx2) mx2 = E[z];
+          prof.push(i + ':' + mx2.toFixed(2));
+        }
+      }
+
+      // Sample the solution back onto the render grid, taking the direction from
+      // the energy flux: along-swell plus the transverse gradient term.
+      var N = FW * FH;
+      var Eo = new Float32Array(N), DXo = new Float32Array(N), DYo = new Float32Array(N);
+      for (var rr = 0; rr < FH; rr++) for (var cc = 0; cc < FW; cc++) {
+        var idx = rr * FW + cc;
+        if (!FWATER[idx]) continue;
+        var mx = (cc + 0.5) / FW - cx, my = (rr + 0.5) / FH * ASP - cy;
+        var xi = mx * ux + my * uy, eta = mx * vx + my * vy;
+        var fi = (xi + UP) / dXi, fj = (eta + HALF) / dEta;
+        if (fi < 0 || fi > NX || fj < 0 || fj > NH) { outside++; continue; }
+        sampled++;
+        var i0 = Math.min(NX - 1, Math.max(0, Math.floor(fi)));
+        var j0 = Math.min(NH - 1, Math.max(0, Math.floor(fj)));
+        var tx = fi - i0, ty = fj - j0;
+        var e00 = rows[i0 * (NH + 1) + j0], e01 = rows[i0 * (NH + 1) + j0 + 1];
+        var e10 = rows[(i0 + 1) * (NH + 1) + j0], e11 = rows[(i0 + 1) * (NH + 1) + j0 + 1];
+        var e = (e00 * (1 - ty) + e01 * ty) * (1 - tx) + (e10 * (1 - ty) + e11 * ty) * tx;
+        Eo[idx] = e;
+        var gEta = ((e01 - e00) * (1 - tx) + (e11 - e10) * tx) / dEta;
+        // flux = (E, -D dE/deta) in (xi, eta); the along-swell part is never
+        // negative, so the arrow can never point back into the swell.
+        // Limit the lateral term to tan(LEAN). It blows up wherever E is small —
+        // the ratio, not the physics, is what produced 50 deg arrows the moment the
+        // lees filled with real energy. Capping the ratio enforces the same limit
+        // the register states, at the one place it can run away.
+        var latMax = Math.tan(LEAN);
+        var lat = clamp(e > 1e-4 ? (-D * gEta) / e : 0, -latMax, latMax);
+        var nx2 = ux + vx * lat, ny2 = uy + vy * lat;
+        var nn = Math.hypot(nx2, ny2) || 1;
+        DXo[idx] = nx2 / nn; DYo[idx] = ny2 / nn;
+      }
+      return { E: Eo, DX: DXo, DY: DYo,
+               info: { UP: +UP.toFixed(2), HALF: +HALF.toFixed(2), r: +r.toFixed(3),
+                       lam: +lam.toFixed(3), inflowWater: inflowWater, nanHits: nanHits,
+                       profile: prof.join(' '), outside: outside, sampled: sampled,
+                       DOWN: +DOWN.toFixed(2), offData: offData, offRead: offRead,
+                       bx: [+bxMin.toFixed(3), +bxMax.toFixed(3)],
+                       by: [+byMin.toFixed(3), +byMax.toFixed(3)],
+                       landFrac: +(landHits / ((NX + 1) * (NH + 1))).toFixed(2) } };
+    }
+
+    function rebuildField() {
+      FH = Math.max(40, Math.round(FW * ASP));
+      var N = FW * FH;
+      FWATER = new Uint8Array(N);
+      for (var r = 0; r < FH; r++) for (var c = 0; c < FW; c++) {
+        var mx = (c + 0.5) / FW, my = (r + 0.5) / FH * ASP;
+        if (!landM(mx, my)) FWATER[r * FW + c] = 1;
+      }
+      var ck = M.key + '|' + FW + '|' + (Math.round(_sw / 3) * 3) + '|' + Math.round(_sp) + '|u' + _upOverrideM;
+      var hit = waveCache[ck];
+      if (!hit) {
+        hit = solveWave(_sw, _sp);
+        waveCache[ck] = hit; waveOrder.push(ck);
+        while (waveOrder.length > 6) delete waveCache[waveOrder.shift()];
+      }
+      WAVE = hit;
+      var th = (_sw + 180) * Math.PI / 180, dx = Math.sin(th), dy = -Math.cos(th);
+      var E0 = clamp(swPower(_hgt, _sp) / SWELL_FULL, 0, 1);
+      FE = new Float32Array(N); FWX = new Float32Array(N); FWY = new Float32Array(N);
+      for (var i = 0; i < N; i++) {
+        if (!FWATER[i]) continue;
+        FE[i] = 100 * WAVE.E[i] * E0;
+        FWX[i] = WAVE.DX[i]; FWY[i] = WAVE.DY[i];
+      }
+      RP = { step: 1 / DENS, dx: dx, dy: dy };
+    }
+
+    function fidx(mx, my) {
+      if (mx < 0 || mx >= 1 || my < 0 || my >= ASP) return -1;
+      return ((my / ASP * FH) | 0) * FW + ((mx * FW) | 0);
+    }
+
+    function arrowGlyph(mx, my, tx, ty, px, py, half) {
+      var W = M._W, X = function (v) { return v * W; }, a = half;
+      ctx.beginPath();
+      ctx.moveTo(X(mx - tx * a), X(my - ty * a)); ctx.lineTo(X(mx + tx * a), X(my + ty * a)); ctx.stroke();
+      var hx = mx + tx * a, hy = my + ty * a, hs = half * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(X(hx), X(hy)); ctx.lineTo(X(hx - tx * hs + px * hs * 0.7), X(hy - ty * hs + py * hs * 0.7));
+      ctx.moveTo(X(hx), X(hy)); ctx.lineTo(X(hx - tx * hs - px * hs * 0.7), X(hy - ty * hs - py * hs * 0.7));
+      ctx.stroke();
+    }
+
+    function rollFlow() {
+      if (_windOnly || !RP) return;
+      ctx.lineWidth = compact ? 2.2 : THICK; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#ffffff';
+      var S2 = RP.step, dx = RP.dx, dy = RP.dy, px = -dy, py = dx, ph = PHASE % 1;
+      // Arrow LENGTH carries the energy, but with a floor: an arrow a few pixels
+      // long stops reading as a direction, and where the swell goes is the whole
+      // point of the picture even on a small day.
+      function draw(mx, my, tx, ty, e, edge) {
+        var eF = clamp(e / 100, 0, 1), half = SIZEN * clamp(0.34 + 0.66 * eF, 0, 1) * 0.5;
+        ctx.globalAlpha = clamp(0.30 + 0.70 * eF, 0, 1) * edge;
+        arrowGlyph(mx, my, tx, ty, -ty, tx, half);
+      }
+      var span = Math.ceil(1.7 / S2) + 2;
+      for (var i = -span; i <= span; i++) for (var j = -span; j <= span; j++) {
+        var a = (i + ph) * S2, b = j * S2;
+        var mx = 0.5 + a * dx + b * px, my = ASP * 0.5 + a * dy + b * py;
+        var k = fidx(mx, my); if (k < 0 || !FWATER[k]) continue;
+        if (FE[k] < CUT) continue;
+        // One field now: size and opacity carry the energy, heading comes from the
+        // flux. A sheltered patch draws a smaller arrow leaning into the lee — it is
+        // the same arrow as open water, not a separate layer with its own rules.
+        draw(mx, my, FWX[k], FWY[k], FE[k], 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ── wind chop ───────────────────────────────────────────────────────────
+    // Fetch = how much open water the wind crossed to get here, ray-cast upwind
+    // against the same land bitmap so shelter matches the shoreline drawn. The
+    // field is only the SHAPE; how rough it gets comes from the site's own wind
+    // and wind-wave demerits.
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    var C_STOPS = [[0, [76, 175, 80]], [0.4, [201, 194, 70]], [0.7, [224, 138, 60]], [1, [176, 57, 47]]];
+    function chopColor(r) {
+      r = clamp(r, 0, 1);
+      for (var i = 0; i < C_STOPS.length - 1; i++) {
+        if (r <= C_STOPS[i + 1][0]) {
+          var t = (r - C_STOPS[i][0]) / (C_STOPS[i + 1][0] - C_STOPS[i][0]), a = C_STOPS[i][1], b = C_STOPS[i + 1][1];
+          return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * t) + ',' + Math.round(a[1] + (b[1] - a[1]) * t) + ',' + Math.round(a[2] + (b[2] - a[2]) * t) + ')';
+        }
+      }
+      return 'rgb(176,57,47)';
+    }
+    function computeChop(ck) {
+      var hit = chopCache[ck];
+      if (hit) return hit;
+      CGH = Math.max(24, Math.round(CGW * ASP));
+      var f = new Float32Array(CGW * CGH);
+      var th = _windDir * Math.PI / 180, ux = Math.sin(th), uy = -Math.cos(th);  // UPWIND
+      var step = 1 / CGW, maxS = Math.ceil(2.2 / step);
+      var full = clamp(4000 / (2 * SPAN), 0.25, 3);   // 4 km of open water = full fetch
+      for (var gy = 0; gy < CGH; gy++) for (var gx = 0; gx < CGW; gx++) {
+        var idx = gy * CGW + gx;
+        var mx = (gx + 0.5) / CGW, my = (gy + 0.5) / CGH * ASP;
+        if (landM(mx, my)) { f[idx] = 0; continue; }
+        var d = 0, hf = 1, got = 0;
+        for (var s = 1; s <= maxS; s++) {
+          mx += ux * step; my += uy * step; d += step;
+          if (mx < 0 || mx > 1 || my < 0 || my > ASP) {
+            // Left the crop over clear water: credit the run plus half a box,
+            // rather than assuming an infinite ocean off every edge.
+            hf = clamp((d + 0.5) / full, 0, 1); got = 1; break;
+          }
+          if (landM(mx, my)) { hf = clamp((d - step) / full, 0, 1); got = 1; break; }
+        }
+        if (!got) hf = 1;
+        f[idx] = hf;
+      }
+      var t2 = new Float32Array(f.length);
+      for (var y2 = 0; y2 < CGH; y2++) for (var x2 = 0; x2 < CGW; x2++) {
+        var sum = 0, n = 0;
+        for (var oy = -1; oy <= 1; oy++) for (var ox = -1; ox <= 1; ox++) {
+          var xx = x2 + ox, yy = y2 + oy;
+          if (xx < 0 || xx >= CGW || yy < 0 || yy >= CGH) continue;
+          sum += f[yy * CGW + xx]; n++;
+        }
+        t2[y2 * CGW + x2] = sum / n;
+      }
+      chopCache[ck] = t2; chopOrder.push(ck);
+      while (chopOrder.length > 8) delete chopCache[chopOrder.shift()];
+      return t2;
+    }
+    function sampleChop(mx, my) {
+      var fx = mx * CGW - 0.5, fy = (my / ASP) * CGH - 0.5;
+      var x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+      function g(gx, gy) { gx = clamp(gx, 0, CGW - 1); gy = clamp(gy, 0, CGH - 1); return _cfield[gy * CGW + gx]; }
+      return lerp(lerp(g(x0, y0), g(x0 + 1, y0), tx), lerp(g(x0, y0 + 1), g(x0 + 1, y0 + 1), tx), ty);
+    }
+    var CPOOL = compact ? 110 : 200, _cp = [];
+    for (var _i = 0; _i < CPOOL; _i++) _cp.push({ x: Math.random(), y: Math.random(), s1: Math.random(), s2: Math.random() });
+    function drawChopWave(x, y, crest, len, amp, col, alpha, foam) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(crest);
+      ctx.globalAlpha = alpha; ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, amp * 0.5); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-len / 2, 0); ctx.quadraticCurveTo(0, -amp, len / 2, 0); ctx.stroke();
+      if (foam) {
+        ctx.globalAlpha = alpha * 0.8; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = Math.max(1, amp * 0.35);
+        ctx.beginPath(); ctx.moveTo(-len * 0.22, -amp * 0.55); ctx.quadraticCurveTo(0, -amp * 1.05, len * 0.22, -amp * 0.55); ctx.stroke();
+      }
+      ctx.restore(); ctx.globalAlpha = 1;
+    }
+    function drawChopLayer() {
+      if (!_cfield) return;
+      var W = M._W;
+      var th = (_windDir + 180) * Math.PI / 180, dx = Math.sin(th), dy = -Math.cos(th);
+      var level = _windLevel, speed = lerp(0.0013, 0.0050, level), count = Math.round(lerp(CPOOL * 0.45, CPOOL, level));
+      var base = lerp(0.10, 1.0, level), gmax = 0.030 * W, crest = Math.atan2(dy, dx) + Math.PI / 2;
+      for (var i = 0; i < count; i++) {
+        var p = _cp[i];
+        p.x += dx * speed; p.y += dy * speed;
+        if (p.x < -0.08) { p.x = 1.08; p.y = Math.random(); } else if (p.x > 1.08) { p.x = -0.08; p.y = Math.random(); }
+        if (p.y < -0.08) { p.y = 1.08; p.x = Math.random(); } else if (p.y > 1.08) { p.y = -0.08; p.x = Math.random(); }
+        var mx = p.x, my = p.y * ASP;
+        var hf = sampleChop(mx, my), hgt = clamp(base * hf * (0.55 + 0.5 * p.s1), 0, 1);
+        if (hgt < 0.045) continue;
+        var amp = hgt * gmax, len = (0.025 + hgt * 0.035) * W;
+        drawChopWave(mx * W, my * W, crest, len, amp, chopColor(hgt), clamp(hgt * 1.4, 0, 1) * 0.9, hgt > 0.72 && p.s2 > 0.45);
+      }
+    }
+
+    // ── chrome ──────────────────────────────────────────────────────────────
+    function dirArrow(cx, cy, dx, dy, col, label) {
+      var W = M._W, L = (compact ? 0.16 : 0.12) * W;
+      ctx.save();
+      ctx.fillStyle = 'rgba(6,40,55,0.32)'; ctx.beginPath(); ctx.arc(cx, cy, L * 0.62, 0, Math.PI * 2); ctx.fill();
+      var ex = cx + dx * L * 0.5, ey = cy + dy * L * 0.5;
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, 0.011 * W); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(cx - dx * L * 0.5, cy - dy * L * 0.5); ctx.lineTo(ex, ey); ctx.stroke();
+      var ang = Math.atan2(dy, dx), hl = 0.045 * W;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang - 0.4) * hl, ey - Math.sin(ang - 0.4) * hl);
+      ctx.moveTo(ex, ey); ctx.lineTo(ex - Math.cos(ang + 0.4) * hl, ey - Math.sin(ang + 0.4) * hl);
+      ctx.stroke();
+      if (label) {
+        var lf = Math.max(7, 0.020 * W);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.font = '700 ' + lf + 'px ui-sans-serif,system-ui,sans-serif';
+        ctx.lineWidth = Math.max(2, 0.006 * W); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(6,40,55,0.75)';
+        ctx.strokeText(label, cx, cy + L * 0.62 + lf * 0.25);
+        ctx.fillStyle = col; ctx.fillText(label, cx, cy + L * 0.62 + lf * 0.25);
+      }
+      ctx.restore();
+    }
+
+    // North marker. The Swim map could leave orientation implicit — one bay,
+    // always the same picture. Across 13 sites facing every point of the compass
+    // a map without a north mark is unreadable.
+    function drawNorth() {
+      var W = M._W, H = M._H, x = W - 0.055 * W, y = 0.13 * H, r = 0.030 * W;
+      ctx.save();
+      ctx.fillStyle = 'rgba(6,40,55,0.35)'; ctx.beginPath(); ctx.arc(x, y, r * 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(1.5, 0.005 * W); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y + r * 0.8); ctx.lineTo(x, y - r * 0.9); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y - r * 0.9); ctx.lineTo(x - r * 0.35, y - r * 0.35);
+      ctx.moveTo(x, y - r * 0.9); ctx.lineTo(x + r * 0.35, y - r * 0.35);
+      ctx.stroke();
+      var f = Math.max(8, 0.020 * W);
+      ctx.font = '700 ' + f + 'px ui-sans-serif,system-ui,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillText('N', x, y + r * 0.85);
+      ctx.restore();
+    }
+
+    function halo(txt, x, y, font, fill, align) {
+      var W = M._W;
+      ctx.font = font; ctx.textAlign = align || 'center'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(6,28,38,0.85)'; ctx.lineWidth = Math.max(2.5, 0.008 * W);
+      ctx.strokeText(txt, x, y); ctx.fillStyle = fill; ctx.fillText(txt, x, y);
+    }
+
+    function drawSiteMarker() {
+      var W = M._W, H = M._H, x = SITEPT[0] * W, y = SITEPT[1] * H;
+      var nf = Math.max(10, (compact ? 0.040 : 0.024) * W);
+      var vf = Math.max(12, (compact ? 0.052 : 0.034) * W);
+      var cf = Math.max(8, 0.019 * W), dot = Math.max(4, 0.013 * W);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, dot, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd166'; ctx.fill();
+      ctx.lineWidth = Math.max(1.5, 0.004 * W); ctx.strokeStyle = 'rgba(6,28,38,0.9)'; ctx.stroke();
+      ctx.textBaseline = 'alphabetic';
+      // The name normally sits above the dot, but a site near the top of the frame
+      // would have it drawn off the canvas — at Fairlight the label was simply
+      // missing. When there is no room above, everything stacks downward instead.
+      var above = (y - dot - nf * 1.6) > 2;
+      var vy = y + dot + vf * 1.15;
+      if (!compact) {
+        if (above) halo(M.name, x, y - dot - nf * 0.55, '700 ' + nf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
+        else { halo(M.name, x, vy, '700 ' + nf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff'); vy += nf * 1.25; }
+      }
+      if (_entryH != null && !_windOnly) {
+        halo(_entryH.toFixed(1) + ' m', x, vy, '600 ' + Math.round(vf * 0.85) + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
+        if (!compact) halo('at entry', x, vy + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif', 'rgba(228,240,246,0.92)');
+      }
+      // The entry used to print sitePct here — the share of the offshore swell's
+      // energy that reaches it. Removed: on a screen already dense with colour and
+      // numbers it read as a second score, and it runs the opposite way (high = more
+      // swell getting in = worse, where a high score is better). The compact tiles
+      // made it worse still, dropping the 'of the swell gets in' caption and leaving
+      // a bare % beside the score. payload.sitePct is still computed, so restoring
+      // this is one block if it is ever wanted back.
+      ctx.restore();
+    }
+
+    /* Overview (v2 only): every entry as a dot in its band colour, labelled. */
+    function drawDots() {
+      var W = M._W, H = M._H, r = Math.max(5, 0.017 * W), f = Math.max(10, 0.03 * W);
+      ctx.save(); ctx.textBaseline = 'middle';
+      _dots.forEach(function (d) {
+        var x = d.u * W, y = d.v * H;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = d.color; ctx.fill();
+        ctx.lineWidth = Math.max(1.5, 0.004 * W); ctx.strokeStyle = 'rgba(6,28,38,0.95)'; ctx.stroke();
+        if (d.label) halo(d.label, x + (d.left ? -1 : 1) * (r + 4), y + (d.dy || 0) * f,
+                          '600 ' + f + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff', d.left ? 'right' : 'left');
+      });
+      ctx.restore();
+    }
+
+    /* OFFSHORE SWELL (owner, 22 Nov 2026): the open-ocean height and period, out in the water on the
+       side the offshore swell comes from (Seal Rocks: the right-hand side for a NE swell), so the map
+       shows "out there" next to the node's "here". Searched far out first, kept clear of the site,
+       the node dot and the two direction discs; drawn only where it finds open water. */
+    function drawOffshoreSwell() {
+      if (!_off || _dots || compact) return;
+      var W = M._W, th = _off.dir * Math.PI / 180;
+      var sx = SITEPT[0], sy = SITEPT[1] * ASP, nd = S && S.node;
+      var nx = nd ? nd.u : -9, ny = nd ? nd.v * ASP : -9;
+      var dx = 0.42, dy = ((SITEPT[1] < 0.42 && SITEPT[0] < 0.62) ? 0.84 : 0.16) * ASP;
+      var fan = [0, -20, 20, -40, 40, -60, 60], mx = null, my = null;
+      for (var f = 0; f < fan.length && mx == null; f++) {
+        var a = th + fan[f] * Math.PI / 180, ux = Math.sin(a), uy = -Math.cos(a);
+        for (var t = 0.9; t >= 0.22; t -= 0.03) {
+          var cx = clamp(sx + ux * t, 0.13, 0.87), cy = clamp(sy + uy * t, ASP * 0.10, ASP * 0.90);
+          if (landM(cx, cy) || landM(cx - 0.08, cy) || landM(cx + 0.08, cy)) continue;
+          if (Math.hypot(cx - sx, cy - sy) < 0.2) continue;
+          if (Math.hypot(cx - nx, cy - ny) < 0.2) continue;
+          if (Math.hypot(cx - dx, cy - dy) < 0.17 || Math.hypot(cx - 0.20, cy - dy) < 0.17) continue;
+          if (Math.hypot(cx - 0.88, cy - 0.10 * ASP) < 0.12) continue;      // north arrow
+          mx = cx; my = cy; break;
+        }
+      }
+      if (mx == null) return;
+      var vf = Math.max(11, 0.034 * W), cf = Math.max(8, 0.019 * W);
+      ctx.save(); ctx.textBaseline = 'alphabetic';
+      halo(_off.h.toFixed(1) + ' m' + (_off.p ? ' · ' + Math.round(_off.p) + ' s' : ''), mx * W, my * W,
+           '600 ' + vf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
+      halo('offshore', mx * W, my * W + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif',
+           'rgba(228,240,246,0.92)');
+      ctx.restore();
+    }
+
+    // Offshore height, pinned out in open water on the side the swell comes from.
+    function drawOffshorePin() {
+      var W = M._W;
+      var th = _sw * Math.PI / 180;
+      var sx = SITEPT[0], sy = SITEPT[1] * ASP;
+      // Search out along the swell bearing, then fan either side of it. Two rules
+      // matter as much as "is it water": stay well clear of the site marker, or the
+      // offshore figure prints straight through the at-the-site figure (Fairlight
+      // showed "0.5 m 1.2 m" as one run-on string); and stay clear of the two
+      // direction discs, which own the corner it would otherwise drift into.
+      var MINSEP = 0.185;
+      var dx = (compact ? 0.34 : 0.42), dy = ((SITEPT[1] < 0.42 && SITEPT[0] < 0.62) ? 0.84 : 0.16) * ASP;
+      var mx = null, my = null;
+      var fan = [0, -22, 22, -45, 45, -70, 70];
+      for (var f = 0; f < fan.length && mx == null; f++) {
+        var a = th + fan[f] * Math.PI / 180, ux = Math.sin(a), uy = -Math.cos(a);
+        for (var t = 0.42; t >= MINSEP; t -= 0.025) {
+          var cx = clamp(sx + ux * t, 0.11, 0.89);
+          var cy = clamp(sy + uy * t, ASP * 0.13, ASP * 0.85);
+          if (landM(cx, cy)) continue;
+          if (Math.hypot(cx - sx, cy - sy) < MINSEP) continue;
+          if (Math.hypot(cx - dx, cy - dy) < 0.16) continue;
+          mx = cx; my = cy; break;
+        }
+      }
+      /* v2: the node's real position. Inside the frame it gets a dot and the height
+         beside it; outside, the searched spot keeps the height and says where it is. */
+      var nd = S && S.node, cap = _dots ? 'open coast' : 'at node';
+      var vf0 = Math.max(11, (compact ? 0.040 : 0.034) * W), cf0 = Math.max(8, 0.019 * W);
+      if (nd && !_dots && nd.u > 0.03 && nd.u < 0.97 && nd.v > 0.03 && nd.v < 0.97) {
+        var nx = nd.u * W, ny = nd.v * M._H, nr = Math.max(3.5, 0.011 * W);
+        ctx.save();
+        ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI * 2);
+        ctx.fillStyle = '#4d9dff'; ctx.fill();
+        ctx.lineWidth = Math.max(1.5, 0.004 * W); ctx.strokeStyle = '#ffffff'; ctx.stroke();
+        var lft = nd.u > 0.72, lx = nx + (lft ? -1 : 1) * (nr + 5);
+        ctx.textBaseline = 'alphabetic';
+        if (_nodeH == null) { ctx.restore(); return; }
+        halo(_nodeH.toFixed(1) + ' m', lx, ny + vf0 * 0.1, '600 ' + vf0 + 'px ui-sans-serif,system-ui,sans-serif',
+             '#ffffff', lft ? 'right' : 'left');
+        if (!compact) halo('at node', lx, ny + vf0 * 0.1 + cf0 * 1.35, '500 ' + cf0 + 'px ui-sans-serif,system-ui,sans-serif',
+             'rgba(228,240,246,0.92)', lft ? 'right' : 'left');
+        ctx.restore();
+        return;
+      }
+      if (nd && !_dots) {
+        var D = ['N','NE','E','SE','S','SW','W','NW'][Math.round(nd.b / 45) % 8];
+        cap = 'node ' + (nd.d >= 1000 ? (nd.d / 1000).toFixed(1) + ' km' : nd.d + ' m') + ' ' + D;
+      }
+      if (mx == null) return;
+      var hv = _dots ? _hgt : _nodeH;          // overview: the open-coast swell; a site: its node's
+      if (hv == null) return;
+      var x = mx * W, y = my * W;
+      var vf = Math.max(11, (compact ? 0.040 : 0.034) * W), cf = Math.max(8, 0.019 * W);
+      ctx.textBaseline = 'alphabetic';
+      // Deliberately quieter than the at-the-site figure. In the grid the caption
+      // does not fit, and two equally loud numbers on one small map read as a pair
+      // of readings for the same spot rather than "out there" vs "here".
+      halo(hv.toFixed(1) + ' m', x, y, '600 ' + vf + 'px ui-sans-serif,system-ui,sans-serif',
+           compact ? 'rgba(214,232,240,0.82)' : '#ffffff');
+      if (!compact) halo(cap, x, y + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif', 'rgba(228,240,246,0.92)');
+    }
+
+    M._render = function () {
+      var W = M._W, H = M._H;
+      if (!W || !RINGS.length) return;
+      // Deferred fields are built HERE, at the moment of drawing, not when the map
+      // was told what to show. Skipping the rebuild for an offscreen map but still
+      // letting it paint left it drawing the PREVIOUS swell direction — tiles in the
+      // grid disagreed with each other, and the detail sheet (which is off-viewport
+      // until it slides up) opened showing the last hour's arrows.
+      if (_pending) applyFields();
+      ctx.clearRect(0, 0, W, H);
+      var g = ctx.createLinearGradient(W, 0, 0, H);
+      g.addColorStop(0, '#0a3d4f'); g.addColorStop(0.6, '#0e5f78'); g.addColorStop(1, '#1f86a3');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.clip(waterClip, 'evenodd');
+      ctx.strokeStyle = 'rgba(110,180,210,0.4)'; ctx.lineWidth = 0.04 * W;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(coastStroke);
+      drawChopLayer();
+      rollFlow();
+      ctx.restore();
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#ddcfae'; ctx.fill(landPath, 'evenodd');
+      ctx.strokeStyle = '#bfae86'; ctx.lineWidth = Math.max(1.2, 0.005 * W);
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(coastStroke);
+      if (!_windOnly) { drawOffshorePin(); drawOffshoreSwell(); }
+      if (_dots) drawDots(); else drawSiteMarker();
+      // Both arrows point where the wave / wind is TRAVELLING TO, and both are
+      // labelled: on one bay you can learn which colour is which, but a diver
+      // moving between 13 maps should never have to remember.
+      // Park the two discs in the top-left, unless that is where the site is — at
+      // Fairlight the marker and its height sat right under the wind arrow.
+      var ay = ((SITEPT[1] < 0.42 && SITEPT[0] < 0.62) ? 0.84 : (compact ? 0.17 : 0.16)) * H;
+      if (!_windOnly) {
+        var st = (_sw + 180) * Math.PI / 180;
+        dirArrow((compact ? 0.13 : 0.20) * W, ay, Math.sin(st), -Math.cos(st), '#4d9dff', compact ? null : 'SWELL');
+      }
+      var wt = (_windDir + 180) * Math.PI / 180;
+      // With no swell arrow drawn there is no reason to leave a gap where it would
+      // have been — the wind arrow takes the first slot.
+      dirArrow((_windOnly ? (compact ? 0.13 : 0.20) : (compact ? 0.34 : 0.42)) * W, ay,
+               Math.sin(wt), -Math.cos(wt), '#ffb35c', compact ? null : 'WIND');
+      drawNorth();
+    };
+
+    M.fit = function () {
+      var cssW = Math.round(cv.getBoundingClientRect().width) || cv.clientWidth || 0;
+      if (!cssW || !S) return false;
+      var dpr = Math.min(window.devicePixelRatio || 1, compact ? 1.75 : 3);
+      M._W = cssW; M._H = Math.round(cssW * ASP);
+      cv.style.height = M._H + 'px';
+      cv.width = Math.round(M._W * dpr); cv.height = Math.round(M._H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildPaths(); M._render();
+      return true;
+    };
+
+    /* d = { swellDir, swellH, swellP, windDir, windKmh, eLit, eWrap, sitePct, chop, offH, offP, offDir } */
+    M.set = function (siteKey, name, d) {
+      var C = (typeof SITE_COAST !== 'undefined') && SITE_COAST[siteKey];
+      // No outline, or one that traced no land, means there is nothing to shelter
+      // anything — an all-water map would imply "fully exposed", which is a claim,
+      // not a blank. Say nothing instead.
+      if (!C || !C.rings || !C.rings.length) { M._on = false; return false; }
+      S = C; M.key = siteKey; M.name = name || siteKey;
+      ASP = C.aspect; RINGS = C.rings; SPAN = C.span; SITEPT = C.site;
+      BM = bitsFor(siteKey, C);
+      if (typeof d.swellDir === 'number' && isFinite(d.swellDir)) _sw = ((d.swellDir % 360) + 360) % 360;
+      if (typeof d.swellH === 'number' && isFinite(d.swellH)) _hgt = Math.max(0, d.swellH);
+      if (typeof d.swellP === 'number' && isFinite(d.swellP) && d.swellP > 0) _sp = d.swellP;
+      if (typeof d.windDir === 'number' && isFinite(d.windDir)) _windDir = ((d.windDir % 360) + 360) % 360;
+      _eLit = d.eLit || 0; _eWrap = d.eWrap || 0;
+      _windOnly = !!d.windOnly;
+      /* The node's own swell, and the sea state at the entry (swell and wind waves combined, the figure
+         the text calls "sea at the entry"). The map used to print the ENTRY swell at the node dot as
+         "at node" (owner, 23 Nov 2026). */
+      _nodeH = (typeof d.nodeH === 'number' && isFinite(d.nodeH)) ? d.nodeH : null;
+      _entryH = (typeof d.entryH === 'number' && isFinite(d.entryH)) ? d.entryH : null;
+      _off = (typeof d.offH === 'number' && isFinite(d.offH) && typeof d.offDir === 'number' && isFinite(d.offDir))
+        ? { h: d.offH, p: d.offP, dir: ((d.offDir % 360) + 360) % 360 } : null;
+      _sitePct = (typeof d.sitePct === 'number' && isFinite(d.sitePct)) ? d.sitePct : null;
+      _windLevel = clamp(d.chop || 0, 0, 1);
+      _dots = d.dots || null;
+      FW = compact ? 96 : 190;   // grid tiles are ~230 px; 96 is plenty there
+      M._on = true;
+      // Only build the fields for a map somebody can see. On the all-sites grid most
+      // tiles are below the fold, and rebuilding all thirteen on every slider step
+      // was the bulk of a cold scrub. Marking it pending defers the work to the first
+      // frame that actually draws — which for an offscreen tile never comes.
+      _pending = true;
+      if (!M.fit()) setTimeout(M.fit, 60);
+      return true;
+    };
+
+    function applyFields() {
+      _pending = false;
+      var fk = M.key + '|' + Math.round(_sw) + '|' + Math.round(_sp * 10) + '|' +
+               Math.round(_hgt * 100) + '|' + Math.round(_eLit * 1000) + '|' + Math.round(_eWrap * 1000);
+      // A wind-only site never draws the swell layer, so the line-of-sight
+      // ray-casting behind it is pure waste.
+      if (!_windOnly && fk !== _fieldKey) { rebuildField(); _fieldKey = fk; }
+      var ck = M.key + '|' + Math.round(_windDir / 3) * 3;
+      if (ck !== _chopKey) { _cfield = computeChop(ck); _chopKey = ck; }
+    }
+
+    // Introspection for tools/workbench.html. The regression checks assert on these
+    // numbers rather than on pixels, so a reported problem becomes a permanent test.
+    // Table generation only. Returns the previous value so a caller can restore it;
+    // 0 means normal scoring behaviour.
+    M.setUpwaveReach = function (metres) {
+      var was = _upOverrideM;
+      _upOverrideM = (typeof metres === 'number' && metres > 0) ? metres : 0;
+      _fieldKey = null;
+      return was;
+    };
+
+    M.debug = function () {
+      var water = 0, litN = 0, leeN = 0, lean = 0, i;
+      var th = (_sw + 180) * Math.PI / 180, ux = Math.sin(th), uy = -Math.cos(th);
+      if (FWATER && FE) {
+        for (i = 0; i < FWATER.length; i++) {
+          if (!FWATER[i]) continue;
+          water++;
+          var e = WAVE ? WAVE.E[i] : 0;
+          if (e > 0.5) litN++;
+          else if (e > 0.03) leeN++;
+          if (FE[i] >= CUT) {
+            var ang = Math.acos(clamp(FWX[i] * ux + FWY[i] * uy, -1, 1)) * 180 / Math.PI;
+            if (ang > lean) lean = ang;
+          }
+        }
+      }
+      var eMax = 0, eSum = 0;
+      if (WAVE) for (i = 0; i < WAVE.E.length; i++) {
+        if (!FWATER[i]) continue;
+        if (WAVE.E[i] > eMax) eMax = WAVE.E[i];
+        eSum += WAVE.E[i];
+      }
+      // Energy and arrival direction AT THE SITE — the quantity the card reports, and
+      // what a generated dispersion table is built from.
+      //
+      // AVERAGE a small disc of water; do not take the single nearest cell. The site is
+      // a shore entry, its own cell is usually land, and whichever lone water cell came
+      // out nearest flipped as the field shifted with swell direction — which made the
+      // transmit curve swing 2.7x between adjacent 10 deg bins. Measured against the
+      // Swim app's trusted Bower Lane table: single-cell roughness 0.075 against the
+      // reference's 0.029, correlation 0.875; averaged, roughness 0.030 and correlation
+      // 0.967. Same physics either way — it was a sampling artefact.
+      var eSite = 0, siteLeanDeg = 0, found = 0;
+      if (WAVE && FWATER && FW) {
+        var sc0 = clamp((SITEPT[0] * FW) | 0, 0, FW - 1),
+            sr0 = clamp((SITEPT[1] * FH) | 0, 0, FH - 1);
+        // Weight by 1/(1+r) so the water right at the entry still dominates, but no
+        // single cell can carry the answer on its own.
+        var eSum2 = 0, wSum = 0, lx = 0, ly = 0, SITE_RAD = 3;
+        for (var dr = -SITE_RAD; dr <= SITE_RAD; dr++) {
+          for (var dc = -SITE_RAD; dc <= SITE_RAD; dc++) {
+            var rr2 = sr0 + dr, cc2 = sc0 + dc;
+            if (rr2 < 0 || rr2 >= FH || cc2 < 0 || cc2 >= FW) continue;
+            var ii = rr2 * FW + cc2;
+            if (!FWATER[ii]) continue;
+            var w2 = 1 / (1 + Math.hypot(dr, dc));
+            eSum2 += WAVE.E[ii] * w2; wSum += w2;
+            lx += FWX[ii] * w2; ly += FWY[ii] * w2;
+            found = 1;
+          }
+        }
+        if (found && wSum > 0) {
+          eSite = +(eSum2 / wSum).toFixed(4);
+          var ln = Math.hypot(lx, ly) || 1;
+          siteLeanDeg = Math.round(Math.acos(clamp((lx / ln) * ux + (ly / ln) * uy, -1, 1)) * 180 / Math.PI);
+        }
+      }
+      return { eSite: eSite, siteLeanDeg: siteLeanDeg,
+               eMax: +eMax.toFixed(3), eMean: water ? +(eSum / water).toFixed(3) : 0,
+               solveInfo: WAVE && WAVE.info,
+               sw: _sw, travelDx: ux, travelDy: uy, site: SITEPT,
+               eLit: _eLit, eWrap: _eWrap, compact: compact,
+               waterCells: water,
+               litFrac: water ? litN / water : 0,
+               wrapFrac: water ? leeN / water : 0,
+               maxLeanDeg: Math.round(lean),
+               tips: 0 };
+    };
+
+    M.destroy = function () {
+      M._on = false;
+      var i = LIVE.indexOf(M); if (i >= 0) LIVE.splice(i, 1);
+    };
+
+    LIVE.push(M);
+    start();
+    // Offscreen maps must not burn a frame budget — 13 canvases at 60 fps is
+    // real work, and most of them are below the fold most of the time.
+    if (typeof IntersectionObserver !== 'undefined') {
+      // _vis defaults to true so a build without IntersectionObserver still
+      // paints. Where there IS one, start false and let its first callback
+      // (which always fires on observe) say what is really on screen. Left
+      // true, every tile painted once before the observer could object — which
+      // is exactly the work the _pending deferral exists to avoid.
+      M._vis = false;
+      new IntersectionObserver(function (es) {
+        M._vis = es[0].isIntersecting;
+        if (M._vis && M._on && _pending) { applyFields(); M.fit(); }
+      }, { rootMargin: '150px' }).observe(cv);
+    }
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(function () { if (M._on) M.fit(); }).observe(cv);
+    }
+    return M;
+  }
+
+  return { create: create };
+})();
+</script>
+<script>
 (function(){
   var API = "https://bold-rain-6ded.sticasale.workers.dev";
   var SITE = { x: 379, y: 224 };
-  var AX1 = 640, AX2 = 830, AY = 480;
   var COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
   function dirName(d){ return COMPASS[Math.round(((d % 360) + 360) % 360 / 22.5) % 16]; }
   function $(id){ return document.getElementById(id); }
@@ -278,18 +1157,22 @@ days, so the rough end is where the app knows least.</p>
   var COL = { Easy: "var(--easy)", Caution: "var(--caution)", Avoid: "var(--avoid)" };
   var last = null, seq = 0, timer = null, nowVals = null, appNow = null;
 
-  function arrow(id, cx, dirFrom){
-    // points where the wave or wind is GOING, like the app's map
-    var t = (dirFrom + 180) * Math.PI / 180, r = 44;
-    var l = $(id);
-    l.setAttribute("x1", cx - Math.sin(t) * r); l.setAttribute("y1", AY + Math.cos(t) * r);
-    l.setAttribute("x2", cx + Math.sin(t) * r); l.setAttribute("y2", AY - Math.cos(t) * r);
+  /* The app's own map (VizSiteMap, from v2): swell flowing in from where it comes, wind chop by wind
+     speed, the node and the entry figures. Fed the node swell the Worker converted, as the app is. */
+  var MAP = null;
+  function drawMap(v, j){
+    if (typeof VizSiteMap === "undefined") return;
+    if (!MAP) MAP = VizSiteMap.create(document.getElementById("gmap"));
+    var n = j.node || {}, k = +v.wind;
+    MAP.set("Gordons", "Gordons Bay", {
+      swellDir: n.swellDir != null ? n.swellDir : +v.offDir, swellP: n.swellP || +v.offP, swellH: j.entry.swellH,
+      windDir: +v.windDir, windKmh: k, chop: Math.max(0, Math.min(1, (k - 5) / 30)),
+      nodeH: n.swellH, entryH: j.entry.combined, offH: +v.offH, offP: +v.offP, offDir: +v.offDir });
   }
   function vals(){ var o = {}; ids.forEach(function(k){ o[k] = $(k).value; }); return o; }
   function paint(){
     var v = vals();
     ids.forEach(function(k){ $(k + "o").textContent = fmt[k](v[k]); });
-    arrow("sl", AX1, +v.offDir); arrow("wl", AX2, +v.windDir);
     var same = nowVals && ids.every(function(k){ return String(nowVals[k]) === String(v[k]); });
     $("resetNow").hidden = !nowVals || same;
     $("now").textContent = nowVals && same && appNow != null
@@ -306,7 +1189,7 @@ days, so the rough end is where the app knows least.</p>
       $("pct").textContent = j.pct + "%";
       $("band").textContent = j.band; $("band").style.background = COL[j.band] || "#888";
       $("entry").textContent = "Sea at the entry about " + j.entry.combined.toFixed(1) + " m";
-      $("entryLbl").textContent = j.entry.combined.toFixed(1) + " m at entry";
+      drawMap(v, j);
       var c = j.cost, rows = [["Swell", c.swell], ["Wind waves", c.windWaves], ["Wind", c.wind], ["Tide", c.tide]];
       $("costs").innerHTML = '<div class="muted">What each one takes off the score</div>' + rows.map(function(r){
         return '<div class="cost"><span>' + r[0] + '</span><span class="bar"><i style="width:' + Math.min(100, r[1]) + '%"></i></span><span>−' + r[1] + '</span></div>';
