@@ -48,29 +48,43 @@
   .num{white-space:nowrap}
   footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
   /* ── Gordons simulator (in-page; everything scoped to .sim) ── */
-  .sim .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:10px}
+  .sim .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+  /* Map and controls in ONE view (owner, 23 Nov 2026): side by side on wider screens, the section
+     breaking out of the 760 px text column; on a phone the map card stays pinned while the
+     controls scroll under it. */
+  @media (min-width:700px){
+    .sim{width:min(1120px,calc(100vw - 32px));margin-left:calc(50% - min(560px,(100vw - 32px)/2))}
+    .sim .grid{grid-template-columns:1.15fr 1fr;align-items:start}
+    .sim .grid>.card:first-child{position:sticky;top:8px}
+  }
+  @media (max-width:699px){
+    .sim .grid>.card:first-child{position:sticky;top:0;z-index:5;padding:8px 10px;box-shadow:0 6px 14px rgba(0,0,0,.18)}
+  }
   .sim .card{margin:0}
   .sim svg{display:block;width:100%;height:auto;border-radius:10px}
-  .sim .score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:10px 0 4px}
-  .sim .pct{font-size:46px;font-weight:800;line-height:1}
-  .sim .sband{font-size:20px;font-weight:700;padding:3px 12px;border-radius:999px;color:#fff;background:#888}
-  .sim .entry{color:var(--ink-2);font-size:15px;margin:0 0 10px}
+  .sim .score{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 2px}
+  .sim .pct{font-size:34px;font-weight:800;line-height:1}
+  .sim .sband{font-size:16px;font-weight:700;padding:2px 10px;border-radius:999px;color:#fff;background:#888}
+  .sim .entry{color:var(--ink-2);font-size:14px;margin:0}
+  .sim .chips{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--ink-2);margin:4px 0 0}
+  .sim .chips b{color:var(--ink);font-variant-numeric:tabular-nums}
   .sim .cost{display:grid;grid-template-columns:92px 1fr 40px;align-items:center;gap:8px;font-size:14px;margin:5px 0}
   .sim .bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden}
   .sim .bar>i{display:block;height:100%;background:var(--avoid);width:0}
   .sim .muted{color:var(--ink-2);font-size:13px}
-  .sim .ctl{display:grid;grid-template-columns:96px 1fr 92px;align-items:center;gap:10px;margin:11px 0}
+  .sim .ctl{display:grid;grid-template-columns:72px 1fr 86px;align-items:center;gap:8px;margin:4px 0}
   .sim .ctl label{font-size:14px;font-weight:600}
   .sim .ctl output{font-variant-numeric:tabular-nums;font-weight:700;text-align:right;font-size:15px}
   .sim input[type=range]{width:100%;accent-color:var(--accent)}
-  .sim h3{font-size:17px;margin:6px 0 4px}
+  .sim h3{font-size:15px;margin:8px 0 2px}
   .sim .sw{color:#2f7fe0} .sim .wd{color:#d7851f}
   .sim .sask{margin-top:16px}
   .sim .btns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
   .sim .btns button{font:inherit;font-weight:700;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
   .sim .btns button:hover{border-color:var(--accent)}
   .sim textarea{width:100%;min-height:64px;font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-  .sim .now{font-size:13px;color:var(--ink-2);margin:2px 0 0}
+  .sim .now{font-size:13px;color:var(--ink-2);margin:0 0 6px}
+  .sim .now.cur b{color:var(--easy)}
   .sim .reset{font:inherit;font-size:13px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline}
 </style>
 </head>
@@ -156,11 +170,11 @@ That is why the app marks it as still being checked.</p>
 It starts on the current forecast hour. If the score doesn't match your experience, tell us.</p>
   <div class="grid">
     <div class="card">
+      <p class="now" id="now">Loading the current conditions…</p>
       <canvas id="gmap" style="display:block;width:100%;border-radius:10px" aria-label="Gordons Bay with the swell and wind on the water"></canvas>
       <div class="score" aria-live="polite"><span class="pct" id="pct">–</span><span class="sband" id="band">…</span></div>
       <p class="entry" id="entry">Sea at the entry –</p>
       <div class="costs" id="costs"></div>
-      <p class="now" id="now"></p>
     </div>
 
     <div class="card">
@@ -1155,7 +1169,7 @@ var VizSiteMap = (function () {
     windDir: function(v){ return dirName(+v) + " " + v + "°"; }, tide: function(v){ return (+v).toFixed(2) + " m"; }
   };
   var COL = { Easy: "var(--easy)", Caution: "var(--caution)", Avoid: "var(--avoid)" };
-  var last = null, seq = 0, timer = null, nowVals = null, appNow = null;
+  var last = null, seq = 0, timer = null, nowVals = null, appNow = null, nowLabel = "", nowDone = false;
 
   /* The app's own map (VizSiteMap, from v2): swell flowing in from where it comes, wind chop by wind
      speed, the node and the entry figures. Fed the node swell the Worker converted, as the app is. */
@@ -1175,8 +1189,13 @@ var VizSiteMap = (function () {
     ids.forEach(function(k){ $(k + "o").textContent = fmt[k](v[k]); });
     var same = nowVals && ids.every(function(k){ return String(nowVals[k]) === String(v[k]); });
     $("resetNow").hidden = !nowVals || same;
-    $("now").textContent = nowVals && same && appNow != null
-      ? "Starting point: the current forecast hour, which the app scores at " + appNow + "%." : "";
+    /* Say plainly whether the map shows NOW or the diver's own what-if (owner, 23 Nov 2026). */
+    var nw = $("now");
+    if (nowVals && same) { nw.className = "now cur";
+      nw.innerHTML = "<b>Current conditions</b> · " + nowLabel + (appNow != null ? " · the app says " + appNow + "%" : ""); }
+    else if (nowVals) { nw.className = "now";
+      nw.innerHTML = "<b>Your own settings</b> · <button class=\"reset\" type=\"button\" onclick=\"document.getElementById('resetNow').click()\">back to current conditions</button>"; }
+    else if (nowDone) nw.textContent = "Current conditions not available; set your own.";
     clearTimeout(timer); timer = setTimeout(score, 120);
   }
   function score(){
@@ -1191,9 +1210,9 @@ var VizSiteMap = (function () {
       $("entry").textContent = "Sea at the entry about " + j.entry.combined.toFixed(1) + " m";
       drawMap(v, j);
       var c = j.cost, rows = [["Swell", c.swell], ["Wind waves", c.windWaves], ["Wind", c.wind], ["Tide", c.tide]];
-      $("costs").innerHTML = '<div class="muted">What each one takes off the score</div>' + rows.map(function(r){
-        return '<div class="cost"><span>' + r[0] + '</span><span class="bar"><i style="width:' + Math.min(100, r[1]) + '%"></i></span><span>−' + r[1] + '</span></div>';
-      }).join("");
+      $("costs").innerHTML = '<div class="chips">' + rows.map(function(r){
+        return '<span>' + r[0] + ' <b>−' + r[1] + '</b></span>';
+      }).join("") + '</div>';
     }).catch(function(){ if (my === seq) $("band").textContent = "offline"; });
   }
   function setVals(o){ ids.forEach(function(k){ if (o[k] != null) $(k).value = o[k]; }); paint(); }
@@ -1218,8 +1237,11 @@ var VizSiteMap = (function () {
     o.offP = Math.round(o.offP); o.wind = Math.round(o.wind); o.tide = (Math.round(o.tide * 20) / 20).toFixed(2);
     o.offH = (+o.offH).toFixed(1);
     var S = d.sites && d.sites.Gordons; appNow = S && S.score && S.score[i] != null ? Math.round(S.score[i] * 100 / 60) : null;
+    var hh = +sydNowKey().slice(11, 13);
+    nowLabel = new Date().toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", timeZone: "Australia/Sydney" })
+      + ", " + ((hh % 12) || 12) + " " + (hh < 12 ? "am" : "pm") + " forecast";
     nowVals = o; setVals(o);
-  }).catch(function(){});
+  }).catch(function(){}).then(function(){ nowDone = true; paint(); });
   $("resetNow").onclick = function(){ if (nowVals) setVals(nowVals); };
 
   ids.forEach(function(k){ $(k).addEventListener("input", paint); });
