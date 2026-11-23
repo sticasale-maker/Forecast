@@ -1470,9 +1470,23 @@ var VIZ_TIDE = {
                 ev:"In 48 timed reports, viz was poor 7% of the time near high tide against 37% near low." },
   BassPoint:  { flow:"incoming",
                 ev:"In 49 timed reports, viz was poor 9% of the time on the rising tide against 31% on the falling." },
-  Bushranger: { flow:"outgoing",
-                ev:"In 67 timed reports, viz was poor 21% of the time on the falling tide against 44% on the rising. The sheltered, shallow inner bay settles like a basin and drains out clear; the incoming tide brings in murkier outside water, about half the time whatever the swell." }
+  /* SUMMER ONLY, INNER BAY (owner, 23 Nov 2026, relayed by the viz-model session). All year the split
+     was 39% poor rising vs 20% falling on 68 posts, but it is a summer effect: Dec-Mar 61% (23) vs 15%
+     (13); Apr-Nov 7% (15) vs 24% (17), weakly reversed and within chance. Height does not matter
+     (<0.8 m 36%, >=1.3 m 33%), the direction does. Posts naming the inner bay or shallows: rising 53%
+     vs falling 25%; posts naming only the gutter, wall, Arch or outer bay: 18% on both. A local
+     expert's account: in the warm months the inner bay fills with green algae; the rising tide pushes
+     it back from the shark gutter into the inner bay, the falling tide draws it out through the gutter. */
+  Bushranger: { flow:"outgoing", months:[12,1,2,3], where:"in the inner bay",
+                ev:"In summer the inner bay fills with green algae, and the rising tide pushes it back in from the shark gutter. In 36 timed summer reports (December to March), viz was poor 61% of the time on the rising tide against 15% on the falling. Outside summer the tide makes little difference here." }
 };
+/* A VIZ_TIDE entry with `months` applies only in those months (Bushrangers: summer). Every reader
+   goes through this, so the stripe, the badge window and the Clarity line agree. */
+function vizTide(key, date){
+  var v = VIZ_TIDE[key];
+  if (!v || !v.months) return v || null;
+  return date && v.months.indexOf(+String(date).slice(5, 7)) >= 0 ? v : null;
+}
 /* VIZ BY SEASON (owner, 15 Nov 2026). Sydney viz has a calendar: the VIZ group posts (1,261,
    2020-2026) put winter clearest (42% of dives good or better, against 20-28% the rest of the
    year) and October murkiest. Only sites with a clear, consistent best and worst stretch get a line.
@@ -1515,7 +1529,7 @@ var VIZ_HEAD = {};   // site -> the heading its region chip hangs on (as render(
 REGIONS.forEach(function(reg){ reg[2].forEach(function(sub){
   sub[1].forEach(function(k){ VIZ_HEAD[k] = sub[0] || (reg[2].length === 1 ? reg[0] : ""); }); }); });
 function vizWindow(key, day){
-  var v = VIZ_TIDE[key], flow = v ? v.flow : BOTANY[key] ? "incoming" : null;
+  var v = vizTide(key, day && day.date), flow = v ? v.flow : (BOTANY[key] && !VIZ_TIDE[key]) ? "incoming" : null;
   if (!flow) return null;
   var td = tideDay(key, day); if (!td) return null;
   var good = {};
@@ -1628,23 +1642,25 @@ function tideGuide(key, day, pick){
          : ok === false ? ' <span class="tg-state">Wrong end of the tide' + at + '.</span>' : ""));
   }
   /* clarity: Botany outflow, or McFadyen's incoming/outgoing */
-  var flow = VIZ_TIDE[key] ? VIZ_TIDE[key].flow
+  var vt = vizTide(key, day && day.date);
+  // A seasonal entry out of season says NOTHING about the tide (no fallback to a site note).
+  var flow = vt ? vt.flow : VIZ_TIDE[key] ? null
            : BOTANY[key] ? "incoming" : (m && (m.tide === "incoming" || m.tide === "outgoing") ? m.tide : null);
   if (flow) {
     var runs = td ? runsText(td, function(x){ return x.rising === (flow === "incoming"); }) : "";
     var okc = cur && cur.rising != null ? (cur.rising === (flow === "incoming")) : null;
-    var txt = "Clearest water on the <b>" + flow + " tide</b>"
+    var txt = "Clearest water" + (vt && vt.where ? " " + vt.where : "") + " on the <b>" + flow + " tide</b>"
       + (runs ? " — today it runs " + (flow === "incoming" ? "in " : "out ") + runs : "") + ".";
     /* Where high water is the tested signal (VIZ_TIDE high:true), judge the picked hour by the SAME
        window the row's stripe paints (within 2 h of high), so the stripe and this line never disagree. */
-    var vw = VIZ_TIDE[key] && VIZ_TIDE[key].high ? vizWindow(key, day) : null;
+    var vw = vt && vt.high ? vizWindow(key, day) : null;
     if (vw) {
       okc = cur ? !!vw.good[pick.h] : null;
       txt = "Clearest water <b>around high tide</b>" + (vw.txt ? " — today " + vw.txt : "") + ".";
     }
     if (BOTANY[key]) txt += (td && td.highs.length ? " Be in before the high at <b>" + hoursList(td.highs).replace(/about /g, "") + "</b>." : "")
       + " Once it turns and runs out, murkier water draining from Botany Bay passes by and drops the visibility.";
-    if (VIZ_TIDE[key]) txt += " " + VIZ_TIDE[key].ev;
+    if (vt) txt += " " + vt.ev;
     txt += okc === true ? ' <span class="tg-state">' + (vw ? "Inside the window" : "Running that way") + at + '.</span>'
          : okc === false ? ' <span class="tg-state">Not' + at + '.</span>' : "";
     line(okc === true ? "good" : okc === false ? "bad" : "", "👁 Clarity", txt);
