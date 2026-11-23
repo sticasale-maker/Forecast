@@ -120,6 +120,23 @@ That is why the app marks it as still being checked.</p>
   decide how hard the app should be on east swell at Gordons.</p>
 </div>
 
+<h2>Where the data comes from</h2>
+<h3>Waves: the NSW Government's Nearshore Wave Tool</h3>
+<p>The Bureau of Meteorology's national ocean wave model (AUSWAVE) forecasts the open sea. The NSW Government's
+<a href="https://www.environment.nsw.gov.au/publications/nsw-nearshore-wave-tool" target="_blank" rel="noopener">Nearshore Wave Tool</a>
+carries that in to the coast, through the bending and sheltering that headlands and the seabed cause, and is checked
+against the state's wave buoys. It forecasts 10 days ahead, hour by hour, at points every 250 m along the coast.
+Gordons has its own point, in open water just outside the bay.</p>
+<p>It also splits the waves in two: <b>swell</b>, the long waves from distant storms that wrap into bays and bring
+surge, and <b>sea</b>, the short chop raised by local wind, which a bay blocks far better. The app carries each into
+the bay separately. Most forecasts give one offshore number for all of Sydney; this one already knows what the coast
+does to the waves at each spot.</p>
+<h3>Wind: the forecast, corrected by a live anemometer</h3>
+<p>The wind forecast is the Bureau's, through WillyWeather, for Coogee; days 8–10 come from Open-Meteo's longer-range
+models. Through the day, the app checks it against the Bureau's live wind station at Little Bay: the measured wind
+replaces the forecast for the hours already past, and the next few hours ease back to the forecast. A live reading can
+make an hour look worse, but never lifts an hour the forecast says to Avoid.</p>
+
 <h2>How the visibility forecast works</h2>
 <p>We do not forecast visibility in metres. We tested it, and it cannot be done reliably a week out by anyone. Instead
 the app tells you what is usual and when to expect worse:</p>
