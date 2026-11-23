@@ -47,6 +47,31 @@
   th{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2)}
   .num{white-space:nowrap}
   footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+  /* ── Gordons simulator (in-page; everything scoped to .sim) ── */
+  .sim .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:10px}
+  .sim .card{margin:0}
+  .sim svg{display:block;width:100%;height:auto;border-radius:10px}
+  .sim .score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:10px 0 4px}
+  .sim .pct{font-size:46px;font-weight:800;line-height:1}
+  .sim .sband{font-size:20px;font-weight:700;padding:3px 12px;border-radius:999px;color:#fff;background:#888}
+  .sim .entry{color:var(--ink-2);font-size:15px;margin:0 0 10px}
+  .sim .cost{display:grid;grid-template-columns:92px 1fr 40px;align-items:center;gap:8px;font-size:14px;margin:5px 0}
+  .sim .bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden}
+  .sim .bar>i{display:block;height:100%;background:var(--avoid);width:0}
+  .sim .muted{color:var(--ink-2);font-size:13px}
+  .sim .ctl{display:grid;grid-template-columns:96px 1fr 92px;align-items:center;gap:10px;margin:11px 0}
+  .sim .ctl label{font-size:14px;font-weight:600}
+  .sim .ctl output{font-variant-numeric:tabular-nums;font-weight:700;text-align:right;font-size:15px}
+  .sim input[type=range]{width:100%;accent-color:var(--accent)}
+  .sim h3{font-size:17px;margin:6px 0 4px}
+  .sim .sw{color:#2f7fe0} .sim .wd{color:#d7851f}
+  .sim .sask{margin-top:16px}
+  .sim .btns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .sim .btns button{font:inherit;font-weight:700;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  .sim .btns button:hover{border-color:var(--accent)}
+  .sim textarea{width:100%;min-height:64px;font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  .sim .now{font-size:13px;color:var(--ink-2);margin:2px 0 0}
+  .sim .reset{font:inherit;font-size:13px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -59,7 +84,7 @@
   will be, and what the visibility is likely to do. Here is what it shows for Gordons, how it is worked out,
   and where Gordons divers can help make it better.</p>
   <a class="cta" href="https://app.viz.net.au/Forecast/v2.html">Open VIZ Forecast</a>
-  <a class="cta cta2" href="gordons-sim.html">Try the Gordons simulator</a>
+  <a class="cta cta2" href="#simulator">Try the Gordons simulator</a>
 </header>
 
 <h2>What you get for Gordons Bay</h2>
@@ -121,9 +146,68 @@ That is why the app marks it as still being checked.</p>
   </table>
   <p><b>Did you dive on any of these days?</b> Which side of the bay did you go in, and how was it really? Your answers
   decide how hard the app should be on east swell at Gordons.</p>
-  <p>Or try it yourself: the <a href="gordons-sim.html">Gordons simulator</a> lets you set the offshore swell, wind and
+  <p>Or try it yourself: the <a href="#simulator">simulator below</a> lets you set the offshore swell, wind and
   tide as WillyWeather shows them, see the score, and tell us whether it looks right.</p>
 </div>
+
+<h2 id="simulator">Try it: does the score look right?</h2>
+<section class="sim">
+<p>Set the swell as WillyWeather shows it offshore, plus wind and tide, and see how the app scores the Gordons entry.
+It starts on the current forecast hour. If the score doesn't match your experience, tell us.</p>
+  <div class="grid">
+    <div class="card">
+      <svg id="map" viewBox="0 0 1000 600" role="img" aria-label="Gordons Bay with swell and wind arrows">
+        <defs>
+          <linearGradient id="sea" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a3d4f"/><stop offset=".6" stop-color="#0e5f78"/><stop offset="1" stop-color="#1f86a3"/></linearGradient>
+          <marker id="hs" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4d9dff"/></marker>
+          <marker id="hw" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ffb35c"/></marker>
+        </defs>
+        <rect width="1000" height="600" fill="url(#sea)"/>
+        <polygon points="118.7,600 115.6,593.8 103.1,590.6 90.6,581.3 90.6,559.4 71.9,546.9 56.3,546.9 56.3,550.0 50.0,550.0 37.5,562.5 31.2,562.5 0,593.8 0,0 834.4,0 840.6,18.7 850.0,28.1 856.2,28.1 856.2,34.4 865.6,37.5 871.9,46.9 859.4,71.9 853.1,71.9 843.8,84.4 846.9,121.9 828.1,134.4 837.5,143.8 834.4,171.9 809.4,212.5 793.7,196.9 793.7,190.6 784.4,187.5 784.4,181.3 778.1,181.3 778.1,178.1 750.0,178.1 750.0,181.3 734.4,181.3 734.4,184.4 725.0,184.4 725.0,181.3 687.5,181.3 687.5,178.1 675.0,178.1 675.0,165.6 681.3,159.4 668.7,146.9 640.6,140.6 625.0,128.1 612.5,128.1 612.5,125.0 596.9,121.9 565.6,93.7 553.1,71.9 537.5,84.4 521.9,84.4 518.8,87.5 518.8,93.7 525.0,93.7 528.1,100.0 537.5,96.9 546.9,109.4 553.1,109.4 571.9,128.1 587.5,134.4 615.6,162.5 615.6,168.7 625.0,178.1 640.6,184.4 625.0,203.1 625.0,221.9 618.8,221.9 612.5,231.2 606.2,231.2 587.5,268.7 581.3,268.7 556.3,293.8 537.5,293.8 525.0,281.3 490.6,290.6 481.3,281.3 475.0,281.3 468.8,271.9 428.1,256.3 400.0,228.1 387.5,225.0 384.4,218.8 371.9,215.6 368.8,209.4 356.3,206.3 353.1,200.0 340.6,196.9 337.5,190.6 321.9,187.5 315.6,181.3 306.3,181.3 300.0,175.0 271.9,168.7 271.9,165.6 250.0,165.6 240.6,171.9 218.8,171.9 218.8,168.7 187.5,165.6 187.5,168.7 175.0,171.9 168.8,184.4 178.1,206.3 200.0,234.4 203.1,246.9 218.8,259.4 225.0,275.0 234.4,281.3 240.6,296.9 268.7,321.9 271.9,337.5 281.2,350.0 284.4,375.0 278.1,400.0 262.5,415.6 256.2,415.6 253.1,421.9 234.4,428.1 231.3,434.4 225.0,434.4 218.8,440.6 212.5,440.6 212.5,446.9 200.0,450.0 196.9,456.2 178.1,459.4 156.2,481.3 140.6,528.1 153.1,575.0 140.6,600" fill="#ddcfae" stroke="#bfae86" stroke-width="4" stroke-linejoin="round" fill-rule="evenodd"/>
+        <g id="swellArrow"><circle cx="640" cy="480" r="66" fill="rgba(6,28,38,.45)"/><line id="sl" x1="0" y1="0" x2="0" y2="0" stroke="#4d9dff" stroke-width="11" stroke-linecap="round" marker-end="url(#hs)"/>
+          <text x="640" y="574" text-anchor="middle" font-size="24" font-weight="700" fill="#4d9dff">SWELL</text></g>
+        <g id="windArrow"><circle cx="830" cy="480" r="66" fill="rgba(6,28,38,.45)"/><line id="wl" x1="0" y1="0" x2="0" y2="0" stroke="#ffb35c" stroke-width="11" stroke-linecap="round" marker-end="url(#hw)"/>
+          <text x="830" y="574" text-anchor="middle" font-size="24" font-weight="700" fill="#ffb35c">WIND</text></g>
+        <circle cx="379" cy="224" r="13" fill="#ffd166" stroke="rgba(6,28,38,.9)" stroke-width="4"/>
+        <text x="379" y="190" text-anchor="middle" font-size="28" font-weight="800" fill="#fff" stroke="rgba(6,28,38,.8)" stroke-width="6" paint-order="stroke">Gordons Bay</text>
+        <text x="379" y="266" text-anchor="middle" font-size="24" font-weight="700" fill="#fff" stroke="rgba(6,28,38,.8)" stroke-width="6" paint-order="stroke" id="entryLbl"></text>
+        <g transform="translate(950,48)"><text text-anchor="middle" y="34" font-size="24" font-weight="800" fill="#fff">N</text><path d="M0,-28 L0,12" stroke="#fff" stroke-width="5"/><path d="M-9,-16 L0,-30 L9,-16" fill="none" stroke="#fff" stroke-width="5"/></g>
+      </svg>
+      <div class="score" aria-live="polite"><span class="pct" id="pct">–</span><span class="sband" id="band">…</span></div>
+      <p class="entry" id="entry">Sea at the entry –</p>
+      <div class="costs" id="costs"></div>
+      <p class="now" id="now"></p>
+    </div>
+
+    <div class="card">
+      <h3 class="sw">Swell offshore (as on WillyWeather)</h3>
+      <div class="ctl"><label for="offH">Height</label><input id="offH" type="range" min="0.2" max="4" step="0.1" value="1.5"><output id="offHo"></output></div>
+      <div class="ctl"><label for="offP">Period</label><input id="offP" type="range" min="5" max="16" step="1" value="9"><output id="offPo"></output></div>
+      <div class="ctl"><label for="offDir">From</label><input id="offDir" type="range" min="0" max="355" step="5" value="90"><output id="offDiro"></output></div>
+      <h3 class="wd">Wind</h3>
+      <div class="ctl"><label for="wind">Speed</label><input id="wind" type="range" min="0" max="50" step="1" value="10"><output id="windo"></output></div>
+      <div class="ctl"><label for="windDir">From</label><input id="windDir" type="range" min="0" max="355" step="5" value="0"><output id="windDiro"></output></div>
+      <h3>Tide</h3>
+      <div class="ctl"><label for="tide">Height</label><input id="tide" type="range" min="0.1" max="2.1" step="0.05" value="1"><output id="tideo"></output></div>
+      <p class="muted" style="margin:-4px 0 8px">Gordons gets harder above about 1.3 m of tide.</p>
+      <button class="reset" id="resetNow" type="button" hidden>Back to the current forecast</button>
+
+      <div class="sask">
+        <h3>Is this score right for these conditions?</h3>
+        <div class="btns">
+          <button type="button" data-v="looks right">Looks right</button>
+          <button type="button" data-v="too easy">Too easy</button>
+          <button type="button" data-v="too harsh">Too harsh</button>
+        </div>
+        <textarea id="note" placeholder="Optional: why, which side of the bay, a day you remember…"></textarea>
+        <p class="muted">The buttons open an email to the VIZ team with these settings filled in. You can also post in the
+        <a href="https://www.facebook.com/groups/sydviz" target="_blank" rel="noopener">VIZ Facebook group</a>.</p>
+      </div>
+    </div>
+  </div>
+<p class="muted">The app scores the waves at a model point just outside the bay. Here, WillyWeather's offshore swell is
+converted to that point, so a result can differ a little from the app on the same day.</p>
+</section>
 
 <h2>Where the data comes from</h2>
 <h3>Waves: the NSW Government's Nearshore Wave Tool</h3>
@@ -177,5 +261,98 @@ days, so the rough end is where the app knows least.</p>
 </footer>
 
 </div>
+<script>
+(function(){
+  var API = "https://bold-rain-6ded.sticasale.workers.dev";
+  var SITE = { x: 379, y: 224 };
+  var AX1 = 640, AX2 = 830, AY = 480;
+  var COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  function dirName(d){ return COMPASS[Math.round(((d % 360) + 360) % 360 / 22.5) % 16]; }
+  function $(id){ return document.getElementById(id); }
+  var ids = ["offH","offP","offDir","wind","windDir","tide"];
+  var fmt = {
+    offH: function(v){ return (+v).toFixed(1) + " m"; }, offP: function(v){ return v + " s"; },
+    offDir: function(v){ return dirName(+v) + " " + v + "°"; }, wind: function(v){ return v + " km/h"; },
+    windDir: function(v){ return dirName(+v) + " " + v + "°"; }, tide: function(v){ return (+v).toFixed(2) + " m"; }
+  };
+  var COL = { Easy: "var(--easy)", Caution: "var(--caution)", Avoid: "var(--avoid)" };
+  var last = null, seq = 0, timer = null, nowVals = null, appNow = null;
+
+  function arrow(id, cx, dirFrom){
+    // points where the wave or wind is GOING, like the app's map
+    var t = (dirFrom + 180) * Math.PI / 180, r = 44;
+    var l = $(id);
+    l.setAttribute("x1", cx - Math.sin(t) * r); l.setAttribute("y1", AY + Math.cos(t) * r);
+    l.setAttribute("x2", cx + Math.sin(t) * r); l.setAttribute("y2", AY - Math.cos(t) * r);
+  }
+  function vals(){ var o = {}; ids.forEach(function(k){ o[k] = $(k).value; }); return o; }
+  function paint(){
+    var v = vals();
+    ids.forEach(function(k){ $(k + "o").textContent = fmt[k](v[k]); });
+    arrow("sl", AX1, +v.offDir); arrow("wl", AX2, +v.windDir);
+    var same = nowVals && ids.every(function(k){ return String(nowVals[k]) === String(v[k]); });
+    $("resetNow").hidden = !nowVals || same;
+    $("now").textContent = nowVals && same && appNow != null
+      ? "Starting point: the current forecast hour, which the app scores at " + appNow + "%." : "";
+    clearTimeout(timer); timer = setTimeout(score, 120);
+  }
+  function score(){
+    var v = vals(), my = ++seq;
+    var qs = "site=Gordons&offH=" + v.offH + "&offP=" + v.offP + "&offDir=" + v.offDir + "&wind=" + v.wind + "&windDir=" + v.windDir + "&tide=" + v.tide;
+    fetch(API + "/whatif?" + qs).then(function(r){ return r.json(); }).then(function(j){
+      if (my !== seq) return;
+      if (!j || j.pct == null) { $("band").textContent = "unavailable"; return; }
+      last = { v: v, j: j };
+      $("pct").textContent = j.pct + "%";
+      $("band").textContent = j.band; $("band").style.background = COL[j.band] || "#888";
+      $("entry").textContent = "Sea at the entry about " + j.entry.combined.toFixed(1) + " m";
+      $("entryLbl").textContent = j.entry.combined.toFixed(1) + " m at entry";
+      var c = j.cost, rows = [["Swell", c.swell], ["Wind waves", c.windWaves], ["Wind", c.wind], ["Tide", c.tide]];
+      $("costs").innerHTML = '<div class="muted">What each one takes off the score</div>' + rows.map(function(r){
+        return '<div class="cost"><span>' + r[0] + '</span><span class="bar"><i style="width:' + Math.min(100, r[1]) + '%"></i></span><span>−' + r[1] + '</span></div>';
+      }).join("");
+    }).catch(function(){ if (my === seq) $("band").textContent = "offline"; });
+  }
+  function setVals(o){ ids.forEach(function(k){ if (o[k] != null) $(k).value = o[k]; }); paint(); }
+
+  /* Start from the current forecast hour: WillyWeather's Sydney swell, Gordons' own wind and tide. */
+  function sydNowKey(){
+    var p = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date()).reduce(function(a, x){ a[x.type] = x.value; return a; }, {});
+    return p.year + "-" + p.month + "-" + p.day + " " + p.hour + ":00:00";
+  }
+  fetch(API + "/forecast2").then(function(r){ return r.json(); }).then(function(d){
+    var i = d.hours.indexOf(sydNowKey()); if (i < 0) return;
+    var W = d.weather || {}, M = W.main || {}, own = null;
+    Object.keys(W).forEach(function(n){ if (W[n] && W[n].sites && W[n].sites.indexOf("Gordons") >= 0) own = W[n]; });
+    function at(src, f){ return src && src[f] ? src[f][i] : null; }
+    var o = { offH: at(M, "swellH"), offP: at(M, "swellP"), offDir: at(M, "swellDir"),
+              wind: at(own, "windKmh") != null ? at(own, "windKmh") : at(M, "windKmh"),
+              windDir: at(own, "windDir") != null ? at(own, "windDir") : at(M, "windDir"),
+              tide: at(own, "tideM") != null ? at(own, "tideM") : at(M, "tideM") };
+    if (o.offH == null) return;
+    o.offDir = Math.round(o.offDir / 5) * 5 % 360; o.windDir = Math.round(o.windDir / 5) * 5 % 360;
+    o.offP = Math.round(o.offP); o.wind = Math.round(o.wind); o.tide = (Math.round(o.tide * 20) / 20).toFixed(2);
+    o.offH = (+o.offH).toFixed(1);
+    var S = d.sites && d.sites.Gordons; appNow = S && S.score && S.score[i] != null ? Math.round(S.score[i] * 100 / 60) : null;
+    nowVals = o; setVals(o);
+  }).catch(function(){});
+  $("resetNow").onclick = function(){ if (nowVals) setVals(nowVals); };
+
+  ids.forEach(function(k){ $(k).addEventListener("input", paint); });
+  [].forEach.call(document.querySelectorAll(".btns button"), function(b){
+    b.onclick = function(){
+      var v = vals(), j = last && last.j;
+      var body = "Gordons Bay simulator: " + b.dataset.v.toUpperCase() + "\n\n"
+        + "Offshore swell " + fmt.offH(v.offH) + ", " + v.offP + " s, from " + fmt.offDir(v.offDir) + "\n"
+        + "Wind " + v.wind + " km/h from " + fmt.windDir(v.windDir) + "\nTide " + fmt.tide(v.tide) + "\n"
+        + "App score " + (j ? j.pct + "% " + j.band : "?") + "\n\n" + ($("note").value || "");
+      location.href = "mailto:vizgroupsydney@gmail.com?subject=" + encodeURIComponent("Gordons simulator: " + b.dataset.v)
+        + "&body=" + encodeURIComponent(body);
+    };
+  });
+  paint();
+})();
+</script>
 </body>
 </html>
