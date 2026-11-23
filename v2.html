@@ -1302,6 +1302,8 @@ function mapSlot(key, pick, wind){
   var k = wind && wind.k != null ? wind.k : 0;
   _mapReq = { key: key, name: LABEL[key] || key, d: {
     swellDir: at(S.swellDir), swellH: at(S.swellH), swellP: at(S.swellP),
+    nodeH: at(S.nodeSwellH),
+    entryH: at(S.swellH) != null || at(S.seaH) != null ? Math.sqrt(Math.pow(at(S.swellH) || 0, 2) + Math.pow(at(S.seaH) || 0, 2)) : null,
     offH: offAt(key, "swellH", pick.i), offP: offAt(key, "swellP", pick.i), offDir: offAt(key, "swellDir", pick.i),
     windDir: wind ? wind.d : null, windKmh: k,
     chop: Math.max(0, Math.min(1, (k - 5) / 30)), windOnly: windOnly } };
@@ -2437,7 +2439,7 @@ var VizSiteMap = (function () {
     };
     var S = null, ASP = 0.6, RINGS = [], SPAN = 800, SITEPT = [0.5, 0.5], BM = null;
     var _sw = 110, _sp = 10, _hgt = 1, _windDir = 90, _windLevel = 0;
-    var _eLit = 0, _eWrap = 0, _sitePct = null, _windOnly = false, _dots = null, _off = null;
+    var _eLit = 0, _eWrap = 0, _sitePct = null, _windOnly = false, _dots = null, _off = null, _nodeH = null, _entryH = null;
     var landPath = null, waterClip = null, coastStroke = null;
     var FW = 160, FH = 96, FWATER = null, FE = null;
     var FWX = null, FWY = null, waveCache = {}, waveOrder = [];
@@ -2917,6 +2919,10 @@ var VizSiteMap = (function () {
         if (above) halo(M.name, x, y - dot - nf * 0.55, '700 ' + nf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
         else { halo(M.name, x, vy, '700 ' + nf + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff'); vy += nf * 1.25; }
       }
+      if (_entryH != null && !_windOnly) {
+        halo(_entryH.toFixed(1) + ' m', x, vy, '600 ' + Math.round(vf * 0.85) + 'px ui-sans-serif,system-ui,sans-serif', '#ffffff');
+        if (!compact) halo('at entry', x, vy + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif', 'rgba(228,240,246,0.92)');
+      }
       // The entry used to print sitePct here — the share of the offshore swell's
       // energy that reaches it. Removed: on a screen already dense with colour and
       // numbers it read as a second score, and it runs the opposite way (high = more
@@ -3012,7 +3018,8 @@ var VizSiteMap = (function () {
         ctx.lineWidth = Math.max(1.5, 0.004 * W); ctx.strokeStyle = '#ffffff'; ctx.stroke();
         var lft = nd.u > 0.72, lx = nx + (lft ? -1 : 1) * (nr + 5);
         ctx.textBaseline = 'alphabetic';
-        halo(_hgt.toFixed(1) + ' m', lx, ny + vf0 * 0.1, '600 ' + vf0 + 'px ui-sans-serif,system-ui,sans-serif',
+        if (_nodeH == null) { ctx.restore(); return; }
+        halo(_nodeH.toFixed(1) + ' m', lx, ny + vf0 * 0.1, '600 ' + vf0 + 'px ui-sans-serif,system-ui,sans-serif',
              '#ffffff', lft ? 'right' : 'left');
         if (!compact) halo('at node', lx, ny + vf0 * 0.1 + cf0 * 1.35, '500 ' + cf0 + 'px ui-sans-serif,system-ui,sans-serif',
              'rgba(228,240,246,0.92)', lft ? 'right' : 'left');
@@ -3024,13 +3031,15 @@ var VizSiteMap = (function () {
         cap = 'node ' + (nd.d >= 1000 ? (nd.d / 1000).toFixed(1) + ' km' : nd.d + ' m') + ' ' + D;
       }
       if (mx == null) return;
+      var hv = _dots ? _hgt : _nodeH;          // overview: the open-coast swell; a site: its node's
+      if (hv == null) return;
       var x = mx * W, y = my * W;
       var vf = Math.max(11, (compact ? 0.040 : 0.034) * W), cf = Math.max(8, 0.019 * W);
       ctx.textBaseline = 'alphabetic';
       // Deliberately quieter than the at-the-site figure. In the grid the caption
       // does not fit, and two equally loud numbers on one small map read as a pair
       // of readings for the same spot rather than "out there" vs "here".
-      halo(_hgt.toFixed(1) + ' m', x, y, '600 ' + vf + 'px ui-sans-serif,system-ui,sans-serif',
+      halo(hv.toFixed(1) + ' m', x, y, '600 ' + vf + 'px ui-sans-serif,system-ui,sans-serif',
            compact ? 'rgba(214,232,240,0.82)' : '#ffffff');
       if (!compact) halo(cap, x, y + cf * 1.35, '500 ' + cf + 'px ui-sans-serif,system-ui,sans-serif', 'rgba(228,240,246,0.92)');
     }
@@ -3106,6 +3115,11 @@ var VizSiteMap = (function () {
       if (typeof d.windDir === 'number' && isFinite(d.windDir)) _windDir = ((d.windDir % 360) + 360) % 360;
       _eLit = d.eLit || 0; _eWrap = d.eWrap || 0;
       _windOnly = !!d.windOnly;
+      /* The node's own swell, and the sea state at the entry (swell and wind waves combined, the figure
+         the text calls "sea at the entry"). The map used to print the ENTRY swell at the node dot as
+         "at node" (owner, 23 Nov 2026). */
+      _nodeH = (typeof d.nodeH === 'number' && isFinite(d.nodeH)) ? d.nodeH : null;
+      _entryH = (typeof d.entryH === 'number' && isFinite(d.entryH)) ? d.entryH : null;
       _off = (typeof d.offH === 'number' && isFinite(d.offH) && typeof d.offDir === 'number' && isFinite(d.offDir))
         ? { h: d.offH, p: d.offP, dir: ((d.offDir % 360) + 360) % 360 } : null;
       _sitePct = (typeof d.sitePct === 'number' && isFinite(d.sitePct)) ? d.sitePct : null;
