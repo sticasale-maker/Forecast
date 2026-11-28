@@ -164,6 +164,7 @@
   .page[hidden]{display:none}
   .wt-day{font-size:12.5px;color:var(--ink-3);margin:0 0 10px}
   .wg{padding:11px 0;border-top:1px solid var(--line)}
+  .wg-title{font-size:15px;margin:18px 0 2px;color:var(--ink)}
   .wg-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-bottom:4px}
   .wg-t{font-size:20px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-width:3.2em}
   .wg-suit{font-size:13px;color:var(--ink-2)}
@@ -1066,8 +1067,9 @@ function suitFor(t){ var c = Math.round(t); return WETSUIT.filter(function(x){ r
 function wetsuitLine(key, date){
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][date];
   if (!T || T.t15 == null) return "";
-  var r = suitFor(T.t15);
-  return "scuba " + r[1] + " · freedive " + r[2] + (/^[357] mm$/.test(r[2]) ? " open-cell" : "");
+  // Scuba from 15 m; freediving from the SURFACE, where freedivers spend their time (owner, 28 Nov 2026).
+  var r = suitFor(T.t15), f = suitFor(T.t0 != null ? T.t0 : T.t15)[2];
+  return "scuba " + r[1] + " · freedive " + f + (/^[357] mm$/.test(f) ? " open-cell" : "");
 }
 function oceanTempLine(key, date){
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][date];
@@ -2181,34 +2183,40 @@ function setTab(t){
 function tabsSetup(){
   [].forEach.call(document.querySelectorAll(".tab"), function(b){ b.onclick = function(){ setTab(b.dataset.tab); }; });
 }
-/* Every site's suit for the selected day, from its 15 m water temperature. Grouped by the rounded
-   temperature, warmest first (owner, 22 Nov 2026: "easier to read"): the suit follows from that number,
-   so each group states it once and lists its sites, north to south as before. */
+/* Every site's suit for the selected day: SCUBA from the 15 m temperature, FREEDIVING from the surface
+   temperature (owner, 28 Nov 2026: "use the surface temp for the freediving wetsuit"). Each list is
+   grouped by its rounded temperature, warmest first (owner, 22 Nov 2026: "easier to read"), so each
+   group states its suit once and lists its sites, north to south. */
 function renderWetsuit(){
   var el = document.getElementById("wetsuitBody"); if (!el || !DAYS.length) return;
-  var day = DAYS[dayIx], groups = {};
-  SITES_ORDER().forEach(function(k){
-    var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][day.date];
-    if (!T || T.t15 == null) return;
-    var c = Math.round(T.t15);
-    (groups[c] = groups[c] || []).push(LABEL[k]);
-  });
-  var temps = Object.keys(groups).map(Number).sort(function(a, b){ return b - a; });
-  var html = temps.map(function(c){
-    var r = suitFor(c), fd = r[2] + (/^[357] mm$/.test(r[2]) ? ' open-cell' : '');
-    return '<div class="wg"><div class="wg-head"><span class="wg-t">' + c + ' °C</span>'
-      + '<span class="wg-suit">Scuba <b>' + r[1] + '</b> · Freedive <b>' + fd + '</b></span></div>'
-      + '<div class="wg-sites">' + groups[c].join(' · ') + '</div></div>';
-  }).join('');
+  var day = DAYS[dayIx];
+  function list(field, col, title){
+    var groups = {};
+    SITES_ORDER().forEach(function(k){
+      var T = oceanData && oceanData.temp && oceanData.temp[k] && oceanData.temp[k][day.date];
+      var t = T ? (T[field] != null ? T[field] : T.t15) : null;
+      if (t == null) return;
+      var c = Math.round(t);
+      (groups[c] = groups[c] || []).push(LABEL[k]);
+    });
+    var temps = Object.keys(groups).map(Number).sort(function(a, b){ return b - a; });
+    if (!temps.length) return "";
+    return '<h3 class="wg-title">' + title + '</h3>' + temps.map(function(c){
+      var sv = suitFor(c)[col]; if (col === 2 && /^[357] mm$/.test(sv)) sv += ' open-cell';
+      return '<div class="wg"><div class="wg-head"><span class="wg-t">' + c + ' °C</span>'
+        + '<span class="wg-suit"><b>' + sv + '</b></span></div>'
+        + '<div class="wg-sites">' + groups[c].join(' · ') + '</div></div>';
+    }).join('');
+  }
+  var html = list("t15", 1, "Scuba · water at 15 m") + list("t0", 2, "Freediving · surface water");
   var dd = new Date(day.date + "T12:00:00+11:00").toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"short" });
   /* Source note (owner, 22 Nov 2026: "specify where these temperatures come from, and whether they are
      meant to be at 15 m"). Same facts as oceanTempLine and the Worker's ocean.js header. */
-  var src = '<p class="wg-src">Water temperature at <b>15 m</b>, on purpose: it is the depth we could check '
-    + 'against divers’ own logs. From the Copernicus Marine global ocean forecast, '
-    + 'whose nearest point sits a few km offshore and runs warm, so each site is corrected by its usual miss '
-    + 'against VIZ divers’ reported temperatures. A guide to within 1–2 °C. The surface can be warmer: the '
-    + 'Forecast tab says when the model shows a cold layer.</p>';
-  el.innerHTML = html ? '<p class="wt-day">' + dd + ' · water at 15 m, warmest first</p>' + html + src
+  var src = '<p class="wg-src">From the Copernicus Marine global ocean forecast, whose nearest point sits a '
+    + 'few km offshore and runs warm. The <b>15 m</b> figure is corrected per site by its usual miss against VIZ '
+    + 'divers’ reported temperatures; the <b>surface</b> figure gets a general correction. A guide to within '
+    + '1–2 °C.</p>';
+  el.innerHTML = html ? '<p class="wt-day">' + dd + ' · warmest first</p>' + html + src
     : '<p class="wt-day">Water temperatures are still loading.</p>';
 }
 function SITES_ORDER(){ return [].concat.apply([], REGIONS.map(function(g){ return [].concat.apply([], g[2].map(function(x){ return x[1]; })); })); }
