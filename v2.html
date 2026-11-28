@@ -1033,9 +1033,11 @@ function vizNetsRow(key, date){
    idea"; out about 7 pm (0.34 m), "safe but hard (extremely slippery floor and lack of rocks to prop
    yourself up)"; videos at 2:15 pm and 7:45 pm. The swell that day was as calm as it gets (owner).
    Note the SCORE runs the other way: the model charges North Bondi LESS at low tide, so this line is the
-   only place the ramp shows. `below` 0.5 m is a first guess from that one day; tune it from reports. */
-var ENTRY_LOWTIDE = { NorthBondi: { below: 0.5, from: 5, to: 22,
-  txt: "At low tide the boat ramp ends above the water on slippery, weedy concrete: getting in and out is hard, and with a heavy rig jumping off the rocks can be safer." } };
+   only place the ramp shows. `below` was 0.5 m from the 5 pm entry; RAISED to 1.2 m the same day (owner:
+   "the slippery was mentioned also at the first dive"): the 2:15 pm video, which the diver called the
+   same conditions, was at about 1.15 m on the falling tide. Tune it from reports. */
+var ENTRY_LOWTIDE = { NorthBondi: { below: 1.2, from: 5, to: 22,
+  txt: "Below about 1.2 m of tide the boat ramp is slippery and weedy, and near low water it ends above the sea: getting in and out is hard, and with a heavy rig jumping off the rocks can be safer." } };
 function lowTideHours(key, date){
   var v = ENTRY_LOWTIDE[key]; if (!v || !data) return null;
   var out = [];
