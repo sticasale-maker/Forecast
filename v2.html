@@ -1072,10 +1072,10 @@ function wetsuitLine(key, date){
 function oceanTempLine(key, date){
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][date];
   if (!T || T.t15 == null) return null;
-  /* 15 m only: it is the figure corrected against divers' own logs at this site. The surface figure's
-     correction is pooled across sites, so showing both side by side could imply a gap the model does
-     not have (review, 18 Nov). The cold layer comes from the model's own surface-to-15 m difference. */
-  var txt = "About <b>" + Math.round(T.t15) + " °C at 15 m</b>.";
+  /* Surface added 28 Nov 2026 (owner). Its correction is site-specific only at CTB, BIW and Bass Point
+     and pooled elsewhere, while 15 m is corrected per site everywhere (the 18 Nov review's reason for
+     leaving it out). The cold layer still comes from the model's own surface-to-15 m difference. */
+  var txt = "About " + (T.t0 != null ? "<b>" + Math.round(T.t0) + " °C at the surface</b> and " : "") + "<b>" + Math.round(T.t15) + " °C at 15 m</b>.";
   if (T.layer != null && T.layer >= 1.5) txt += " <b>Cold layer:</b> the model has it about " + Math.round(T.layer) + " °C warmer on top than at 15 m.";
   return txt + " Copernicus ocean model, corrected per site: a guide to within 1–2 °C.";
 }
@@ -1563,10 +1563,13 @@ function vizBadge(key, day){
   var reduced = !!((head && vizChip(head, d)) || vizRainRow(key, d) || vizRiverRow(key, d) || vizSurgeHours(key, d) || vizCtbSwell(key, d) != null || vizNetsHours(key, d) || vizSatRow(key, d));
   var better = !reduced && sea && sea.best.indexOf(m) >= 0;
   var murkyMonth = sea && sea.worst.indexOf(m) >= 0;
-  // water temperature at 15 m (the Worker's /ocean, Copernicus model corrected per site), on the same line
+  // water temperature at the surface and at 15 m (the Worker's /ocean, Copernicus model corrected per
+  // site), on the same line. Surface added 28 Nov 2026 (owner: "add surface temperature per site").
   var T = oceanData && oceanData.temp && oceanData.temp[key] && oceanData.temp[key][d];
-  var temp = T && T.t15 != null ? Math.round(T.t15) + " °C at 15 m" + (T.layer != null && T.layer >= 1.5 ? ", cold layer" : "") : "";
-  var tempTitle = temp ? "Water about " + Math.round(T.t15) + " °C at 15 m"
+  var hasT0 = T && T.t0 != null;
+  var temp = T && T.t15 != null ? (hasT0 ? Math.round(T.t0) + " °C surface · " : "") + Math.round(T.t15) + " °C at 15 m"
+    + (T.layer != null && T.layer >= 1.5 ? ", cold layer" : "") : "";
+  var tempTitle = temp ? "Water about " + (hasT0 ? Math.round(T.t0) + " °C at the surface and " : "") + Math.round(T.t15) + " °C at 15 m"
     + (T.layer != null && T.layer >= 1.5 ? ", with a cold layer: the model has it about " + Math.round(T.layer) + " °C warmer on top" : "")
     + ". Copernicus ocean model, corrected per site, a guide to within 1–2 °C." : "";
   if (!rng && !w && !reduced) return temp
