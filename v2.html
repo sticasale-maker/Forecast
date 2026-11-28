@@ -259,6 +259,11 @@
            letter-spacing:0;text-transform:none;color:var(--ink-2);border:1px dashed var(--ink-3);
            border-radius:10px;padding:1px 8px;line-height:1.5;cursor:help;max-width:100%;flex-wrap:wrap}
   .vizchip b{font-weight:600}
+  /* Entry warning from local experience (ENTRY_LOWTIDE): outlined in the caution colour, not filled,
+     because it sits beside the score rather than being part of it. */
+  .entchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--ink-2);
+           border:1px solid var(--caution-cell);border-radius:10px;padding:1px 8px;line-height:1.5;cursor:help;max-width:100%;flex-wrap:wrap}
+  .entchip b{font-weight:600;color:var(--ink)}
   .ask{background:var(--caution-bg);border-radius:10px;padding:11px 13px;margin:8px 0 2px}
   .askh{margin:0 0 4px;font-size:14px;color:var(--caution)}
   .askb{margin:0 0 9px;font-size:12.5px;line-height:1.55;color:var(--caution)}
@@ -1021,6 +1026,37 @@ function vizNetsRow(key, date){
   return '<span class="vizt"><span class="vizchip" title="Visibility forecast, not part of the Entry &amp; exit forecast. '
     + VIZ_NETS[key].ev.replace(/"/g, "&quot;") + '"><b>Viz may be reduced</b> · low tide with a breeze (' + when + ')</span></span>';
 }
+/* LOW-TIDE ENTRY WARNING (owner, 28 Nov 2026: "add a warning for low tide regarding slippery entry/exit at
+   the ramp"). EXPERIENCE RULE, display only: it never changes the score. A diver's report, North Bondi
+   27 Nov: in at 5 pm (Fort Denison 0.26 m) from the boat ramp, "doable but extremely tricky ... a bit of
+   climbing because of how slippery the boat ramp is ... jumping off the rocks would've been a much safer
+   idea"; out about 7 pm (0.34 m), "safe but hard (extremely slippery floor and lack of rocks to prop
+   yourself up)"; videos at 2:15 pm and 7:45 pm. The swell that day was as calm as it gets (owner).
+   Note the SCORE runs the other way: the model charges North Bondi LESS at low tide, so this line is the
+   only place the ramp shows. `below` 0.5 m is a first guess from that one day; tune it from reports. */
+var ENTRY_LOWTIDE = { NorthBondi: { below: 0.5, from: 5, to: 22,
+  txt: "At low tide the boat ramp ends above the water on slippery, weedy concrete: getting in and out is hard, and with a heavy rig jumping off the rocks can be safer." } };
+function lowTideHours(key, date){
+  var v = ENTRY_LOWTIDE[key]; if (!v || !data) return null;
+  var out = [];
+  for (var i = 0; i < data.hours.length; i++) {
+    var hk = data.hours[i]; if (hk.slice(0, 10) !== date) continue;
+    var h = +hk.slice(11, 13); if (h < v.from || h > v.to) continue;
+    var t = wxAt(key, "tideM", i); if (t != null && t < v.below) out.push(h);
+  }
+  return out.length ? out : null;
+}
+function hourRuns(hs){
+  var runs = [], a = hs[0], b = hs[0];
+  for (var i = 1; i <= hs.length; i++) { if (i < hs.length && hs[i] === b + 1) { b = hs[i]; continue; }
+    runs.push(fmtHour(a) + "–" + fmtHour(b + 1)); if (i < hs.length) { a = b = hs[i]; } }
+  return runs.join(" and ");
+}
+function lowTideRow(key, date){
+  var hs = lowTideHours(key, date); if (!hs) return "";
+  return '<span class="vizt"><span class="entchip" title="' + ENTRY_LOWTIDE[key].txt.replace(/"/g, "&quot;")
+    + ' From local experience; not part of the score.">⚠ <b>Low tide: slippery ramp</b> · ' + hourRuns(hs) + '</span></span>';
+}
 /* COPERNICUS (owner, 18 Nov 2026). The Worker's /ocean route (swim-worker src/ocean.js) reads
    Copernicus Marine through its public map-tile service a few points an hour and serves:
    - sat[site]: the latest clear satellite image's Secchi depth and whether it is in the site's
@@ -1216,7 +1252,7 @@ function render(){
           }).join("") + '</span>' + vizStripe(key, day, cells) + '<span class="ticks">' + cells.map(function(c){
             return '<span' + (c.h % 4 === 2 ? ' class="t4"' : '') + '>'
                  + (c.h % 2 === 0 ? fmtHour(c.h) : '') + '</span>';
-          }).join("") + '</span>' + vizBadge(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSurgeRow(key, day.date) + vizNetsRow(key, day.date) + vizSatRow(key, day.date);
+          }).join("") + '</span>' + lowTideRow(key, day.date) + vizBadge(key, day) + vizRainRow(key, day.date) + vizRiverRow(key, day.date) + vizSurgeRow(key, day.date) + vizNetsRow(key, day.date) + vizSatRow(key, day.date);
         }
         html += '<span class="row-foot">' + confidenceEl(key)
               + (unavailable ? '' : '<button class="exp" type="button" aria-expanded="' + isOpen + '">'
@@ -1639,6 +1675,13 @@ function tideGuide(key, day, pick){
   var at = " at " + fmtHour(pick.h);
   function line(cls, k, txt){ lines.push('<div class="tg-line ' + cls + '"><span class="tg-key">' + k
                                         + '</span><span>' + txt + '</span></div>'); }
+  /* entry: the low-tide ramp warning (ENTRY_LOWTIDE), with the picked hour's state */
+  if (ENTRY_LOWTIDE[key]) {
+    var lh = lowTideHours(key, day.date), lv = ENTRY_LOWTIDE[key];
+    var bad = lh && lh.indexOf(pick.h) >= 0;
+    line(bad ? "bad" : "", "🚪 Entry", lv.txt + (lh ? " Today below " + lv.below + " m: <b>" + hourRuns(lh) + "</b>." : " Not below " + lv.below + " m in daylight today.")
+      + (bad ? ' <span class="tg-state">Low' + at + '.</span>' : ""));
+  }
   /* entry: McFadyen's depth need at the shallow entries */
   if (m && (m.tide === "high" || m.tide === "low")) {
     var when = td ? hoursList(m.tide === "high" ? td.highs : td.lows) : "";
